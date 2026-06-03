@@ -8,24 +8,15 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
-    /**
-     * The table associated with the model.
-     *
-     * @var string
-     */
     protected $table = 'user';
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'email',
         'password',
@@ -34,36 +25,36 @@ class User extends Authenticatable
         'nom_fr',
         'prenom_fr',
         'role',
-        'new_column',
         'photo_profile_url',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
+    protected $appends = ['avatar_url'];
+
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'email_verified_at'  => 'datetime',
+            'password'           => 'hashed',
+            'photo_profile_url'  => 'string',
         ];
     }
 
     /**
-     * Get the prof profile associated with the user.
+     * Full public URL to the avatar (or null if not set).
      */
+    public function getAvatarUrlAttribute(): ?string
+    {
+        if (!$this->photo_profile_url) {
+            return null;
+        }
+        return Storage::disk('public')->url($this->photo_profile_url);
+    }
+
     public function prof(): HasOne
     {
         return $this->hasOne(Prof::class, 'user_id');

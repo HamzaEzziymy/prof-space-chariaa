@@ -171,6 +171,16 @@ export default function AdminLayout({ children, title }) {
         ? ((isRTL ? user.nom_ar?.[0] : user.nom_fr?.[0]) ?? user.email?.[0]?.toUpperCase())
         : 'A';
 
+    // Reusable avatar — shows photo if available, falls back to initial
+    const UserAvatar = ({ size = 'sm' }) => {
+        const cls = size === 'sm'
+            ? 'h-8 w-8 rounded-full text-sm font-bold'
+            : 'h-8 w-8 rounded-full text-sm font-bold';
+        return user?.avatar_url
+            ? <img src={user.avatar_url} alt="avatar" className={`${cls} object-cover`} />
+            : <div className={`${cls} bg-primary flex items-center justify-center text-white`}>{userInitial}</div>;
+    };
+
     return (
         <div
             dir={isRTL ? 'rtl' : 'ltr'}
@@ -252,8 +262,10 @@ export default function AdminLayout({ children, title }) {
                     {!sidebarCollapsed && (
                         <div className="rounded-xl bg-white/5 p-3">
                             <div className="flex items-center gap-3">
-                                <div className="h-8 w-8 shrink-0 rounded-full bg-primary flex items-center justify-center text-white text-sm font-bold">
-                                    {userInitial}
+                                <div className="h-8 w-8 shrink-0 rounded-full bg-primary flex items-center justify-center text-white text-sm font-bold overflow-hidden">
+                                    {user?.avatar_url
+                                        ? <img src={user.avatar_url} alt="avatar" className="h-full w-full object-cover" />
+                                        : userInitial}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="text-xs font-medium text-white truncate">{userDisplay}</p>
@@ -363,8 +375,10 @@ export default function AdminLayout({ children, title }) {
                                 onClick={() => setProfileOpen(!profileOpen)}
                                 className="flex items-center gap-2 rounded-xl p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700"
                             >
-                                <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-bold">
-                                    {userInitial}
+                                <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-bold overflow-hidden">
+                                    {user?.avatar_url
+                                        ? <img src={user.avatar_url} alt="avatar" className="h-full w-full object-cover" />
+                                        : userInitial}
                                 </div>
                                 <div className="hidden sm:block" style={{ textAlign: isRTL ? 'right' : 'left' }}>
                                     <p className="text-sm font-medium text-slate-700 dark:text-slate-200 leading-none">{userDisplay}</p>
