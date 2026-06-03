@@ -4,7 +4,15 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title inertia>{{ config('app.name', 'Laravel') }}</title>
+        <title inertia>{{ \App\Models\AppSetting::get('app_name', config('app.name')) }}</title>
+
+        {{-- Dynamic favicon from app_settings --}}
+        @php $favicon = \App\Models\AppSetting::get('app_favicon_url'); @endphp
+        @if($favicon)
+            <link rel="icon" type="image/png" href="{{ asset('storage/' . $favicon) }}">
+        @else
+            <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+        @endif
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">

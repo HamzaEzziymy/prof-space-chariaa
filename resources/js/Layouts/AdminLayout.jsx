@@ -53,11 +53,11 @@ function SideNavItem({ href, iconKey, label, active, collapsed, isRTL }) {
                     'relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
                     active
                         ? 'bg-primary text-white shadow-md'
-                        : 'text-slate-400 hover:bg-white/10 hover:text-white',
+                        : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-white',
                     collapsed ? 'justify-center' : '',
                 ].join(' ')}
             >
-                <span className={`flex-shrink-0 ${active ? 'text-white' : 'text-slate-400'}`}>
+                <span className={`flex-shrink-0 ${active ? 'text-white' : 'text-slate-400 dark:text-slate-500'}`}>
                     <Icon d={icons[iconKey]} />
                 </span>
                 {!collapsed && <span className="truncate">{label}</span>}
@@ -79,8 +79,15 @@ function SideNavItem({ href, iconKey, label, active, collapsed, isRTL }) {
 // ─── Main Layout ──────────────────────────────────────────────────────────────
 export default function AdminLayout({ children, title }) {
     const { t, locale, toggleLocale, isRTL } = useLanguage();
-    const { auth } = usePage().props;
+    const { auth, appSettings } = usePage().props;
     const user = auth?.user;
+
+    // Live values from DB — fall back to translation keys if not set
+    const appName    = isRTL ? (appSettings?.app_name_ar || appSettings?.app_name || t('appName'))
+                             : (appSettings?.app_name    || t('appName'));
+    const appTagline = isRTL ? (appSettings?.app_tagline_ar || appSettings?.app_tagline || t('adminPanel'))
+                             : (appSettings?.app_tagline    || t('adminPanel'));
+    const appLogoUrl = appSettings?.app_logo_url ?? null;
 
     const [sidebarOpen, setSidebarOpen]       = useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -126,11 +133,14 @@ export default function AdminLayout({ children, title }) {
         { key: 'grades',     href: '#',                iconKey: 'grades',     label: t('grades')     },
     ];
     const adminItems = [
-        { key: 'users',    href: '#', iconKey: 'users',    label: t('users')    },
-        { key: 'settings', href: '#', iconKey: 'settings', label: t('settings') },
+        { key: 'users',    href: '#',                      iconKey: 'users',    label: t('users')    },
+        { key: 'settings', href: route('settings.index'),  iconKey: 'settings', label: t('settings') },
     ];
 
     const currentRoute = route().current();
+    const currentRouteKey = currentRoute?.includes('settings') ? 'settings'
+        : currentRoute?.includes('dashboard') ? 'dashboard'
+        : currentRoute ?? '';
     const SIDEBAR_W    = sidebarCollapsed ? 72 : 256; // px
 
     // ── Sidebar position:
@@ -184,7 +194,7 @@ export default function AdminLayout({ children, title }) {
     return (
         <div
             dir={isRTL ? 'rtl' : 'ltr'}
-            className="flex h-screen overflow-hidden bg-slate-100 dark:bg-slate-900"
+            className="flex h-screen overflow-hidden bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-100"
         >
             {/* ── Mobile overlay ── */}
             {sidebarOpen && !isDesktop && (
@@ -197,17 +207,21 @@ export default function AdminLayout({ children, title }) {
             {/* ── Sidebar ── */}
             <aside
                 style={sidebarStyle}
-                className="flex flex-col bg-slate-800 dark:bg-slate-950 overflow-hidden"
+                className="flex flex-col bg-white dark:bg-slate-900 border-e border-slate-200 dark:border-slate-700/60 overflow-hidden shadow-sm"
             >
                 {/* Logo */}
-                <div className={`flex h-16 shrink-0 items-center border-b border-white/10 px-4 gap-3 ${sidebarCollapsed ? 'justify-center' : ''}`}>
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary">
-                        <span className="text-lg font-bold text-white">P</span>
+                <div className={`flex h-16 shrink-0 items-center border-b border-slate-200 dark:border-slate-700/60 px-4 gap-3 ${sidebarCollapsed ? 'justify-center' : ''}`}>
+                    {/* Favicon/Icon — square slot, no bg when image set */}
+                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl overflow-hidden ${appSettings?.app_favicon_url ? '' : 'bg-primary'}`}>
+                        {appSettings?.app_favicon_url
+                            ? <img src={appSettings.app_favicon_url} alt={appName} className="h-full w-full object-cover" />
+                            : <span className="text-lg font-bold text-white">{appName?.[0] ?? 'P'}</span>
+                        }
                     </div>
                     {!sidebarCollapsed && (
-                        <div>
-                            <p className="text-sm font-bold text-white leading-none">{t('appName')}</p>
-                            <p className="text-[10px] text-slate-400 mt-0.5">{t('adminPanel')}</p>
+                        <div className="min-w-0">
+                            <p className="text-sm font-bold text-slate-800 dark:text-white leading-none truncate">{appName}</p>
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">{appTagline}</p>
                         </div>
                     )}
                 </div>
@@ -217,7 +231,7 @@ export default function AdminLayout({ children, title }) {
                     {/* Main items */}
                     <div className="space-y-0.5">
                         {!sidebarCollapsed && (
-                            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+                            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
                                 {t('menu')}
                             </p>
                         )}
@@ -227,19 +241,19 @@ export default function AdminLayout({ children, title }) {
                                 href={item.href}
                                 iconKey={item.iconKey}
                                 label={item.label}
-                                active={currentRoute === item.key}
+                                active={currentRouteKey === item.key}
                                 collapsed={sidebarCollapsed}
                                 isRTL={isRTL}
                             />
                         ))}
                     </div>
 
-                    <div className="my-3 border-t border-white/10" />
+                    <div className="my-3 border-t border-slate-200 dark:border-slate-700/60" />
 
                     {/* Admin items */}
                     <div className="space-y-0.5">
                         {!sidebarCollapsed && (
-                            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+                            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
                                 Admin
                             </p>
                         )}
@@ -249,7 +263,7 @@ export default function AdminLayout({ children, title }) {
                                 href={item.href}
                                 iconKey={item.iconKey}
                                 label={item.label}
-                                active={currentRoute === item.key}
+                                active={currentRouteKey === item.key}
                                 collapsed={sidebarCollapsed}
                                 isRTL={isRTL}
                             />
@@ -260,7 +274,7 @@ export default function AdminLayout({ children, title }) {
                     <div className="flex-1" />
 
                     {!sidebarCollapsed && (
-                        <div className="rounded-xl bg-white/5 p-3">
+                        <div className="rounded-xl bg-slate-100 dark:bg-slate-800 p-3">
                             <div className="flex items-center gap-3">
                                 <div className="h-8 w-8 shrink-0 rounded-full bg-primary flex items-center justify-center text-white text-sm font-bold overflow-hidden">
                                     {user?.avatar_url
@@ -268,7 +282,7 @@ export default function AdminLayout({ children, title }) {
                                         : userInitial}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-medium text-white truncate">{userDisplay}</p>
+                                    <p className="text-xs font-medium text-slate-800 dark:text-white truncate">{userDisplay}</p>
                                     <p className="text-[10px] text-slate-400 truncate">{user?.email}</p>
                                 </div>
                             </div>
