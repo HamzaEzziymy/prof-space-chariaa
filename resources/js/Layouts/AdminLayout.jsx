@@ -133,12 +133,13 @@ export default function AdminLayout({ children, title }) {
         { key: 'grades',     href: '#',                iconKey: 'grades',     label: t('grades')     },
     ];
     const adminItems = [
-        { key: 'users',    href: '#',                      iconKey: 'users',    label: t('users')    },
-        { key: 'settings', href: route('settings.index'),  iconKey: 'settings', label: t('settings') },
+        { key: 'users',    href: route('users.index'),      iconKey: 'users',    label: t('users')    },
+        { key: 'settings', href: route('settings.index'),   iconKey: 'settings', label: t('settings') },
     ];
 
     const currentRoute = route().current();
     const currentRouteKey = currentRoute?.includes('settings') ? 'settings'
+        : currentRoute?.includes('users')    ? 'users'
         : currentRoute?.includes('dashboard') ? 'dashboard'
         : currentRoute ?? '';
     const SIDEBAR_W    = sidebarCollapsed ? 72 : 256; // px

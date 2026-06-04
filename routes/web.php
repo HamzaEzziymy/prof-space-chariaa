@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\UserController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -34,6 +35,14 @@ Route::middleware(['auth', 'admin'])->prefix('settings')->name('settings.')->gro
     Route::post('/logo',        [SettingsController::class, 'uploadLogo'])->name('logo');
     Route::post('/favicon',     [SettingsController::class, 'uploadFavicon'])->name('favicon');
     Route::post('/maintenance', [SettingsController::class, 'toggleMaintenance'])->name('maintenance');
+});
+
+// ── Users management (admin only) ─────────────────────────────────────────────
+Route::middleware(['auth', 'admin'])->prefix('users')->name('users.')->group(function () {
+    Route::get('/',            [UserController::class, 'index'])->name('index');
+    Route::post('/',           [UserController::class, 'store'])->name('store');
+    Route::put('/{user}',      [UserController::class, 'update'])->name('update');
+    Route::delete('/{user}',   [UserController::class, 'destroy'])->name('destroy');
 });
 
 require __DIR__.'/auth.php';
