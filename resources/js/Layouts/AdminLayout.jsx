@@ -126,21 +126,28 @@ export default function AdminLayout({ children, title }) {
 
     const navItems = [
         { key: 'dashboard',  href: route('dashboard'), iconKey: 'dashboard',  label: t('dashboard')  },
-        { key: 'professors', href: '#',                iconKey: 'professors', label: t('professors') },
+        { key: 'professors', href: route('professors.index'), iconKey: 'professors', label: t('professors') },
         { key: 'students',   href: '#',                iconKey: 'students',   label: t('students')   },
-        { key: 'modules',    href: '#',                iconKey: 'modules',    label: t('modules')    },
-        { key: 'rooms',      href: '#',                iconKey: 'rooms',      label: t('examRooms')  },
+        { key: 'modules',    href: route('modules.index'), iconKey: 'modules',    label: t('modules')    },
+        { key: 'rooms',      href: route('salles.index'), iconKey: 'rooms',      label: t('examRooms')  },
         { key: 'grades',     href: '#',                iconKey: 'grades',     label: t('grades')     },
     ];
     const adminItems = [
-        { key: 'users',    href: route('users.index'),      iconKey: 'users',    label: t('users')    },
-        { key: 'settings', href: route('settings.index'),   iconKey: 'settings', label: t('settings') },
+        ...(user?.role === 'super_admin'
+            ? [{ key: 'users',    href: route('users.index'),    iconKey: 'users',    label: t('users')    }]
+            : []),
+        ...(user?.role === 'super_admin'
+            ? [{ key: 'settings', href: route('settings.index'), iconKey: 'settings', label: t('settings') }]
+            : []),
     ];
 
     const currentRoute = route().current();
     const currentRouteKey = currentRoute?.includes('settings') ? 'settings'
-        : currentRoute?.includes('users')    ? 'users'
-        : currentRoute?.includes('dashboard') ? 'dashboard'
+        : currentRoute?.includes('users')        ? 'users'
+        : currentRoute?.includes('professors')   ? 'professors'
+        : currentRoute?.includes('salles')       ? 'rooms'
+        : currentRoute?.includes('modules')      ? 'modules'
+        : currentRoute?.includes('dashboard')    ? 'dashboard'
         : currentRoute ?? '';
     const SIDEBAR_W    = sidebarCollapsed ? 72 : 256; // px
 
@@ -249,27 +256,31 @@ export default function AdminLayout({ children, title }) {
                         ))}
                     </div>
 
-                    <div className="my-3 border-t border-slate-200 dark:border-slate-700/60" />
+                    {adminItems.length > 0 && (
+                        <div className="my-3 border-t border-slate-200 dark:border-slate-700/60" />
+                    )}
 
-                    {/* Admin items */}
-                    <div className="space-y-0.5">
-                        {!sidebarCollapsed && (
-                            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                                Admin
-                            </p>
-                        )}
-                        {adminItems.map((item) => (
-                            <SideNavItem
-                                key={item.key}
-                                href={item.href}
-                                iconKey={item.iconKey}
-                                label={item.label}
-                                active={currentRouteKey === item.key}
-                                collapsed={sidebarCollapsed}
-                                isRTL={isRTL}
-                            />
-                        ))}
-                    </div>
+                    {/* Admin items — only shown when there are items (super_admin only) */}
+                    {adminItems.length > 0 && (
+                        <div className="space-y-0.5">
+                            {!sidebarCollapsed && (
+                                <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                                    Admin
+                                </p>
+                            )}
+                            {adminItems.map((item) => (
+                                <SideNavItem
+                                    key={item.key}
+                                    href={item.href}
+                                    iconKey={item.iconKey}
+                                    label={item.label}
+                                    active={currentRouteKey === item.key}
+                                    collapsed={sidebarCollapsed}
+                                    isRTL={isRTL}
+                                />
+                            ))}
+                        </div>
+                    )}
 
                     {/* Push user card to bottom */}
                     <div className="flex-1" />

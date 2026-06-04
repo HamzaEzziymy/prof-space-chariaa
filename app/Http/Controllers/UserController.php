@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
@@ -19,8 +20,10 @@ class UserController extends Controller
     public function index(Request $request): Response
     {
         $query = User::query()
+            ->with('prof')   // eager-load prof relationship
             ->select(['id', 'nom_fr', 'prenom_fr', 'nom_ar', 'prenom_ar',
-                      'email', 'role', 'photo_profile_url', 'created_at', 'email_verified_at'])
+                      'email', 'role', 'photo_profile_url', 'is_active',
+                      'created_at', 'email_verified_at'])
             ->orderBy('created_at', 'desc');
 
         if ($search = $request->get('search')) {
@@ -39,10 +42,10 @@ class UserController extends Controller
 
         $users = $query->paginate(12)->withQueryString();
 
-        // Append avatar_url to each user
+        // Ensure avatar_url is always present as a relative public URL
         $users->getCollection()->transform(function ($user) {
             $user->avatar_url = $user->photo_profile_url
-                ? url('storage/' . $user->photo_profile_url)
+                ? '/storage/' . $user->photo_profile_url
                 : null;
             return $user;
         });
@@ -57,6 +60,21 @@ class UserController extends Controller
                 'superAdmins'=> User::where('role', 'super_admin')->count(),
             ],
         ]);
+    }
+
+    /**
+     * Toggle active/inactive status of a user.
+     */
+    public function toggleActive(Request $request, User $user): RedirectResponse
+    {
+        if ($user->id === $request->user()->id) {
+            return back()->with('error', 'cannot_deactivate_self');
+        }
+
+        $user->is_active = ! $user->is_active;
+        $user->save();
+
+        return back()->with('success', $user->is_active ? 'user_activated' : 'user_deactivated');
     }
 
     /**
@@ -76,7 +94,8 @@ class UserController extends Controller
 
         User::create([
             ...$validated,
-            'password' => Hash::make($validated['password']),
+            'password'             => Hash::make($validated['password']),
+            'must_change_password' => true,
         ]);
 
         return back()->with('success', 'user_created');

@@ -15,8 +15,10 @@ const roleColors = {
 function UserAvatar({ user, size = 'md' }) {
     const sz = size === 'lg' ? 'h-12 w-12 text-base' : 'h-9 w-9 text-sm';
     const initial = (user.nom_fr?.[0] ?? user.email?.[0] ?? '?').toUpperCase();
-    return user.avatar_url
-        ? <img src={user.avatar_url} alt="avatar" className={`${sz} rounded-full object-cover flex-shrink-0`} />
+    const src = user.avatar_url
+        || (user.photo_profile_url ? `/storage/${user.photo_profile_url}` : null);
+    return src
+        ? <img src={src} alt="avatar" className={`${sz} rounded-full object-cover flex-shrink-0`} />
         : <div className={`${sz} rounded-full bg-primary flex items-center justify-center text-white font-bold flex-shrink-0`}>{initial}</div>;
 }
 
@@ -184,10 +186,6 @@ function UserModal({ mode, user, onClose, t, isRTL, locale }) {
         }
     };
 
-    // Avatar preview initials
-    const previewInitial = (data.nom_fr?.[0] ?? data.email?.[0] ?? '?').toUpperCase();
-    const previewName = `${data.prenom_fr} ${data.nom_fr}`.trim() || (locale === 'ar' ? 'مستخدم جديد' : 'Nouvel utilisateur');
-
     return (
         <>
             {/* Backdrop */}
@@ -232,30 +230,16 @@ function UserModal({ mode, user, onClose, t, isRTL, locale }) {
                 <form onSubmit={submit} className="flex flex-1 flex-col overflow-hidden">
                     <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
 
-                        {/* Live preview card */}
-                        <div className="flex items-center gap-4 rounded-2xl bg-gradient-to-br from-primary/5 to-violet-500/5 border border-primary/10 dark:border-primary/20 p-4">
-                            <div className="h-14 w-14 flex-shrink-0 rounded-2xl bg-primary flex items-center justify-center text-xl font-bold text-white shadow-md">
-                                {previewInitial}
-                            </div>
-                            <div>
-                                <p className="font-semibold text-slate-800 dark:text-white text-sm">{previewName}</p>
-                                <p className="text-xs text-slate-400 mt-0.5">{data.email || (locale === 'ar' ? 'البريد الإلكتروني' : 'Adresse e-mail')}</p>
-                                <span className={`mt-1.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${roleColors[data.role] ?? ''}`}>
-                                    {t(data.role)}
-                                </span>
-                            </div>
-                        </div>
-
                         {/* ── Identity section ── */}
                         <div className="space-y-4">
                             <SectionLabel icon="🇫🇷" label={locale === 'ar' ? 'الهوية بالفرنسية' : 'Identité en français'} />
                             <div className="grid grid-cols-2 gap-4">
                                 <Field id="prenom_fr" label={t('firstName')} value={data.prenom_fr}
                                     onChange={e => setData('prenom_fr', e.target.value)}
-                                    placeholder="Mohammed" required error={errors.prenom_fr} autoComplete="given-name" />
+                                    placeholder={locale === 'ar' ? 'الاسم الأول' : 'Prénom'} required error={errors.prenom_fr} autoComplete="given-name" />
                                 <Field id="nom_fr" label={t('lastName')} value={data.nom_fr}
                                     onChange={e => setData('nom_fr', e.target.value)}
-                                    placeholder="Benali" required error={errors.nom_fr} autoComplete="family-name" />
+                                    placeholder={locale === 'ar' ? 'اسم العائلة' : 'Nom de famille'} required error={errors.nom_fr} autoComplete="family-name" />
                             </div>
                         </div>
 
@@ -264,10 +248,10 @@ function UserModal({ mode, user, onClose, t, isRTL, locale }) {
                             <div className="grid grid-cols-2 gap-4">
                                 <Field id="prenom_ar" label={t('firstNameAr')} value={data.prenom_ar}
                                     onChange={e => setData('prenom_ar', e.target.value)}
-                                    placeholder="محمد" error={errors.prenom_ar} />
+                                    placeholder="الاسم الأول" error={errors.prenom_ar} />
                                 <Field id="nom_ar" label={t('lastNameAr')} value={data.nom_ar}
                                     onChange={e => setData('nom_ar', e.target.value)}
-                                    placeholder="بنعلي" error={errors.nom_ar} />
+                                    placeholder="اسم العائلة" error={errors.nom_ar} />
                             </div>
                         </div>
 
@@ -276,7 +260,7 @@ function UserModal({ mode, user, onClose, t, isRTL, locale }) {
                             <SectionLabel icon="📧" label={locale === 'ar' ? 'بيانات الحساب' : 'Informations du compte'} />
                             <Field id="email" type="email" label={t('email')} value={data.email}
                                 onChange={e => setData('email', e.target.value)}
-                                placeholder="exemple@univ.ma" required error={errors.email} autoComplete="username" />
+                                placeholder={locale === 'ar' ? 'البريد الإلكتروني' : 'Adresse e-mail'} required error={errors.email} autoComplete="username" />
                             <RoleCardSelect value={data.role} onChange={v => setData('role', v)} t={t} isRTL={isRTL} />
                         </div>
 
@@ -380,6 +364,68 @@ function DeleteModal({ user, onClose, t, isRTL }) {
     );
 }
 
+// ─── Prof details modal ───────────────────────────────────────────────────────
+function ProfDetailsModal({ user, onClose, t, isRTL, locale }) {
+    const prof = user.prof;
+    const name = (locale === 'ar' && (user.nom_ar || user.prenom_ar))
+        ? `${user.prenom_ar ?? ''} ${user.nom_ar ?? ''}`.trim()
+        : `${user.prenom_fr ?? ''} ${user.nom_fr ?? ''}`.trim();
+
+    const Row = ({ label, value }) => (
+        <div className="flex items-center justify-between py-3 border-b border-slate-100 dark:border-slate-700 last:border-0">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</span>
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{value || '—'}</span>
+        </div>
+    );
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative z-10 w-full max-w-sm rounded-2xl bg-white shadow-2xl dark:bg-slate-800 overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-emerald-50 dark:bg-emerald-900/20">
+                    <div className="flex items-center gap-3">
+                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/40">
+                            <svg className="h-4 w-4 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                        </span>
+                        <div>
+                            <p className="text-sm font-bold text-slate-800 dark:text-white">{t('profDetails')}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">{name}</p>
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                {/* Body */}
+                <div className="px-6 py-2">
+                    {prof ? (
+                        <>
+                            <Row label="CIN"       value={prof.cin} />
+                            <Row label={locale === 'ar' ? 'الهاتف' : 'Téléphone'} value={prof.telephone} />
+                            <Row label={locale === 'ar' ? 'الرتبة' : 'Grade'}     value={prof.grade} />
+                        </>
+                    ) : (
+                        <div className="py-8 text-center text-sm text-slate-400">
+                            {t('noProfAccount')}
+                        </div>
+                    )}
+                </div>
+                <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 flex justify-end">
+                    <button onClick={onClose}
+                        className="rounded-xl border border-slate-200 dark:border-slate-600 px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+                        {t('close')}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ─── Flash toast ──────────────────────────────────────────────────────────────
 function Toast({ flash, t }) {
     const [visible, setVisible] = useState(false);
@@ -387,10 +433,12 @@ function Toast({ flash, t }) {
     const isError = !!flash?.error;
 
     const messages = {
-        user_created: t('userCreated'),
-        user_updated: t('userUpdated'),
-        user_deleted: t('userDeleted'),
-        cannot_delete_self: t('cannotDeleteSelf'),
+        user_created:         t('userCreated'),
+        user_updated:         t('userUpdated'),
+        user_deleted:         t('userDeleted'),
+        user_activated:       t('userActivated'),
+        user_deactivated:     t('userDeactivated'),
+        cannot_delete_self:   t('cannotDeleteSelf'),
     };
 
     useEffect(() => {
@@ -419,6 +467,12 @@ function UsersContent({ users, filters, stats }) {
     const [search, setSearch] = useState(filters?.search ?? '');
     const [role, setRole]     = useState(filters?.role   ?? '');
     const searchTimeout = useRef(null);
+
+    // Always reload fresh data on mount — catches back/forward navigation
+    // with stale Inertia cached state (e.g. after creating a prof on Professors page)
+    useEffect(() => {
+        router.reload({ only: ['users', 'stats'], preserveScroll: true, preserveState: true });
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Debounced search
     const handleSearch = (val) => {
@@ -518,8 +572,8 @@ function UsersContent({ users, filters, stats }) {
                         <table className="w-full text-sm" dir={isRTL ? 'rtl' : 'ltr'}>
                             <thead>
                                 <tr className="border-b border-slate-100 dark:border-slate-700">
-                                    {[t('name'), t('email'), t('role'), t('joinedAt'), t('actions')].map((h, i) => (
-                                        <th key={i} className={`px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 ${isRTL ? 'text-right' : 'text-left'} ${i === 4 ? (isRTL ? 'text-left' : 'text-right') : ''}`}>
+                                    {[t('user'), t('role'), t('profAccount'), t('status'), t('joinedAt'), t('actions')].map((h, i) => (
+                                        <th key={i} className={`px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 ${isRTL ? 'text-right' : 'text-left'} ${i === 5 ? (isRTL ? 'text-left' : 'text-right') : ''}`}>
                                             {h}
                                         </th>
                                     ))}
@@ -528,7 +582,7 @@ function UsersContent({ users, filters, stats }) {
                             <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
                                 {users.data.length === 0 ? (
                                     <tr>
-                                        <td colSpan={5} className="px-5 py-16 text-center">
+                                        <td colSpan={6} className="px-5 py-16 text-center">
                                             <div className="flex flex-col items-center gap-2 text-slate-400">
                                                 <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.2}>
                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -544,7 +598,7 @@ function UsersContent({ users, filters, stats }) {
                                     const isSelf = u.id === currentUserId;
 
                                     return (
-                                        <tr key={u.id} className="group hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                                        <tr key={u.id} className={`group hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors ${!u.is_active ? 'opacity-60' : ''}`}>
                                             {/* Name + avatar */}
                                             <td className="px-5 py-3.5">
                                                 <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -558,22 +612,52 @@ function UsersContent({ users, filters, stats }) {
                                                                 </span>
                                                             )}
                                                         </p>
-                                                        <p className="text-xs text-slate-400">
-                                                            {u.email_verified_at
-                                                                ? <span className="text-emerald-500">✓ {t('verified')}</span>
-                                                                : <span className="text-amber-500">⚠ {t('notVerified')}</span>}
+                                                        <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+                                                            <svg className="w-3 h-3 flex-shrink-0 text-slate-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                                            </svg>
+                                                            <span className="truncate max-w-[180px]">{u.email}</span>
                                                         </p>
                                                     </div>
                                                 </div>
-                                            </td>
-                                            {/* Email */}
-                                            <td className={`px-5 py-3.5 ${isRTL ? 'text-right' : ''}`}>
-                                                <span className="text-slate-600 dark:text-slate-300">{u.email}</span>
                                             </td>
                                             {/* Role badge */}
                                             <td className={`px-5 py-3.5 ${isRTL ? 'text-right' : ''}`}>
                                                 <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${roleColors[u.role] ?? ''}`}>
                                                     {t(u.role)}
+                                                </span>
+                                            </td>
+                                            {/* Prof account */}
+                                            <td className={`px-5 py-3.5 ${isRTL ? 'text-right' : ''}`}>
+                                                {u.role === 'prof' ? (
+                                                    u.prof ? (
+                                                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                                                            <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                            </svg>
+                                                            {t('hasProfAccount')}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-700 px-2.5 py-0.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                                                            <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                            </svg>
+                                                            {t('noProfAccount')}
+                                                        </span>
+                                                    )
+                                                ) : (
+                                                    <span className="text-xs text-slate-300 dark:text-slate-600">—</span>
+                                                )}
+                                            </td>
+                                            {/* Active status */}
+                                            <td className={`px-5 py-3.5 ${isRTL ? 'text-right' : ''}`}>
+                                                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                                    u.is_active
+                                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                                        : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                                                }`}>
+                                                    <span className={`h-1.5 w-1.5 rounded-full ${u.is_active ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                                                    {u.is_active ? t('accountActive') : t('accountInactive')}
                                                 </span>
                                             </td>
                                             {/* Date */}
@@ -585,17 +669,67 @@ function UsersContent({ users, filters, stats }) {
                                             {/* Actions */}
                                             <td className={`px-5 py-3.5 ${isRTL ? 'text-left' : 'text-right'}`}>
                                                 <div className={`flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ${isRTL ? 'flex-row-reverse justify-end' : 'justify-end'}`}>
-                                                    {/* Edit */}
-                                                    <button
-                                                        onClick={() => setModal({ mode: 'edit', user: u })}
-                                                        title={t('edit')}
-                                                        className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-primary dark:hover:bg-slate-700"
-                                                    >
-                                                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                        </svg>
-                                                    </button>
-                                                    {/* Delete — disabled for self */}
+
+                                                    {/* View prof details — only for prof role */}
+                                                    {u.role === 'prof' && (
+                                                        <button
+                                                            onClick={() => setModal({ mode: 'prof', user: u })}
+                                                            title={t('profDetails')}
+                                                            className="rounded-lg p-1.5 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-900/20"
+                                                        >
+                                                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                            </svg>
+                                                        </button>
+                                                    )}
+
+                                                    {/* Toggle active/inactive — not for self */}
+                                                    {!isSelf && (
+                                                        <button
+                                                            onClick={() => router.patch(route('users.toggle', u.id), {}, { preserveState: true })}
+                                                            title={u.is_active ? t('accountInactive') : t('accountActive')}
+                                                            className={`rounded-lg p-1.5 transition ${
+                                                                u.is_active
+                                                                    ? 'text-slate-400 hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-900/20'
+                                                                    : 'text-amber-500 hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-900/20'
+                                                            }`}
+                                                        >
+                                                            {u.is_active ? (
+                                                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                                                </svg>
+                                                            ) : (
+                                                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                </svg>
+                                                            )}
+                                                        </button>
+                                                    )}
+
+                                                    {/* Edit — redirects to profile for self, modal for others */}
+                                                    {isSelf ? (
+                                                        <a
+                                                            href={route('profile.edit')}
+                                                            title={t('edit')}
+                                                            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-primary dark:hover:bg-slate-700"
+                                                        >
+                                                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                            </svg>
+                                                        </a>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => setModal({ mode: 'edit', user: u })}
+                                                            title={t('edit')}
+                                                            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-primary dark:hover:bg-slate-700"
+                                                        >
+                                                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                            </svg>
+                                                        </button>
+                                                    )}
+
+                                                    {/* Delete — not for self */}
                                                     {!isSelf && (
                                                         <button
                                                             onClick={() => setModal({ mode: 'delete', user: u })}
@@ -656,6 +790,9 @@ function UsersContent({ users, filters, stats }) {
             )}
             {modal?.mode === 'delete' && (
                 <DeleteModal user={modal.user} onClose={() => setModal(null)} t={t} isRTL={isRTL} />
+            )}
+            {modal?.mode === 'prof' && (
+                <ProfDetailsModal user={modal.user} onClose={() => setModal(null)} t={t} isRTL={isRTL} locale={locale} />
             )}
         </>
     );

@@ -34,7 +34,7 @@ class HandleInertiaRequests extends Middleware
                     'email_verified_at' => $user->email_verified_at,
                     'photo_profile_url' => $user->photo_profile_url,
                     'avatar_url'        => $user->photo_profile_url
-                        ? url('storage/' . $user->photo_profile_url)
+                        ? '/storage/' . $user->photo_profile_url
                         : null,
                 ] : null,
             ],
@@ -46,10 +46,10 @@ class HandleInertiaRequests extends Middleware
                 'app_tagline'     => AppSetting::get('app_tagline', ''),
                 'app_tagline_ar'  => AppSetting::get('app_tagline_ar', ''),
                 'app_logo_url'    => AppSetting::get('app_logo_url')
-                    ? url('storage/' . AppSetting::get('app_logo_url'))
+                    ? '/storage/' . AppSetting::get('app_logo_url')
                     : null,
                 'app_favicon_url' => AppSetting::get('app_favicon_url')
-                    ? url('storage/' . AppSetting::get('app_favicon_url'))
+                    ? '/storage/' . AppSetting::get('app_favicon_url')
                     : null,
                 'maintenance_mode' => AppSetting::get('maintenance_mode', false),
             ],

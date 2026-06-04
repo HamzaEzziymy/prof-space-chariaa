@@ -21,8 +21,8 @@ class CheckMaintenance
         if ($maintenance) {
             $user = Auth::user();
 
-            // Allow admins / super_admins through
-            if ($user && in_array($user->role, ['admin', 'super_admin'])) {
+            // Only super_admin can bypass maintenance mode
+            if ($user && $user->role === 'super_admin') {
                 return $next($request);
             }
 

@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -31,7 +32,36 @@ class AuthenticatedSessionController extends Controller
     {
         $request->authenticate();
 
+        $user = $request->user();
+
+        // Block prof role — this dashboard is not for them
+        if ($user->role === 'prof') {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            throw ValidationException::withMessages([
+                'email' => 'Accès réservé aux administrateurs. Cette interface n\'est pas destinée aux professeurs.',
+            ]);
+        }
+
+        // Block inactive accounts
+        if (! $user->is_active) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            throw ValidationException::withMessages([
+                'email' => 'Ce compte a été désactivé. Contactez votre administrateur.',
+            ]);
+        }
+
         $request->session()->regenerate();
+
+        // First login: force password change
+        if ($user->must_change_password) {
+            return redirect()->route('password.change');
+        }
 
         return redirect()->intended(route('dashboard', absolute: false));
     }

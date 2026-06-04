@@ -1,0 +1,155 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Prof;
+use App\Models\User;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class ProfessorController extends Controller
+{
+    /**
+     * List all professors with search + grade filter + pagination.
+     */
+    public function index(Request $request): Response
+    {
+        $query = Prof::query()
+            ->with(['user:id,nom_fr,prenom_fr,nom_ar,prenom_ar,email,photo_profile_url,is_active',
+                    'modules:id,nom_fr,nom_ar,code_module,prof_id'])
+            ->withCount('modules')
+            ->orderBy('created_at', 'desc');
+
+        // Search by name, email, CIN, or telephone
+        if ($search = $request->get('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('user', function ($uq) use ($search) {
+                    $uq->where('nom_fr',    'like', "%{$search}%")
+                       ->orWhere('prenom_fr', 'like', "%{$search}%")
+                       ->orWhere('nom_ar',    'like', "%{$search}%")
+                       ->orWhere('prenom_ar', 'like', "%{$search}%")
+                       ->orWhere('email',     'like', "%{$search}%");
+                })
+                ->orWhere('cin',       'like', "%{$search}%")
+                ->orWhere('telephone', 'like', "%{$search}%");
+            });
+        }
+
+        // Filter by grade
+        if ($grade = $request->get('grade')) {
+            $query->where('grade', $grade);
+        }
+
+        $profs = $query->paginate(12)->withQueryString();
+
+        // Append computed avatar_url
+        $profs->getCollection()->transform(function ($prof) {
+            if ($prof->user) {
+                $prof->user->avatar_url = $prof->user->photo_profile_url
+                    ? '/storage/' . $prof->user->photo_profile_url
+                    : null;
+            }
+            return $prof;
+        });
+
+        // All distinct grades for the filter dropdown
+        $grades = Prof::distinct()->pluck('grade')->filter()->values();
+
+        // Available users with role='prof' who don't have a Prof record yet
+        $availableUsers = User::where('role', 'prof')
+            ->whereDoesntHave('prof')
+            ->select(['id', 'nom_fr', 'prenom_fr', 'nom_ar', 'prenom_ar', 'email'])
+            ->orderBy('nom_fr')
+            ->get();
+
+        $stats = [
+            'total'      => Prof::count(),
+            'active'     => Prof::whereHas('user', fn ($q) => $q->where('is_active', true))->count(),
+            'inactive'   => Prof::whereHas('user', fn ($q) => $q->where('is_active', false))->count(),
+            'withModules'=> Prof::has('modules')->count(),
+        ];
+
+        return Inertia::render('Professors/Index', [
+            'profs'          => $profs,
+            'grades'         => $grades,
+            'availableUsers' => $availableUsers,
+            'filters'        => $request->only(['search', 'grade']),
+            'stats'          => $stats,
+        ]);
+    }
+
+    /**
+     * Show a single professor's detail page.
+     */
+    public function show(Prof $prof): Response
+    {
+        $prof->load([
+            'user:id,nom_fr,prenom_fr,nom_ar,prenom_ar,email,photo_profile_url,is_active,email_verified_at,created_at',
+            'modules:id,prof_id,nom_fr,nom_ar,code_module,coefficient,type_module',
+        ]);
+        $prof->loadCount('modules');
+
+        // Compute avatar URL
+        if ($prof->user) {
+            $prof->user->avatar_url = $prof->user->photo_profile_url
+                ? '/storage/' . $prof->user->photo_profile_url
+                : null;
+        }
+
+        // Attach enrolled student count per module
+        $prof->modules->each(function ($module) {
+            $module->loadCount('etudiants');
+        });
+
+        return Inertia::render('Professors/Show', [
+            'prof' => $prof,
+        ]);
+    }
+
+    /**
+     * Store a new professor record.
+     */
+    public function store(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'user_id'   => ['required', 'exists:user,id', Rule::unique('prof', 'user_id')],
+            'cin'       => ['nullable', 'string', 'max:20', Rule::unique('prof', 'cin')->whereNotNull('cin')],
+            'telephone' => ['nullable', 'string', 'max:20'],
+            'grade'     => ['nullable', 'string', 'max:100'],
+        ]);
+
+        Prof::create($validated);
+
+        return back()->with('success', 'prof_created');
+    }
+
+    /**
+     * Update an existing professor record.
+     */
+    public function update(Request $request, Prof $prof): RedirectResponse
+    {
+        $validated = $request->validate([
+            'user_id'   => ['required', 'exists:user,id', Rule::unique('prof', 'user_id')->ignore($prof->id)],
+            'cin'       => ['nullable', 'string', 'max:20', Rule::unique('prof', 'cin')->ignore($prof->id)->whereNotNull('cin')],
+            'telephone' => ['nullable', 'string', 'max:20'],
+            'grade'     => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $prof->update($validated);
+
+        return back()->with('success', 'prof_updated');
+    }
+
+    /**
+     * Remove a professor record.
+     */
+    public function destroy(Prof $prof): RedirectResponse
+    {
+        $prof->delete();
+
+        return back()->with('success', 'prof_deleted');
+    }
+}

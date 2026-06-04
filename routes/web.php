@@ -1,8 +1,12 @@
 <?php
 
+use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProfessorController;
+use App\Http\Controllers\SalleController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\Auth\ForcePasswordChangeController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -26,10 +30,12 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar');
     Route::delete('/profile/avatar', [ProfileController::class, 'removeAvatar'])->name('profile.avatar.remove');
-});
 
-// ── Settings (admin only) ──────────────────────────────────────────────────────
-Route::middleware(['auth', 'admin'])->prefix('settings')->name('settings.')->group(function () {
+    // Force password change on first login
+    Route::get('/password/change',  [ForcePasswordChangeController::class, 'create'])->name('password.change');
+    Route::post('/password/change', [ForcePasswordChangeController::class, 'store'])->name('password.change.store');
+});// ── Settings (super_admin only) ───────────────────────────────────────────────
+Route::middleware(['auth', 'super_admin'])->prefix('settings')->name('settings.')->group(function () {
     Route::get('/',             [SettingsController::class, 'index'])->name('index');
     Route::post('/general',     [SettingsController::class, 'updateGeneral'])->name('general');
     Route::post('/logo',        [SettingsController::class, 'uploadLogo'])->name('logo');
@@ -37,12 +43,40 @@ Route::middleware(['auth', 'admin'])->prefix('settings')->name('settings.')->gro
     Route::post('/maintenance', [SettingsController::class, 'toggleMaintenance'])->name('maintenance');
 });
 
-// ── Users management (admin only) ─────────────────────────────────────────────
-Route::middleware(['auth', 'admin'])->prefix('users')->name('users.')->group(function () {
-    Route::get('/',            [UserController::class, 'index'])->name('index');
-    Route::post('/',           [UserController::class, 'store'])->name('store');
-    Route::put('/{user}',      [UserController::class, 'update'])->name('update');
-    Route::delete('/{user}',   [UserController::class, 'destroy'])->name('destroy');
+// ── Professors (admin + super_admin) ─────────────────────────────────────────
+Route::middleware(['auth', 'admin'])->prefix('professors')->name('professors.')->group(function () {
+    Route::get('/',             [ProfessorController::class, 'index'])->name('index');
+    Route::post('/',            [ProfessorController::class, 'store'])->name('store');
+    Route::get('/{prof}',       [ProfessorController::class, 'show'])->name('show');
+    Route::put('/{prof}',       [ProfessorController::class, 'update'])->name('update');
+    Route::delete('/{prof}',    [ProfessorController::class, 'destroy'])->name('destroy');
+});
+
+// ── Modules (admin + super_admin) ────────────────────────────────────────────
+Route::middleware(['auth', 'admin'])->prefix('modules')->name('modules.')->group(function () {
+    Route::get('/',             [ModuleController::class, 'index'])->name('index');
+    Route::post('/',            [ModuleController::class, 'store'])->name('store');
+    Route::put('/{module}',     [ModuleController::class, 'update'])->name('update');
+    Route::delete('/{module}',  [ModuleController::class, 'destroy'])->name('destroy');
+    Route::post('/import',      [ModuleController::class, 'import'])->name('import');
+    Route::post('/import-rows', [ModuleController::class, 'importRows'])->name('importRows');
+});
+
+// ── Salles d'examen (admin + super_admin) ─────────────────────────────────────
+Route::middleware(['auth', 'admin'])->prefix('salles')->name('salles.')->group(function () {
+    Route::get('/',          [SalleController::class, 'index'])->name('index');
+    Route::post('/',         [SalleController::class, 'store'])->name('store');
+    Route::put('/{salle}',   [SalleController::class, 'update'])->name('update');
+    Route::delete('/{salle}',[SalleController::class, 'destroy'])->name('destroy');
+});
+
+// ── Users management (super_admin only) ───────────────────────────────────────
+Route::middleware(['auth', 'super_admin'])->prefix('users')->name('users.')->group(function () {
+    Route::get('/',                    [UserController::class, 'index'])->name('index');
+    Route::post('/',                   [UserController::class, 'store'])->name('store');
+    Route::put('/{user}',              [UserController::class, 'update'])->name('update');
+    Route::delete('/{user}',           [UserController::class, 'destroy'])->name('destroy');
+    Route::patch('/{user}/toggle',     [UserController::class, 'toggleActive'])->name('toggle');
 });
 
 require __DIR__.'/auth.php';

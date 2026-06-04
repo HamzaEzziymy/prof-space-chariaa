@@ -18,14 +18,8 @@ class User extends Authenticatable
     protected $table = 'user';
 
     protected $fillable = [
-        'email',
-        'password',
-        'nom_ar',
-        'prenom_ar',
-        'nom_fr',
-        'prenom_fr',
-        'role',
-        'photo_profile_url',
+        'email', 'password', 'nom_ar', 'prenom_ar', 'nom_fr', 'prenom_fr',
+        'role', 'photo_profile_url', 'must_change_password', 'is_active',
     ];
 
     protected $hidden = [
@@ -38,9 +32,11 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at'  => 'datetime',
-            'password'           => 'hashed',
-            'photo_profile_url'  => 'string',
+            'email_verified_at'    => 'datetime',
+            'password'             => 'hashed',
+            'photo_profile_url'    => 'string',
+            'must_change_password' => 'boolean',
+            'is_active'            => 'boolean',
         ];
     }
 
@@ -52,7 +48,7 @@ class User extends Authenticatable
         if (!$this->photo_profile_url) {
             return null;
         }
-        return Storage::disk('public')->url($this->photo_profile_url);
+        return '/storage/' . $this->photo_profile_url;
     }
 
     public function prof(): HasOne

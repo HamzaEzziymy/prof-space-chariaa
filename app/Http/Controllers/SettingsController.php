@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\AppSetting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -22,7 +21,7 @@ class SettingsController extends Controller
         // Resolve storage URLs for image fields
         foreach (['app_logo_url', 'app_favicon_url'] as $key) {
             if (!empty($settings[$key])) {
-                $settings[$key] = url('storage/' . $settings[$key]);
+                $settings[$key] = '/storage/' . $settings[$key];
             }
         }
 
@@ -106,12 +105,6 @@ class SettingsController extends Controller
             'maintenance_message'    => $request->maintenance_message ?? '',
             'maintenance_message_ar' => $request->maintenance_message_ar ?? '',
         ]);
-
-        if ($request->maintenance_mode) {
-            Artisan::call('down', ['--secret' => config('app.key')]);
-        } else {
-            Artisan::call('up');
-        }
 
         $msg = $request->maintenance_mode
             ? 'Mode maintenance activé.'
