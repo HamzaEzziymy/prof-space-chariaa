@@ -45,11 +45,12 @@ Route::middleware(['auth', 'super_admin'])->prefix('settings')->name('settings.'
 
 // ── Professors (admin + super_admin) ─────────────────────────────────────────
 Route::middleware(['auth', 'admin'])->prefix('professors')->name('professors.')->group(function () {
-    Route::get('/',             [ProfessorController::class, 'index'])->name('index');
-    Route::post('/',            [ProfessorController::class, 'store'])->name('store');
-    Route::get('/{prof}',       [ProfessorController::class, 'show'])->name('show');
-    Route::put('/{prof}',       [ProfessorController::class, 'update'])->name('update');
-    Route::delete('/{prof}',    [ProfessorController::class, 'destroy'])->name('destroy');
+    Route::get('/',                        [ProfessorController::class, 'index'])->name('index');
+    Route::post('/',                       [ProfessorController::class, 'store'])->name('store');
+    Route::get('/{prof}',                  [ProfessorController::class, 'show'])->name('show');
+    Route::put('/{prof}',                  [ProfessorController::class, 'update'])->name('update');
+    Route::delete('/{prof}',               [ProfessorController::class, 'destroy'])->name('destroy');
+    Route::post('/{prof}/assign-module',   [ProfessorController::class, 'assignModule'])->name('assignModule');
 });
 
 // ── Modules (admin + super_admin) ────────────────────────────────────────────

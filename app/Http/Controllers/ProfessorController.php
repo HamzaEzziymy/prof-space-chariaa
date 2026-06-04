@@ -104,9 +104,30 @@ class ProfessorController extends Controller
             $module->loadCount('etudiants');
         });
 
+        // Modules not yet assigned to any professor (available to assign)
+        $unassignedModules = \App\Models\Module::whereNull('prof_id')
+            ->orderBy('nom_fr')
+            ->get(['id', 'nom_fr', 'nom_ar', 'code_module', 'type_module', 'coefficient']);
+
         return Inertia::render('Professors/Show', [
-            'prof' => $prof,
+            'prof'              => $prof,
+            'unassignedModules' => $unassignedModules,
         ]);
+    }
+
+    /**
+     * Assign an existing (unassigned) module to this professor.
+     */
+    public function assignModule(Request $request, Prof $prof): RedirectResponse
+    {
+        $validated = $request->validate([
+            'module_id' => ['required', 'exists:module,id'],
+        ]);
+
+        $module = \App\Models\Module::findOrFail($validated['module_id']);
+        $module->update(['prof_id' => $prof->id]);
+
+        return back()->with('success', 'module_assigned');
     }
 
     /**

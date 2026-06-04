@@ -460,85 +460,93 @@ function Pagination({ meta, t, isRTL }) {
 function ProfCard({ prof, displayName, locale, isRTL, t, onEdit, onDelete }) {
     const isActive = prof.user?.is_active !== false;
     return (
-        <div className="group flex flex-col rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-200 overflow-hidden">
+        <div className="group flex flex-col rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200">
 
-            {/* ── Cover band + avatar ── */}
-            <div className="relative h-24 bg-gradient-to-br from-indigo-500 via-violet-500 to-purple-600 flex-shrink-0">
-                {/* subtle pattern overlay */}
-                <div className="absolute inset-0 opacity-20"
-                    style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
-                {/* status dot top-right */}
-                <span className={`absolute top-3 end-3 flex h-2.5 w-2.5 rounded-full ring-2 ring-white/80 ${isActive ? 'bg-emerald-400' : 'bg-slate-400'}`} />
+            {/* ── Cover — rounded top corners only, own overflow-hidden ── */}
+            <div className="relative h-16 rounded-t-2xl overflow-hidden bg-gradient-to-br from-indigo-500 via-violet-500 to-purple-600 flex-shrink-0">
+                <div className="absolute inset-0 opacity-[0.15]"
+                    style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '18px 18px' }} />
+                {/* Status pill — top right */}
+                <span className={`absolute top-2 end-2.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-white/30
+                    ${isActive ? 'bg-emerald-500/90 text-white' : 'bg-slate-500/80 text-white'}`}>
+                    <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" />
+                    {isActive ? t('active') : t('inactive')}
+                </span>
             </div>
 
-            {/* ── Avatar (overlapping cover) ── */}
-            <div className="flex justify-center -mt-10 mb-3 px-4">
-                <div className="ring-4 ring-white dark:ring-slate-800 rounded-full shadow-lg">
+            {/* ── Avatar (centered, overlapping cover) — z-10 so it sits above ── */}
+            <div className="relative z-10 flex justify-center -mt-10">
+                <div className="ring-[3px] ring-white dark:ring-slate-800 rounded-full shadow-md">
                     <ProfAvatar prof={prof} size="xl" />
                 </div>
             </div>
 
             {/* ── Identity ── */}
-            <div className="px-5 pb-1 text-center">
-                <p className="font-bold text-slate-800 dark:text-white text-sm leading-snug truncate">
+            <div className="mt-3 px-4 pb-0 text-center space-y-1">
+                <p className="font-bold text-slate-800 dark:text-white text-sm leading-snug line-clamp-1">
                     {displayName(prof)}
                 </p>
-                <p className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 line-clamp-1">
                     {prof.user?.email ?? '—'}
                 </p>
-                {prof.grade && (
-                    <span className={`mt-2 inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${gradePill(prof.grade)}`}>
+                {prof.grade
+                    ? <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${gradePill(prof.grade)}`}>
                         {prof.grade}
-                    </span>
-                )}
+                      </span>
+                    : <span className="inline-flex h-5" />
+                }
             </div>
 
             {/* ── Stats row ── */}
-            <div className="mx-4 my-3 grid grid-cols-2 divide-x divide-slate-100 dark:divide-slate-700/60 rounded-xl border border-slate-100 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/60">
-                <div className="flex flex-col items-center py-2.5 px-3">
-                    <span className={`text-base font-bold leading-none ${prof.modules_count > 0 ? 'text-violet-600 dark:text-violet-400' : 'text-slate-400'}`}>
+            <div className="mx-4 mt-3 mb-4 grid grid-cols-2 rounded-xl border border-slate-100 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-900/30 overflow-hidden">
+                <div className="flex flex-col items-center py-3 px-2 border-e border-slate-100 dark:border-slate-700/60">
+                    <span className={`text-lg font-extrabold leading-none tabular-nums
+                        ${prof.modules_count > 0 ? 'text-violet-600 dark:text-violet-400' : 'text-slate-300 dark:text-slate-600'}`}>
                         {prof.modules_count ?? 0}
                     </span>
-                    <span className="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500 text-center leading-tight">
+                    <span className="mt-1 text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide">
                         {t('modules')}
                     </span>
                 </div>
-                <div className="flex flex-col items-center py-2.5 px-3">
+                <div className="flex flex-col items-center py-3 px-2">
                     {prof.cin
                         ? <>
-                            <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 leading-none font-mono tracking-wider truncate max-w-full">{prof.cin}</span>
-                            <span className="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">{t('cin')}</span>
+                            <span className="text-[12px] font-bold text-slate-700 dark:text-slate-200 leading-none font-mono tracking-widest line-clamp-1 max-w-full px-1">{prof.cin}</span>
+                            <span className="mt-1 text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide">{t('cin')}</span>
                           </>
                         : <>
-                            <span className="text-base font-bold text-slate-300 dark:text-slate-600 leading-none">—</span>
-                            <span className="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">{t('cin')}</span>
+                            <span className="text-lg font-extrabold text-slate-200 dark:text-slate-700 leading-none">—</span>
+                            <span className="mt-1 text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide">{t('cin')}</span>
                           </>
                     }
                 </div>
             </div>
 
             {/* ── Footer actions ── */}
-            <div className="mt-auto flex border-t border-slate-100 dark:border-slate-700/60">
+            <div className="mt-auto grid grid-cols-3 border-t border-slate-100 dark:border-slate-700/60 rounded-b-2xl overflow-hidden">
                 {/* View */}
                 <a href={route('professors.show', prof.id)}
-                    className="flex flex-1 items-center justify-center gap-1.5 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-indigo-600 dark:hover:text-indigo-400 transition border-e border-slate-100 dark:border-slate-700/60">
-                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                    title={locale === 'ar' ? 'عرض الملف' : 'Voir la fiche'}
+                    className="flex flex-col items-center justify-center gap-1 py-3 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/40 hover:text-indigo-600 dark:hover:text-indigo-400 transition border-e border-slate-100 dark:border-slate-700/60">
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    <span className="hidden sm:inline">{locale === 'ar' ? 'عرض' : 'Voir'}</span>
+                    <span className="text-[9px] font-semibold uppercase tracking-wide">{locale === 'ar' ? 'عرض' : 'Voir'}</span>
                 </a>
                 {/* Edit */}
                 <button onClick={onEdit}
-                    className="flex flex-1 items-center justify-center gap-1.5 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition border-e border-slate-100 dark:border-slate-700/60">
-                    <Icon d={ICONS.edit} className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">{t('edit')}</span>
+                    title={t('edit')}
+                    className="flex flex-col items-center justify-center gap-1 py-3 text-slate-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition border-e border-slate-100 dark:border-slate-700/60">
+                    <Icon d={ICONS.edit} className="h-4 w-4" />
+                    <span className="text-[9px] font-semibold uppercase tracking-wide">{t('edit')}</span>
                 </button>
                 {/* Delete */}
                 <button onClick={onDelete}
-                    className="flex flex-1 items-center justify-center gap-1.5 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 dark:hover:text-red-400 transition">
-                    <Icon d={ICONS.trash} className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">{t('delete')}</span>
+                    title={t('delete')}
+                    className="flex flex-col items-center justify-center gap-1 py-3 text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 dark:hover:text-red-400 transition">
+                    <Icon d={ICONS.trash} className="h-4 w-4" />
+                    <span className="text-[9px] font-semibold uppercase tracking-wide">{t('delete')}</span>
                 </button>
             </div>
         </div>
