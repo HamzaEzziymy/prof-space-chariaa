@@ -89,9 +89,11 @@ export default function AdminLayout({ children, title }) {
                              : (appSettings?.app_tagline    || t('adminPanel'));
     const appLogoUrl = appSettings?.app_logo_url ?? null;
 
-    const [sidebarOpen, setSidebarOpen]       = useState(false);
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-    const [darkMode, setDarkMode]             = useState(() => localStorage.getItem('theme') === 'dark');
+    const [sidebarOpen, setSidebarOpen]           = useState(false);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(
+        () => localStorage.getItem('sidebar_collapsed') === 'true'
+    );
+    const [darkMode, setDarkMode]                 = useState(() => localStorage.getItem('theme') === 'dark');
     const [profileOpen, setProfileOpen]       = useState(false);
     const [notifOpen, setNotifOpen]           = useState(false);
     const profileRef = useRef(null);
@@ -323,7 +325,11 @@ export default function AdminLayout({ children, title }) {
 
                         {/* Desktop collapse */}
                         <button
-                            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                            onClick={() => {
+                                const next = !sidebarCollapsed;
+                                setSidebarCollapsed(next);
+                                localStorage.setItem('sidebar_collapsed', next);
+                            }}
                             className="hidden lg:flex rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
                         >
                             <Icon d={icons.menu} />
