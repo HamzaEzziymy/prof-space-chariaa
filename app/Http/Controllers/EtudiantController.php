@@ -2,125 +2,141 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Module;
-use App\Models\Prof;
+use App\Models\Etudiant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class ModuleController extends Controller
+class EtudiantController extends Controller
 {
     /**
-     * List all modules with search + type filter + pagination.
+     * List all students with search + filter + pagination.
      */
     public function index(Request $request): Response
     {
-        $query = Module::query()
-            ->with(['prof.user:id,nom_fr,prenom_fr,nom_ar,prenom_ar'])
-            ->withCount('etudiants')
+        $query = Etudiant::query()
             ->orderBy('created_at', 'desc');
 
         if ($search = $request->get('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('nom_fr',      'like', "%{$search}%")
-                  ->orWhere('nom_ar',      'like', "%{$search}%")
-                  ->orWhere('code_module', 'like', "%{$search}%");
+                  ->orWhere('prenom_fr',  'like', "%{$search}%")
+                  ->orWhere('nom_ar',     'like', "%{$search}%")
+                  ->orWhere('prenom_ar',  'like', "%{$search}%")
+                  ->orWhere('CNE',        'like', "%{$search}%")
+                  ->orWhere('CIN',        'like', "%{$search}%")
+                  ->orWhere('Nins',       'like', "%{$search}%")
+                  ->orWhere('email',      'like', "%{$search}%");
             });
         }
 
-        if ($type = $request->get('type')) {
-            $query->where('type_module', $type);
+        if ($sexe = $request->get('sexe')) {
+            $query->where('sexe', $sexe);
         }
 
-        $modules = $query->paginate(12)->withQueryString();
+        if ($filier = $request->get('filier')) {
+            $query->where('filier', $filier);
+        }
 
-        // Load all profs (with user names) for the create/edit select
-        $profs = Prof::with('user:id,nom_fr,prenom_fr,nom_ar,prenom_ar')
-            ->orderBy('id')
-            ->get()
-            ->map(fn ($p) => [
-                'id'     => $p->id,
-                'nom_fr' => trim(($p->user->prenom_fr ?? '') . ' ' . ($p->user->nom_fr ?? '')),
-                'nom_ar' => trim(($p->user->prenom_ar ?? '') . ' ' . ($p->user->nom_ar ?? '')),
-            ]);
+        $etudiants = $query->paginate(12)->withQueryString();
 
-        $types = Module::distinct()->pluck('type_module')->filter()->values();
+        $filieres = Etudiant::distinct()->whereNotNull('filier')->pluck('filier')->values();
 
         $stats = [
-            'total'        => Module::count(),
-            'withProf'     => Module::whereNotNull('prof_id')->count(),
-            'withStudents' => Module::has('etudiants')->count(),
-            'types'        => Module::distinct()->whereNotNull('type_module')->count('type_module'),
+            'total'   => Etudiant::count(),
+            'hommes'  => Etudiant::where('sexe', 'M')->count(),
+            'femmes'  => Etudiant::where('sexe', 'F')->count(),
+            'filieres' => Etudiant::distinct()->whereNotNull('filier')->count('filier'),
         ];
 
-        return Inertia::render('Modules/Index', [
-            'modules' => $modules,
-            'profs'   => $profs,
-            'types'   => $types,
-            'filters' => $request->only(['search', 'type']),
-            'stats'   => $stats,
+        return Inertia::render('Etudiants/Index', [
+            'etudiants' => $etudiants,
+            'filters'   => $request->only(['search', 'sexe', 'filier']),
+            'filieres'  => $filieres,
+            'stats'     => $stats,
         ]);
     }
 
     /**
-     * Store a new module (form).
+     * Show a single student's detail page.
+     */
+    public function show(Etudiant $etudiant): Response
+    {
+        return Inertia::render('Etudiants/Show', [
+            'etudiant' => $etudiant->load('modules'),
+        ]);
+    }
+
+    /**
+     * Store a new student via form.
      */
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'nom_fr'      => 'required|string|max:255',
-            'nom_ar'      => 'nullable|string|max:255',
-            'code_module' => 'required|string|max:255|unique:module,code_module',
-            'coefficient' => 'nullable|integer|min:1|max:10',
-            'type_module' => 'nullable|string|max:255',
-            'prof_id'     => 'nullable|exists:prof,id',
+            'Nins'           => 'nullable|string|max:255',
+            'CNE'            => 'nullable|string|max:255|unique:etudiant,CNE',
+            'CIN'            => 'nullable|string|max:255|unique:etudiant,CIN',
+            'nom_ar'         => 'nullable|string|max:255',
+            'prenom_ar'      => 'nullable|string|max:255',
+            'nom_fr'         => 'required|string|max:255',
+            'prenom_fr'      => 'required|string|max:255',
+            'date_naissance' => 'nullable|date',
+            'lieu_naissance' => 'nullable|string|max:255',
+            'sexe'           => 'nullable|in:M,F',
+            'telephone'      => 'nullable|string|max:255',
+            'email'          => 'nullable|string|email|max:255',
+            'photo_url'      => 'nullable|string|max:255',
+            'filier'         => 'nullable|string|max:255',
         ]);
 
-        Module::create($validated);
+        Etudiant::create($validated);
 
-        return back()->with('success', 'module_created');
+        return back()->with('success', 'etudiant_created');
     }
 
     /**
-     * Update an existing module.
+     * Update an existing student.
      */
-    public function update(Request $request, Module $module): RedirectResponse
+    public function update(Request $request, Etudiant $etudiant): RedirectResponse
     {
         $validated = $request->validate([
-            'nom_fr'      => 'required|string|max:255',
-            'nom_ar'      => 'nullable|string|max:255',
-            'code_module' => ['required', 'string', 'max:255',
-                             Rule::unique('module', 'code_module')->ignore($module->id)],
-            'coefficient' => 'nullable|integer|min:1|max:10',
-            'type_module' => 'nullable|string|max:255',
-            'prof_id'     => 'nullable|exists:prof,id',
+            'Nins'           => 'nullable|string|max:255',
+            'CNE'            => ['nullable', 'string', 'max:255', Rule::unique('etudiant', 'CNE')->ignore($etudiant->id)],
+            'CIN'            => ['nullable', 'string', 'max:255', Rule::unique('etudiant', 'CIN')->ignore($etudiant->id)],
+            'nom_ar'         => 'nullable|string|max:255',
+            'prenom_ar'      => 'nullable|string|max:255',
+            'nom_fr'         => 'required|string|max:255',
+            'prenom_fr'      => 'required|string|max:255',
+            'date_naissance' => 'nullable|date',
+            'lieu_naissance' => 'nullable|string|max:255',
+            'sexe'           => 'nullable|in:M,F',
+            'telephone'      => 'nullable|string|max:255',
+            'email'          => 'nullable|string|email|max:255',
+            'photo_url'      => 'nullable|string|max:255',
+            'filier'         => 'nullable|string|max:255',
         ]);
 
-        $module->update($validated);
+        $etudiant->update($validated);
 
-        return back()->with('success', 'module_updated');
+        return back()->with('success', 'etudiant_updated');
     }
 
     /**
-     * Delete a module.
+     * Delete a student.
      */
-    public function destroy(Module $module): RedirectResponse
+    public function destroy(Etudiant $etudiant): RedirectResponse
     {
-        $module->delete();
+        $etudiant->delete();
 
-        return back()->with('success', 'module_deleted');
+        return back()->with('success', 'etudiant_deleted');
     }
 
     /**
-     * Import modules from a CSV / Excel file.
-     *
-     * Supported: .csv, .txt, .xlsx, .xls, .ods, .tsv
-     * For .xlsx / .ods  → ZIP-based XML parser
-     * For .xls          → BIFF8 binary parser (basic)
-     * For .csv / .txt / .tsv → fgetcsv parser
+     * Import students from a CSV / Excel file.
      */
     public function import(Request $request): JsonResponse
     {
@@ -130,9 +146,7 @@ class ModuleController extends Controller
 
         $file      = $request->file('file');
         $extension = strtolower($file->getClientOriginalExtension());
-
-        // Also try to detect by MIME if extension is missing/wrong
-        $mime = $file->getMimeType() ?? '';
+        $mime      = $file->getMimeType() ?? '';
 
         $isXlsx = in_array($extension, ['xlsx', 'ods'])
             || str_contains($mime, 'spreadsheetml')
@@ -148,7 +162,6 @@ class ModuleController extends Controller
             } elseif ($isXls) {
                 $rows = $this->parseXls($file->getRealPath());
             } else {
-                // csv, txt, tsv and anything else text-based
                 $rows = $this->parseCsv($file->getRealPath());
             }
         } catch (\Throwable $e) {
@@ -159,7 +172,6 @@ class ModuleController extends Controller
             return response()->json(['error' => 'empty_file'], 422);
         }
 
-        // Normalise header row — use mb_strtolower to handle Arabic/accented chars safely
         $header = array_map(
             fn($h) => mb_strtolower(trim(preg_replace('/\s+/u', '_', $this->sanitize($h))), 'UTF-8'),
             $rows[0]
@@ -176,52 +188,60 @@ class ModuleController extends Controller
             foreach ($header as $i => $key) {
                 $data[$key] = isset($row[$i]) ? trim((string) $row[$i]) : null;
             }
+            // Convert empty strings to null so MySQL doesn't reject date/numeric columns
+            $data = array_map(fn($v) => $v === '' ? null : $v, $data);
 
-            $code   = $data['code_module'] ?? null;
-            $nom_fr = $data['nom_fr']      ?? null;
-            $line   = $lineNum + 2;
+            $prenom_fr = $data['prenom_fr'] ?? null;
+            $nom_fr    = $data['nom_fr']    ?? null;
+            $cne       = $data['cne']       ?? null;
+            $line      = $lineNum + 2;
 
-            if (!$code || !$nom_fr) {
+            if (!$prenom_fr || !$nom_fr) {
                 $rows_report[] = [
-                    'line'        => $line,
-                    'status'      => 'rejected',
-                    'code_module' => $code ?? '',
-                    'nom_fr'      => $nom_fr ?? '',
-                    'reason'      => 'code_module ou nom_fr manquant',
+                    'line'      => $line,
+                    'status'    => 'rejected',
+                    'prenom_fr' => $prenom_fr ?? '',
+                    'nom_fr'    => $nom_fr ?? '',
+                    'reason'    => 'prenom_fr ou nom_fr manquant',
                 ];
                 $skipped++;
                 continue;
             }
 
-            if (Module::where('code_module', $code)->exists()) {
+            if ($cne && Etudiant::where('CNE', $cne)->exists()) {
                 $rows_report[] = [
-                    'line'        => $line,
-                    'status'      => 'rejected',
-                    'code_module' => $code,
-                    'nom_fr'      => $nom_fr,
-                    'reason'      => 'Code "' . $code . '" déjà existant',
+                    'line'      => $line,
+                    'status'    => 'rejected',
+                    'prenom_fr' => $prenom_fr,
+                    'nom_fr'    => $nom_fr,
+                    'reason'    => 'CNE "' . $cne . '" déjà existant',
                 ];
                 $skipped++;
                 continue;
             }
 
-            Module::create([
-                'nom_fr'      => $nom_fr,
-                'nom_ar'      => $data['nom_ar']      ?? null,
-                'code_module' => $code,
-                'coefficient' => is_numeric($data['coefficient'] ?? null)
-                                    ? (int) $data['coefficient'] : null,
-                'type_module' => $data['type_module']  ?? null,
-                'prof_id'     => is_numeric($data['prof_id'] ?? null)
-                                    ? (int) $data['prof_id'] : null,
+            Etudiant::create([
+                'Nins'           => $data['nins']           ?? null,
+                'CNE'            => $cne,
+                'CIN'            => $data['cin']            ?? null,
+                'nom_ar'         => $data['nom_ar']         ?? null,
+                'prenom_ar'      => $data['prenom_ar']      ?? null,
+                'nom_fr'         => $nom_fr,
+                'prenom_fr'      => $prenom_fr,
+                'date_naissance' => $data['date_naissance'] ?? null,
+                'lieu_naissance' => $data['lieu_naissance'] ?? null,
+                'sexe'           => $data['sexe']           ?? null,
+                'telephone'      => $data['telephone']      ?? null,
+                'email'          => $data['email']          ?? null,
+                'filier'         => $data['filier']         ?? null,
             ]);
 
             $rows_report[] = [
-                'line'        => $line,
-                'status'      => 'imported',
-                'code_module' => $code,
-                'nom_fr'      => $nom_fr,
-                'reason'      => null,
+                'line'      => $line,
+                'status'    => 'imported',
+                'prenom_fr' => $prenom_fr,
+                'nom_fr'    => $nom_fr,
+                'reason'    => null,
             ];
 
             $imported++;
@@ -234,13 +254,11 @@ class ModuleController extends Controller
         ]);
     }
 
-    // ── Internal parsers ──────────────────────────────────────────────────────
+    // ── Internal parsers (shared with ModuleController) ───────────────────────
 
-    /** Sanitise a raw string: fix encoding, strip BOM, trim. */
     private function sanitize(string $value): string
     {
         $value = ltrim($value, "\xEF\xBB\xBF");
-
         if (!mb_check_encoding($value, 'UTF-8')) {
             try {
                 $converted = mb_convert_encoding($value, 'UTF-8', 'Windows-1252, ISO-8859-1');
@@ -249,7 +267,6 @@ class ModuleController extends Controller
                 $value = preg_replace('/[^\x09\x0A\x0D\x20-\x7E]/', '', $value);
             }
         }
-
         return trim($value);
     }
 
@@ -259,16 +276,11 @@ class ModuleController extends Controller
         $handle = fopen($path, 'r');
         if ($handle === false) throw new \RuntimeException('Cannot open file.');
 
-        // Strip file-level BOM
         $bom = fread($handle, 3);
-        if ($bom !== "\xEF\xBB\xBF") {
-            rewind($handle);
-        }
+        if ($bom !== "\xEF\xBB\xBF") rewind($handle);
 
-        // Detect delimiter from first line
         $firstLine = fgets($handle);
         rewind($handle);
-        // Re-skip BOM
         $bom2 = fread($handle, 3);
         if ($bom2 !== "\xEF\xBB\xBF") rewind($handle);
 
@@ -288,7 +300,6 @@ class ModuleController extends Controller
 
     private function parseXlsx(string $path): array
     {
-        // Use ZipArchive if available, otherwise fall back to pure-PHP ZIP reader
         if (class_exists('ZipArchive')) {
             return $this->parseXlsxViaZipArchive($path);
         }
@@ -311,18 +322,11 @@ class ModuleController extends Controller
         return $this->parseXlsxXml($ssXml ?: '', $sheetXml);
     }
 
-    /**
-     * Pure-PHP XLSX reader — parses the ZIP format without the php_zip extension.
-     * XLSX/DOCX/ODS are ZIP files with a well-defined local-file-header structure.
-     */
     private function parseXlsxPurePhp(string $path): array
     {
         $data = file_get_contents($path);
-        if ($data === false) {
-            throw new \RuntimeException('Cannot read XLSX file.');
-        }
+        if ($data === false) throw new \RuntimeException('Cannot read XLSX file.');
 
-        // ZIP local file header signature
         if (substr($data, 0, 4) !== "PK\x03\x04") {
             throw new \RuntimeException('File is not a valid ZIP/XLSX archive.');
         }
@@ -338,10 +342,6 @@ class ModuleController extends Controller
         return $this->parseXlsxXml($ssXml, $sheetXml);
     }
 
-    /**
-     * Walk through a ZIP binary and extract file contents indexed by name.
-     * Supports stored (method 0) and deflated (method 8) entries.
-     */
     private function parseZipEntries(string $data): array
     {
         $entries = [];
@@ -349,10 +349,7 @@ class ModuleController extends Controller
         $len     = strlen($data);
 
         while ($offset + 30 <= $len) {
-            // Local file header signature
-            if (substr($data, $offset, 4) !== "PK\x03\x04") {
-                break;
-            }
+            if (substr($data, $offset, 4) !== "PK\x03\x04") break;
 
             $method          = unpack('v', substr($data, $offset + 8,  2))[1];
             $compressedSize  = unpack('V', substr($data, $offset + 18, 4))[1];
@@ -365,14 +362,10 @@ class ModuleController extends Controller
             $compressed  = substr($data, $dataOffset, $compressedSize);
 
             if ($method === 0) {
-                // Stored — no compression
                 $entries[$fileName] = $compressed;
             } elseif ($method === 8) {
-                // Deflate
                 $inflated = @gzinflate($compressed);
-                if ($inflated !== false) {
-                    $entries[$fileName] = $inflated;
-                }
+                if ($inflated !== false) $entries[$fileName] = $inflated;
             }
 
             $offset = $dataOffset + $compressedSize;
@@ -381,10 +374,8 @@ class ModuleController extends Controller
         return $entries;
     }
 
-    /** Shared XML parsing logic for both XLSX readers. */
     private function parseXlsxXml(string $ssXml, string $sheetXml): array
     {
-        // Read shared strings
         $strings = [];
         if ($ssXml !== '') {
             libxml_use_internal_errors(true);
@@ -413,11 +404,9 @@ class ModuleController extends Controller
         if ($sheet === false) throw new \RuntimeException('Cannot parse sheet XML.');
 
         $rows = [];
-
         foreach ($sheet->sheetData->row as $row) {
             $rowData    = [];
             $prevColIdx = -1;
-
             foreach ($row->c as $cell) {
                 preg_match('/^([A-Z]+)/', (string) $cell['r'], $m);
                 $colIdx = $this->colToIndex($m[1] ?? 'A');
@@ -445,18 +434,11 @@ class ModuleController extends Controller
         return $rows;
     }
 
-    /**
-     * Basic BIFF8 .xls parser — reads the first worksheet via OLE compound file.
-     * Covers the most common case: single sheet, standard BIFF8 records.
-     * Falls back to treating the file as CSV if OLE parsing fails.
-     */
     private function parseXls(string $path): array
     {
-        // Try to read as OLE / BIFF8
         try {
             return $this->parseBiff8($path);
         } catch (\Throwable) {
-            // Fallback: maybe it's actually a CSV saved with .xls extension
             return $this->parseCsv($path);
         }
     }
@@ -466,20 +448,15 @@ class ModuleController extends Controller
         $data = file_get_contents($path);
         if ($data === false) throw new \RuntimeException('Cannot read XLS file.');
 
-        // OLE compound file signature
         if (substr($data, 0, 8) !== "\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1") {
             throw new \RuntimeException('Not a valid OLE file.');
         }
 
-        // Sector size from header
         $sectorSizePow = unpack('v', substr($data, 30, 2))[1];
-        $sectorSize    = 1 << $sectorSizePow; // typically 512
+        $sectorSize    = 1 << $sectorSizePow;
+        $numFatSectors = unpack('V', substr($data, 44, 4))[1];
+        $firstDirSector= unpack('V', substr($data, 48, 4))[1];
 
-        // Directory entry for "Workbook" or "Book"
-        $numFatSectors  = unpack('V', substr($data, 44, 4))[1];
-        $firstDirSector = unpack('V', substr($data, 48, 4))[1];
-
-        // Build FAT
         $fat = [];
         for ($i = 0; $i < $numFatSectors && $i < 109; $i++) {
             $fatSecNum = unpack('V', substr($data, 76 + $i * 4, 4))[1];
@@ -489,10 +466,9 @@ class ModuleController extends Controller
             }
         }
 
-        // Walk directory sectors to find Workbook stream
-        $stream    = null;
-        $sector    = $firstDirSector;
-        $visited   = [];
+        $stream  = null;
+        $sector  = $firstDirSector;
+        $visited = [];
 
         while ($sector < 0xFFFFFFFE && !isset($visited[$sector])) {
             $visited[$sector] = true;
@@ -507,7 +483,6 @@ class ModuleController extends Controller
                 $size      = unpack('V', substr($entry, 120, 4))[1];
 
                 if ($type === 2 && in_array($name, ['Workbook', 'Book'], true)) {
-                    // Collect stream data by following FAT chain
                     $streamData = '';
                     $s = $startSec;
                     $sv = [];
@@ -525,13 +500,12 @@ class ModuleController extends Controller
 
         if ($stream === null) throw new \RuntimeException('Workbook stream not found in XLS.');
 
-        // Parse BIFF8 records
         $rows       = [];
         $sharedStrs = [];
         $pos        = 0;
         $len        = strlen($stream);
         $maxRow     = -1;
-        $cells      = []; // [row][col] = value
+        $cells      = [];
 
         while ($pos + 4 <= $len) {
             $recType = unpack('v', substr($stream, $pos, 2))[1];
@@ -539,7 +513,6 @@ class ModuleController extends Controller
             $recData = substr($stream, $pos + 4, $recLen);
             $pos    += 4 + $recLen;
 
-            // SST — shared string table
             if ($recType === 0x00FC) {
                 $numStrings = unpack('V', substr($recData, 4, 4))[1];
                 $p = 8;
@@ -566,7 +539,6 @@ class ModuleController extends Controller
                 }
             }
 
-            // LABELSST (0x00FD) — string cell referencing SST
             if ($recType === 0x00FD && $recLen >= 10) {
                 $row = unpack('v', substr($recData, 0, 2))[1];
                 $col = unpack('v', substr($recData, 2, 2))[1];
@@ -575,7 +547,6 @@ class ModuleController extends Controller
                 $maxRow = max($maxRow, $row);
             }
 
-            // NUMBER (0x0203)
             if ($recType === 0x0203 && $recLen >= 14) {
                 $row   = unpack('v', substr($recData, 0, 2))[1];
                 $col   = unpack('v', substr($recData, 2, 2))[1];
@@ -584,7 +555,6 @@ class ModuleController extends Controller
                 $maxRow = max($maxRow, $row);
             }
 
-            // LABEL (0x0204) — inline string
             if ($recType === 0x0204 && $recLen >= 8) {
                 $row    = unpack('v', substr($recData, 0, 2))[1];
                 $col    = unpack('v', substr($recData, 2, 2))[1];
@@ -594,7 +564,6 @@ class ModuleController extends Controller
                 $maxRow = max($maxRow, $row);
             }
 
-            // RK (0x027E) — compact number
             if ($recType === 0x027E && $recLen >= 10) {
                 $row  = unpack('v', substr($recData, 0, 2))[1];
                 $col  = unpack('v', substr($recData, 2, 2))[1];
@@ -606,7 +575,6 @@ class ModuleController extends Controller
             }
         }
 
-        // Build 2D array
         for ($r = 0; $r <= $maxRow; $r++) {
             $maxCol = empty($cells[$r]) ? 0 : max(array_keys($cells[$r]));
             $rowArr = [];
@@ -627,5 +595,41 @@ class ModuleController extends Controller
             $index = $index * 26 + (ord($col[$i]) - 64);
         }
         return $index - 1;
+    }
+
+    /**
+     * Upload a photo for a student.
+     */
+    public function uploadPhoto(Request $request, Etudiant $etudiant): RedirectResponse
+    {
+        $request->validate([
+            'photo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+        ]);
+
+        if ($etudiant->photo_url) {
+            $oldPath = str_replace('/storage/', '', $etudiant->photo_url);
+            Storage::disk('public')->delete($oldPath);
+        }
+
+        $path = $request->file('photo')->store('etudiants', 'public');
+        $etudiant->photo_url = '/storage/' . $path;
+        $etudiant->save();
+
+        return back()->with('success', 'etudiant_photo_updated');
+    }
+
+    /**
+     * Remove the photo for a student.
+     */
+    public function removePhoto(Request $request, Etudiant $etudiant): RedirectResponse
+    {
+        if ($etudiant->photo_url) {
+            $oldPath = str_replace('/storage/', '', $etudiant->photo_url);
+            Storage::disk('public')->delete($oldPath);
+            $etudiant->photo_url = null;
+            $etudiant->save();
+        }
+
+        return back()->with('success', 'etudiant_photo_removed');
     }
 }

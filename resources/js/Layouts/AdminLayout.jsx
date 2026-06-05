@@ -129,7 +129,7 @@ export default function AdminLayout({ children, title }) {
     const navItems = [
         { key: 'dashboard',  href: route('dashboard'), iconKey: 'dashboard',  label: t('dashboard')  },
         { key: 'professors', href: route('professors.index'), iconKey: 'professors', label: t('professors') },
-        { key: 'students',   href: '#',                iconKey: 'students',   label: t('students')   },
+        { key: 'students',   href: route('etudiants.index'), iconKey: 'students',   label: t('students')   },
         { key: 'modules',    href: route('modules.index'), iconKey: 'modules',    label: t('modules')    },
         { key: 'rooms',      href: route('salles.index'), iconKey: 'rooms',      label: t('examRooms')  },
         { key: 'grades',     href: '#',                iconKey: 'grades',     label: t('grades')     },
@@ -147,6 +147,7 @@ export default function AdminLayout({ children, title }) {
     const currentRouteKey = currentRoute?.includes('settings') ? 'settings'
         : currentRoute?.includes('users')        ? 'users'
         : currentRoute?.includes('professors')   ? 'professors'
+        : currentRoute?.includes('etudiants')    ? 'students'
         : currentRoute?.includes('salles')       ? 'rooms'
         : currentRoute?.includes('modules')      ? 'modules'
         : currentRoute?.includes('dashboard')    ? 'dashboard'

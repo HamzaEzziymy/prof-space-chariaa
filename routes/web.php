@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\EtudiantController;
 use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProfessorController;
@@ -69,6 +70,18 @@ Route::middleware(['auth', 'admin'])->prefix('salles')->name('salles.')->group(f
     Route::post('/',         [SalleController::class, 'store'])->name('store');
     Route::put('/{salle}',   [SalleController::class, 'update'])->name('update');
     Route::delete('/{salle}',[SalleController::class, 'destroy'])->name('destroy');
+});
+
+// ── Étudiants (admin + super_admin) ──────────────────────────────────────────
+Route::middleware(['auth', 'admin'])->prefix('etudiants')->name('etudiants.')->group(function () {
+    Route::get('/',             [EtudiantController::class, 'index'])->name('index');
+    Route::get('/{etudiant}',   [EtudiantController::class, 'show'])->name('show');
+    Route::post('/',            [EtudiantController::class, 'store'])->name('store');
+    Route::put('/{etudiant}',   [EtudiantController::class, 'update'])->name('update');
+    Route::delete('/{etudiant}',[EtudiantController::class, 'destroy'])->name('destroy');
+    Route::post('/import',      [EtudiantController::class, 'import'])->name('import');
+    Route::post('/{etudiant}/photo', [EtudiantController::class, 'uploadPhoto'])->name('photo');
+    Route::delete('/{etudiant}/photo', [EtudiantController::class, 'removePhoto'])->name('photo.remove');
 });
 
 // ── Users management (super_admin only) ───────────────────────────────────────
