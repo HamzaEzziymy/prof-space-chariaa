@@ -1,0 +1,1008 @@
+import AdminLayout from '@/Layouts/AdminLayout';
+import { LanguageProvider, useLanguage } from '@/i18n/LanguageContext';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { useState, useEffect, useRef, Fragment } from 'react';
+import * as XLSX from 'xlsx';
+
+/* ── Icons ───────────────────────────────────────────────────────────────────*/
+function Icon({ d, className = 'w-5 h-5', fill = 'none' }) {
+    return (
+        <svg className={className} fill={fill} stroke={fill === 'none' ? 'currentColor' : 'none'}
+            strokeWidth={1.8} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d={d} />
+        </svg>
+    );
+}
+
+const I = {
+    search:   'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0',
+    plus:     'M12 4v16m8-8H4',
+    trash:    'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16',
+    check:    'M5 13l4 4L19 7',
+    close:    'M6 18L18 6M6 6l12 12',
+    down:     'M19 9l-7 7-7-7',
+    up:       'M5 15l7-7 7 7',
+    upload:   'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12',
+    download: 'M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2v-7a2 2 0 012-2h.172M15 3h4a2 2 0 012 2v4M11 3H7a2 2 0 00-2 2v.172',
+    grid:     'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z',
+    list:     'M4 6h16M4 10h16M4 14h16M4 18h16',
+    users:    'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
+    book:     'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
+    student:  'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
+    file:     'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z M14 2v6h6',
+    excel:    'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 1v5h5M8 13h3m-3 4h3m2-4h3m-3 4h3',
+    link:     'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1',
+};
+
+/* ── Stat card ───────────────────────────────────────────────────────────────*/
+function StatCard({ icon, label, value, color }) {
+    return (
+        <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 flex items-center gap-3 shadow-sm">
+            <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${color}`}>
+                <Icon d={icon} className="h-5 w-5 text-white" />
+            </div>
+            <div>
+                <p className="text-xs font-medium text-slate-400 dark:text-slate-500">{label}</p>
+                <p className="text-lg font-bold text-slate-800 dark:text-white">{value}</p>
+            </div>
+        </div>
+    );
+}
+
+/* ── Student search combobox ─────────────────────────────────────────────────*/
+function StudentCombo({ items, value, onChange, placeholder }) {
+    const [open, setOpen] = useState(false);
+    const [query, setQuery] = useState('');
+    const ref = useRef();
+
+    useEffect(() => {
+        const handler = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    const selected = items?.find(i => i.id === value);
+    const filtered = items?.filter(i => {
+        const q = query.toLowerCase();
+        return !q || (i.nom_fr + ' ' + i.prenom_fr + ' ' + (i.CNE || '') + ' ' + i.nom_ar + ' ' + i.prenom_ar).toLowerCase().includes(q);
+    }) || [];
+
+    return (
+        <div ref={ref} className="relative">
+            <input type="text" value={open ? query : (selected ? (selected.nom_fr + ' ' + selected.prenom_fr + (selected.CNE ? ' (' + selected.CNE + ')' : '')) : '')}
+                onChange={e => { setQuery(e.target.value); setOpen(true); if (!e.target.value) onChange(null); }}
+                onFocus={() => { setOpen(true); setQuery(''); }}
+                placeholder={placeholder || ''}
+                className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600 transition" />
+            {open && (
+                <div className="absolute z-20 mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg max-h-60 overflow-y-auto">
+                    {filtered.length > 0 ? filtered.map(i => (
+                        <button key={i.id} type="button" onClick={() => { onChange(i.id); setOpen(false); setQuery(''); }}
+                            className={`w-full text-start px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700/50 transition flex items-center gap-3
+                                ${value === i.id ? 'bg-indigo-50 dark:bg-indigo-900/20 font-medium' : ''}`}>
+                            <div className="h-7 w-7 shrink-0 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-500">
+                                {(i.prenom_fr?.[0] || i.nom_fr?.[0] || '?').toUpperCase()}
+                            </div>
+                            <span>{i.nom_fr} {i.prenom_fr}</span>
+                            {i.CNE && <code className="ml-auto text-[10px] text-slate-400 font-mono">{i.CNE}</code>}
+                        </button>
+                    )) : (
+                        <p className="px-4 py-3 text-xs text-slate-400">Aucun résultat</p>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+/* ── Module search combobox ──────────────────────────────────────────────────*/
+function ModuleCombo({ items, value, onChange, placeholder }) {
+    const [open, setOpen] = useState(false);
+    const [query, setQuery] = useState('');
+    const ref = useRef();
+
+    useEffect(() => {
+        const handler = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    const selected = items?.find(i => i.id === value);
+    const filtered = items?.filter(i => {
+        const q = query.toLowerCase();
+        return !q || (i.nom_fr + ' ' + i.nom_ar + ' ' + (i.code_module || '')).toLowerCase().includes(q);
+    }) || [];
+
+    return (
+        <div ref={ref} className="relative">
+            <input type="text" value={open ? query : (selected ? (selected.nom_fr + (selected.code_module ? ' (' + selected.code_module + ')' : '')) : '')}
+                onChange={e => { setQuery(e.target.value); setOpen(true); if (!e.target.value) onChange(null); }}
+                onFocus={() => { setOpen(true); setQuery(''); }}
+                placeholder={placeholder || ''}
+                className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600 transition" />
+            {open && (
+                <div className="absolute z-20 mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg max-h-60 overflow-y-auto">
+                    {filtered.length > 0 ? filtered.map(i => (
+                        <button key={i.id} type="button" onClick={() => { onChange(i.id); setOpen(false); setQuery(''); }}
+                            className={`w-full text-start px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700/50 transition flex items-center gap-3
+                                ${value === i.id ? 'bg-indigo-50 dark:bg-indigo-900/20 font-medium' : ''}`}>
+                            <span>{i.nom_fr}</span>
+                            {i.code_module && <code className="ml-auto text-[10px] text-slate-400 font-mono">{i.code_module}</code>}
+                        </button>
+                    )) : (
+                        <p className="px-4 py-3 text-xs text-slate-400">Aucun résultat</p>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+/* ── Add single inscription modal ────────────────────────────────────────────*/
+function AddModal({ allEtudiants, allModules, onClose, t, locale }) {
+    const { data, setData, post, processing, errors, reset } = useForm({
+        etudiant_id: null,
+        module_id: null,
+    });
+
+    const selectedStudent = allEtudiants?.find(e => e.id === data.etudiant_id);
+    const enrolledIds = selectedStudent?.module_ids || [];
+    const availableModules = allModules?.filter(m => !enrolledIds.includes(m.id)) || [];
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        post(route('inscriptions.store'), {
+            preserveScroll: true,
+            onSuccess: () => { reset(); onClose(); },
+        });
+    };
+
+    return (
+        <>
+            <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl dark:bg-slate-900 overflow-hidden">
+                    <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-6 py-4">
+                        <h2 className="text-sm font-bold text-slate-800 dark:text-white">
+                            {locale === 'ar' ? 'تسجيل جديد' : 'Nouvelle inscription'}
+                        </h2>
+                        <button onClick={onClose} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                            <Icon d={I.close} className="h-5 w-5" />
+                        </button>
+                    </div>
+                    <form onSubmit={handleSubmit} className="p-6 space-y-5">
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                {locale === 'ar' ? 'الطالب' : 'Étudiant'}
+                            </label>
+                            <StudentCombo items={allEtudiants} value={data.etudiant_id}
+                                onChange={v => setData('etudiant_id', v)}
+                                placeholder={locale === 'ar' ? 'ابحث عن طالب...' : 'Rechercher un étudiant...'} />
+                            {errors.etudiant_id && <p className="text-xs text-red-500">{errors.etudiant_id}</p>}
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                {locale === 'ar' ? 'الوحدة' : 'Module'}
+                            </label>
+                            <ModuleCombo items={availableModules} value={data.module_id}
+                                onChange={v => setData('module_id', v)}
+                                placeholder={locale === 'ar' ? 'ابحث عن وحدة...' : 'Rechercher un module...'} />
+                            {errors.module_id && <p className="text-xs text-red-500">{errors.module_id}</p>}
+                        </div>
+                        <div className="flex items-center justify-end gap-3 pt-2">
+                            <button type="button" onClick={onClose}
+                                className="rounded-xl border border-slate-200 dark:border-slate-700 px-5 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                                {t('cancel')}
+                            </button>
+                            <button type="submit" disabled={processing || !data.etudiant_id || !data.module_id}
+                                className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition disabled:opacity-50">
+                                {processing ? <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                                    : <Icon d={I.check} className="h-4 w-4" />}
+                                {locale === 'ar' ? 'تسجيل' : 'Inscrire'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </>
+    );
+}
+
+/* ── Excel import modal (full-featured) ──────────────────────────────────────*/
+function ExcelModal({ onClose, t, isRTL, locale }) {
+    const [file, setFile]         = useState(null);
+    const [dragging, setDragging] = useState(false);
+    const [status, setStatus]     = useState('idle'); // idle | previewing | loading | done | error
+    const [preview, setPreview]   = useState(null);
+    const [report, setReport]     = useState(null);
+    const fileInput               = useRef(null);
+
+    const COLS = [
+        { name: 'CNE',         req: true  },
+        { name: 'code_module', req: true  },
+    ];
+
+    const parseFileWithSheetJS = (f) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data     = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array', codepage: 1256 });
+                const sheet    = workbook.Sheets[workbook.SheetNames[0]];
+                const rows     = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+                resolve(rows);
+            } catch (err) { reject(err); }
+        };
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(f);
+    });
+
+    const validateRows = (rows) => {
+        if (rows.length < 2) return { valid: [], invalid: [] };
+        const header = rows[0].map(h => String(h).toLowerCase().replace(/\s+/g, '_').trim());
+        const valid = [], invalid = [];
+        rows.slice(1).forEach((row, i) => {
+            const lineNum = i + 2;
+            const data    = {};
+            header.forEach((k, j) => { data[k] = String(row[j] ?? '').trim(); });
+            const allEmpty = Object.values(data).every(v => !v);
+            if (allEmpty) return;
+            const reasons = [];
+            if (!data['cne'])         reasons.push(locale === 'ar' ? 'CNE مطلوب' : 'CNE requis');
+            if (!data['code_module']) reasons.push(locale === 'ar' ? 'code_module مطلوب' : 'code_module requis');
+            if (reasons.length === 0) valid.push({ lineNum, data });
+            else                      invalid.push({ lineNum, data, reasons });
+        });
+        return { valid, invalid, header };
+    };
+
+    const handleFile = async (f) => {
+        if (!f) return;
+        const ok = ['csv', 'xlsx', 'xls', 'ods', 'tsv', 'txt'].some(ext =>
+            f.name.toLowerCase().endsWith('.' + ext));
+        if (!ok || f.size > 5 * 1024 * 1024) return;
+        setFile(f); setReport(null); setPreview(null);
+        try {
+            const rows = await parseFileWithSheetJS(f);
+            setPreview(validateRows(rows));
+        } catch { setPreview(null); }
+        setStatus('previewing');
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault(); setDragging(false);
+        handleFile(e.dataTransfer.files[0]);
+    };
+
+    const reset = () => {
+        setFile(null); setPreview(null); setReport(null); setStatus('idle');
+    };
+
+    const submit = async () => {
+        if (!file) return;
+        setStatus('loading');
+        const fd = new FormData();
+        fd.append('file', file);
+        try {
+            const res = await window.axios.post(route('inscriptions.import'), fd, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            setReport(res.data);
+            setStatus('done');
+            const imported = res.data.imported ?? 0;
+            const hasErrors = (res.data.report ?? []).some(r => r.status === 'rejected');
+            if (imported > 0 && !hasErrors) {
+                router.reload({ only: ['items', 'stats'] });
+                setTimeout(() => onClose(), 400);
+            } else if (imported > 0) {
+                router.reload({ only: ['items', 'stats'] });
+            }
+        } catch (err) {
+            const data = err.response?.data;
+            setReport({ error: data?.error ?? 'unknown', message: data?.message, report: [] });
+            setStatus('error');
+        }
+    };
+
+    const downloadRejectedReport = () => {
+        const rejected = (report?.report ?? []).filter(r => r.status === 'rejected');
+        if (rejected.length === 0) return;
+        const rows = rejected.map(r => ({ Ligne: r.line, CNE: r.cne ?? '', Code_module: r.code_module ?? '', Raison: r.reason }));
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Rejets');
+        ws['!cols'] = [{ wch: 8 }, { wch: 16 }, { wch: 16 }, { wch: 40 }];
+        const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'rapport_rejets_inscriptions.xlsx'; a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const downloadTemplate = () => {
+        const header = COLS.map(c => c.name).join(',');
+        const example = 'CNE123456,MATH101';
+        const blob = new Blob([header + '\n' + example], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'inscriptions_template.csv'; a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const ext      = file?.name?.split('.').pop()?.toLowerCase();
+    const isXlsx   = ['xlsx', 'xls', 'ods'].includes(ext);
+    const fileIcon = isXlsx ? '📊' : ext === 'tsv' ? '📋' : '📄';
+    const hasPreview = preview && (preview.valid.length + preview.invalid.length) > 0;
+
+    return (
+        <>
+            <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl dark:bg-slate-900 overflow-hidden flex flex-col max-h-[92vh]"
+                    dir={isRTL ? 'rtl' : 'ltr'}>
+
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-emerald-50 dark:bg-emerald-900/20 shrink-0">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/50">
+                                <Icon d={I.upload} className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                            </div>
+                            <div>
+                                <p className="font-bold text-slate-800 dark:text-white text-sm">{t('importTitle')}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">{t('importSubtitle')}</p>
+                            </div>
+                        </div>
+                        <button onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800 transition">
+                            <Icon d={I.close} className="h-5 w-5" />
+                        </button>
+                    </div>
+
+                    {/* Body */}
+                    <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+
+                        {/* Column schema */}
+                        <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-4 py-2.5 border-b border-slate-200 dark:border-slate-700">
+                                <Icon d={I.search} className="h-4 w-4 text-slate-400" />
+                                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{t('importCols')}</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2 px-4 py-3">
+                                {COLS.map(c => (
+                                    <div key={c.name} className="flex items-center gap-1.5">
+                                        <code className="rounded-md bg-slate-100 dark:bg-slate-700 px-2 py-0.5 font-mono text-[11px] text-slate-700 dark:text-slate-300">{c.name}</code>
+                                        <span className={`text-[10px] font-medium ${c.req ? 'text-red-500' : 'text-slate-400'}`}>
+                                            {c.req ? t('importRequired') : t('importOptional')}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Drop zone */}
+                        {!file && (
+                            <div onDragOver={e => { e.preventDefault(); setDragging(true); }}
+                                onDragLeave={() => setDragging(false)}
+                                onDrop={handleDrop}
+                                onClick={() => fileInput.current?.click()}
+                                className={`group relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 cursor-pointer transition-all
+                                    ${dragging
+                                        ? 'border-emerald-400 bg-emerald-50 dark:border-emerald-500 dark:bg-emerald-900/20'
+                                        : 'border-slate-300 bg-slate-50 hover:border-emerald-400 hover:bg-emerald-50/50 dark:border-slate-600 dark:bg-slate-800/50 dark:hover:border-emerald-500'}`}>
+                                <input ref={fileInput} type="file" accept=".csv,.xlsx,.xls,.ods,.tsv,.txt"
+                                    className="hidden" onChange={e => handleFile(e.target.files[0])} />
+                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-200 dark:bg-slate-700 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/30 transition">
+                                    <Icon d={I.upload} className="h-6 w-6 text-slate-400 group-hover:text-emerald-500 transition" />
+                                </div>
+                                <p className="mt-3 text-sm font-medium text-slate-600 dark:text-slate-300">{t('importDrop')}</p>
+                                <p className="text-xs text-slate-400">{t('importOr')}</p>
+                                <span className="mt-1 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                                    {t('importBrowse')}
+                                </span>
+                                <p className="mt-2 text-[11px] text-slate-400">{t('importFormats')}</p>
+                            </div>
+                        )}
+
+                        {/* File bar */}
+                        {file && status !== 'done' && (
+                            <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/10 px-4 py-3">
+                                <span className="text-2xl">{fileIcon}</span>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{file.name}</p>
+                                    <p className="text-xs text-slate-400">{(file.size / 1024).toFixed(1)} Ko</p>
+                                </div>
+                                <button onClick={reset}
+                                    className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-red-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 transition">
+                                    <Icon d={I.close} className="h-3.5 w-3.5" />
+                                    {locale === 'ar' ? 'إزالة' : 'Changer'}
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Preview */}
+                        {hasPreview && status !== 'done' && (
+                            <div className="space-y-3">
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div className="rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-center">
+                                        <p className="text-lg font-bold text-slate-800 dark:text-white">{preview.valid.length + preview.invalid.length}</p>
+                                        <p className="text-[11px] text-slate-400">{locale === 'ar' ? 'إجمالي الصفوف' : 'Total lignes'}</p>
+                                    </div>
+                                    <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-4 py-3 text-center">
+                                        <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">{preview.valid.length}</p>
+                                        <p className="text-[11px] text-emerald-600 dark:text-emerald-500">{locale === 'ar' ? 'صالح' : 'Valides'}</p>
+                                    </div>
+                                    <div className="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3 text-center">
+                                        <p className="text-lg font-bold text-red-600 dark:text-red-400">{preview.invalid.length}</p>
+                                        <p className="text-[11px] text-red-500">{locale === 'ar' ? 'غير صالح' : 'Invalides'}</p>
+                                    </div>
+                                </div>
+
+                                {preview.valid.length > 0 && (
+                                    <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 overflow-hidden">
+                                        <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2.5 border-b border-emerald-200 dark:border-emerald-800">
+                                            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                                            <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                                                {locale === 'ar' ? `${preview.valid.length} تسجيلًا ستُستورد` : `${preview.valid.length} inscription(s) à importer`}
+                                            </span>
+                                        </div>
+                                        <div className="overflow-x-auto max-h-48">
+                                            <table className="w-full text-xs">
+                                                <thead>
+                                                    <tr className="border-b border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800">
+                                                        <th className="px-3 py-2 text-left font-semibold text-slate-500">#</th>
+                                                        <th className="px-3 py-2 text-left font-semibold text-slate-500">CNE</th>
+                                                        <th className="px-3 py-2 text-left font-semibold text-slate-500">code_module</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {preview.valid.map(row => (
+                                                        <tr key={row.lineNum} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-emerald-50/40 dark:hover:bg-emerald-900/10">
+                                                            <td className="px-3 py-2 text-slate-400">{row.lineNum}</td>
+                                                            <td className="px-3 py-2"><code className="rounded bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-300">{row.data['cne'] || '—'}</code></td>
+                                                            <td className="px-3 py-2"><code className="rounded bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-300">{row.data['code_module'] || '—'}</code></td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {preview.invalid.length > 0 && (
+                                    <div className="rounded-xl border border-red-200 dark:border-red-800 overflow-hidden">
+                                        <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 px-4 py-2.5 border-b border-red-200 dark:border-red-800">
+                                            <span className="h-2 w-2 rounded-full bg-red-500" />
+                                            <span className="text-xs font-semibold text-red-600 dark:text-red-400">
+                                                {locale === 'ar' ? `${preview.invalid.length} صف بأخطاء (لن يُستورد)` : `${preview.invalid.length} ligne(s) invalide(s) — ignorées`}
+                                            </span>
+                                        </div>
+                                        <div className="overflow-x-auto max-h-36">
+                                            <table className="w-full text-xs">
+                                                <thead>
+                                                    <tr className="border-b border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800">
+                                                        <th className="px-3 py-2 text-left font-semibold text-slate-500">#</th>
+                                                        <th className="px-3 py-2 text-left font-semibold text-slate-500">CNE</th>
+                                                        <th className="px-3 py-2 text-left font-semibold text-slate-500">code_module</th>
+                                                        <th className="px-3 py-2 text-left font-semibold text-red-500">{locale === 'ar' ? 'الأخطاء' : 'Erreurs'}</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {preview.invalid.map(row => (
+                                                        <tr key={row.lineNum} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-red-50/40 dark:hover:bg-red-900/10">
+                                                            <td className="px-3 py-2 text-slate-400">{row.lineNum}</td>
+                                                            <td className="px-3 py-2"><code className="rounded bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-300">{row.data['cne'] || '—'}</code></td>
+                                                            <td className="px-3 py-2"><code className="rounded bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-300">{row.data['code_module'] || '—'}</code></td>
+                                                            <td className="px-3 py-2">{row.reasons.map((r, i) => (
+                                                                <span key={i} className="me-1 inline-flex items-center rounded-full bg-red-100 dark:bg-red-900/30 px-2 py-0.5 text-[10px] font-medium text-red-600 dark:text-red-400">{r}</span>
+                                                            ))}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Post-submit report */}
+                        {status === 'done' && report && (
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-4 py-3 text-center">
+                                        <p className="text-xl font-bold text-emerald-700 dark:text-emerald-400">{report.imported}</p>
+                                        <p className="text-[11px] text-emerald-600 dark:text-emerald-500">{locale === 'ar' ? 'تم استيرادها' : 'Importés'}</p>
+                                    </div>
+                                    <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-4 py-3 text-center">
+                                        <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{report.skipped}</p>
+                                        <p className="text-[11px] text-amber-500">{locale === 'ar' ? 'تم تجاهلها' : 'Ignorés'}</p>
+                                    </div>
+                                    <div className="rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-center">
+                                        <p className="text-xl font-bold text-slate-700 dark:text-slate-200">{(report.imported ?? 0) + (report.skipped ?? 0)}</p>
+                                        <p className="text-[11px] text-slate-400">{locale === 'ar' ? 'المجموع' : 'Total'}</p>
+                                    </div>
+                                </div>
+
+                                {report.report?.filter(r => r.status === 'rejected').length > 0 && (
+                                    <div className="rounded-xl border border-red-200 dark:border-red-800 overflow-hidden">
+                                        <div className="flex items-center justify-between gap-2 bg-red-50 dark:bg-red-900/20 px-4 py-2.5 border-b border-red-200 dark:border-red-800">
+                                            <div className="flex items-center gap-2">
+                                                <Icon d={I.trash} className="h-4 w-4 text-red-500" />
+                                                <span className="text-xs font-semibold text-red-600 dark:text-red-400">
+                                                    {locale === 'ar' ? 'تقرير الأخطاء' : 'Rapport des rejets'}
+                                                </span>
+                                            </div>
+                                            <button type="button" onClick={downloadRejectedReport}
+                                                className="flex items-center gap-1 rounded-lg border border-red-200 dark:border-red-800 bg-white dark:bg-slate-800 px-2.5 py-1 text-[10px] font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition">
+                                                <Icon d={I.download} className="h-3 w-3" />
+                                                {locale === 'ar' ? 'تحميل' : 'Télécharger'}
+                                            </button>
+                                        </div>
+                                        <div className="overflow-x-auto max-h-52">
+                                            <table className="w-full text-xs">
+                                                <thead>
+                                                    <tr className="border-b border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800">
+                                                        <th className="px-3 py-2 text-left font-semibold text-slate-500">{locale === 'ar' ? 'السطر' : 'Ligne'}</th>
+                                                        <th className="px-3 py-2 text-left font-semibold text-slate-500">CNE</th>
+                                                        <th className="px-3 py-2 text-left font-semibold text-slate-500">code_module</th>
+                                                        <th className="px-3 py-2 text-left font-semibold text-red-500">{locale === 'ar' ? 'السبب' : 'Raison'}</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {report.report.filter(r => r.status === 'rejected').map((row, i) => (
+                                                        <tr key={i} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-red-50/30 dark:hover:bg-red-900/10">
+                                                            <td className="px-3 py-2 text-slate-400 font-mono">{row.line}</td>
+                                                            <td className="px-3 py-2"><code className="rounded bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 font-bold text-slate-600 dark:text-slate-300">{row.cne || '—'}</code></td>
+                                                            <td className="px-3 py-2"><code className="rounded bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 font-bold text-slate-600 dark:text-slate-300">{row.code_module || '—'}</code></td>
+                                                            <td className="px-3 py-2 text-red-500 dark:text-red-400">{row.reason}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {(!report.report || report.report.filter(r => r.status === 'rejected').length === 0) && report.imported > 0 && (
+                                    <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20 px-4 py-3">
+                                        <Icon d={I.check} className="h-5 w-5 text-emerald-500 shrink-0" />
+                                        <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+                                            {locale === 'ar' ? 'تم استيراد جميع التسجيلات بنجاح' : 'Toutes les inscriptions ont été importées avec succès'}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Fatal error */}
+                        {status === 'error' && report && (
+                            <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20 p-4">
+                                <Icon d={I.close} className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+                                <div className="space-y-1">
+                                    <p className="text-sm font-semibold text-red-700 dark:text-red-400">
+                                        {report.error === 'parse_error' ? t('importParseError') : t('importEmpty')}
+                                    </p>
+                                    {report.message && <p className="text-xs text-red-500">{report.message}</p>}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Footer */}
+                    <div className={`flex items-center justify-between gap-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 px-6 py-4 shrink-0 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                        <button type="button" onClick={downloadTemplate}
+                            className="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+                            <Icon d={I.download} className="h-4 w-4 text-emerald-500" />
+                            {t('importTemplate')}
+                        </button>
+                        <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                            {status === 'done' ? (
+                                <button type="button" onClick={onClose}
+                                    className="rounded-xl bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition">
+                                    {locale === 'ar' ? 'إغلاق' : 'Fermer'}
+                                </button>
+                            ) : (
+                                <>
+                                    <button type="button" onClick={onClose}
+                                        className="rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                                        {t('cancel')}
+                                    </button>
+                                    <button type="button" onClick={submit}
+                                        disabled={!file || status === 'loading'}
+                                        className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50 transition">
+                                        {status === 'loading' ? (
+                                            <><svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                            </svg>{t('importProcessing')}</>
+                                        ) : (
+                                            <><Icon d={I.upload} className="h-4 w-4" />{t('importStart')}</>
+                                        )}
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </>
+    );
+}
+
+/* ── Main page ───────────────────────────────────────────────────────────────*/
+function PageContent() {
+    const { t, locale, isRTL } = useLanguage();
+    const { items, groupBy, filters, allEtudiants, allModules, stats, flash } = usePage().props;
+
+    const [search, setSearch] = useState(filters?.search || '');
+    const [expanded, setExpanded] = useState(new Set());
+    const [showAdd, setShowAdd] = useState(false);
+    const [showExcel, setShowExcel] = useState(false);
+    const [toast, setToast] = useState(null);
+
+    /* Toast flash messages */
+    useEffect(() => {
+        if (flash?.success || flash?.error) {
+            const map = {
+                inscription_created: locale === 'ar' ? 'تم التسجيل بنجاح' : 'Inscription enregistrée',
+                inscription_deleted: locale === 'ar' ? 'تم حذف التسجيل' : 'Inscription supprimée',
+                inscription_already_exists: locale === 'ar' ? 'الطالب مسجل بالفعل' : 'Inscription déjà existante',
+            };
+            setToast({ text: map[flash.success || flash.error] || flash.success || flash.error, isErr: !!flash.error });
+            const id = setTimeout(() => setToast(null), 3500);
+            return () => clearTimeout(id);
+        }
+    }, [flash]);
+
+    /* Search with debounce */
+    const searchTimeout = useRef(null);
+    const handleSearch = (val) => {
+        setSearch(val);
+        if (searchTimeout.current) clearTimeout(searchTimeout.current);
+        searchTimeout.current = setTimeout(() => {
+            router.get(route('inscriptions.index'), { search: val, group_by: groupBy }, { preserveState: true, replace: true });
+        }, 400);
+    };
+
+    /* Toggle grouping */
+    const toggleGroup = (val) => {
+        router.get(route('inscriptions.index'), { search, group_by: val }, { preserveState: true, replace: true });
+    };
+
+    const toggleExpand = (id) => {
+        setExpanded(prev => {
+            const next = new Set(prev);
+            next.has(id) ? next.delete(id) : next.add(id);
+            return next;
+        });
+    };
+
+    const isModuleView = groupBy === 'module';
+    const deleteForm = useForm();
+
+    return (
+        <>
+            <Head title={t('inscriptionPedagogique')} />
+
+            {/* Toast */}
+            {toast && (
+                <div className={`fixed bottom-6 end-6 z-[100] flex items-center gap-3 rounded-xl px-4 py-3 shadow-xl text-sm font-medium
+                    ${toast.isErr ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'}`}>
+                    <Icon d={toast.isErr ? I.close : I.check} className="h-4 w-4 shrink-0" />
+                    {toast.text}
+                </div>
+            )}
+
+            {/* Header */}
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 className="text-lg font-bold text-slate-800 dark:text-white">{t('inscriptionPedagogique')}</h1>
+                    <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">
+                        {locale === 'ar' ? 'إدارة تسجيلات الطلاب في الوحدات الدراسية' : 'Gérer les inscriptions des étudiants aux modules'}
+                    </p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <button onClick={() => setShowExcel(true)}
+                        title={locale === 'ar' ? 'استيراد Excel' : 'Import Excel'}
+                        className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30 active:scale-95 transition">
+                        <Icon d={I.excel} className="h-4 w-4" />
+                        <span className="hidden sm:inline">{locale === 'ar' ? 'استيراد Excel' : 'Import Excel'}</span>
+                    </button>
+                    <button onClick={() => setShowAdd(true)}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition">
+                        <Icon d={I.plus} className="h-4 w-4" />
+                        {locale === 'ar' ? 'تسجيل جديد' : 'Nouvelle inscription'}
+                    </button>
+                </div>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <StatCard icon={I.link} label={locale === 'ar' ? 'إجمالي التسجيلات' : 'Total inscriptions'}
+                    value={stats?.total ?? 0} color="bg-indigo-500" />
+                <StatCard icon={I.users} label={locale === 'ar' ? 'الطلاب المسجلين' : 'Étudiants inscrits'}
+                    value={stats?.students ?? 0} color="bg-emerald-500" />
+                <StatCard icon={I.book} label={locale === 'ar' ? 'الوحدات النشطة' : 'Modules actifs'}
+                    value={stats?.modules ?? 0} color="bg-violet-500" />
+            </div>
+
+            {/* Group toggle + search */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
+                <div className="flex rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden bg-white dark:bg-slate-800 shadow-sm">
+                    <button onClick={() => toggleGroup('student')}
+                        className={`px-4 py-2 text-xs font-semibold transition flex items-center gap-1.5
+                            ${!isModuleView
+                                ? 'bg-indigo-600 text-white shadow-sm'
+                                : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+                        <Icon d={I.users} className="h-3.5 w-3.5" />
+                        {locale === 'ar' ? 'حسب الطالب' : 'Par étudiant'}
+                    </button>
+                    <button onClick={() => toggleGroup('module')}
+                        className={`px-4 py-2 text-xs font-semibold transition flex items-center gap-1.5
+                            ${isModuleView
+                                ? 'bg-indigo-600 text-white shadow-sm'
+                                : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+                        <Icon d={I.book} className="h-3.5 w-3.5" />
+                        {locale === 'ar' ? 'حسب الوحدة' : 'Par module'}
+                    </button>
+                </div>
+                <div className="relative flex-1 max-w-xs">
+                    <Icon d={I.search} className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <input type="text" value={search}
+                        onChange={e => handleSearch(e.target.value)}
+                        placeholder={isModuleView
+                            ? (locale === 'ar' ? 'ابحث عن وحدة...' : 'Rechercher un module...')
+                            : (locale === 'ar' ? 'ابحث عن طالب...' : 'Rechercher un étudiant...')}
+                        className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 ps-9 pe-4 py-2 text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600 transition shadow-sm" />
+                </div>
+            </div>
+
+            {/* Table */}
+            {items?.data?.length > 0 ? (
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="border-b border-slate-100 dark:border-slate-700/60 bg-slate-50/70 dark:bg-slate-700/30">
+                                    {isModuleView ? (
+                                        <>
+                                            <th className="w-10 px-4 py-3" />
+                                            <th className="text-start px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                                {locale === 'ar' ? 'الوحدة' : 'Module'}
+                                            </th>
+                                            <th className="text-start px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                                {locale === 'ar' ? 'الرمز' : 'Code'}
+                                            </th>
+                                            <th className="text-start px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                                {locale === 'ar' ? 'الأستاذ' : 'Professeur'}
+                                            </th>
+                                            <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                                {locale === 'ar' ? 'المعامل' : 'Coeff'}
+                                            </th>
+                                            <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                                {locale === 'ar' ? 'الطلاب المسجلين' : 'Inscrits'}
+                                            </th>
+                                            <th className="w-20 px-4 py-3" />
+                                        </>
+                                    ) : (
+                                        <>
+                                            <th className="w-10 px-4 py-3" />
+                                            <th className="text-start px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                                {locale === 'ar' ? 'الطالب' : 'Étudiant'}
+                                            </th>
+                                            <th className="text-start px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                                CNE
+                                            </th>
+                                            <th className="text-start px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                                {locale === 'ar' ? 'الشعبة' : 'Filière'}
+                                            </th>
+                                            <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                                {locale === 'ar' ? 'الوحدات المسجلة' : 'Modules'}
+                                            </th>
+                                            <th className="w-20 px-4 py-3" />
+                                        </>
+                                    )}
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
+                                {items.data.map(item => {
+                                    const isOpen = expanded.has(item.id);
+                                    const children = isModuleView ? item.etudiants : item.modules;
+                                    return (
+                                        <Fragment key={item.id}>
+                                            {/* Parent row */}
+                                            <tr className={`hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition cursor-pointer ${isOpen ? 'bg-slate-50/80 dark:bg-slate-700/20' : ''}`}
+                                                onClick={() => toggleExpand(item.id)}>
+                                                <td className="px-4 py-3">
+                                                    <button className="p-0.5 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition">
+                                                        <Icon d={isOpen ? I.up : I.down} className="h-4 w-4" />
+                                                    </button>
+                                                </td>
+                                                {isModuleView ? (
+                                                    <>
+                                                        <td className="px-4 py-3">
+                                                            <p className="text-sm font-medium text-slate-800 dark:text-white">
+                                                                {locale === 'ar' ? (item.nom_ar || item.nom_fr) : (item.nom_fr || item.nom_ar || '')}
+                                                            </p>
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <code className="text-xs font-mono text-slate-400">{item.code_module || '—'}</code>
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <span className="text-sm text-slate-600 dark:text-slate-300">{item.prof || '—'}</span>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-center">
+                                                            <span className="text-sm text-slate-600 dark:text-slate-300">{item.coefficient ?? '—'}</span>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-center">
+                                                            <span className="inline-flex items-center justify-center h-6 min-w-6 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-xs font-semibold text-indigo-700 dark:text-indigo-300 px-2">
+                                                                {item.inscriptions_count}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-3" />
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <td className="px-4 py-3">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="h-8 w-8 shrink-0 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center overflow-hidden">
+                                                                    {item.photo_url
+                                                                        ? <img src={item.photo_url} alt="" className="h-full w-full object-cover" />
+                                                                        : <span className="text-[10px] font-bold text-slate-500">{(item.prenom_fr?.[0] || item.nom_fr?.[0] || '?').toUpperCase()}</span>
+                                                                    }
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-sm font-medium text-slate-800 dark:text-white">
+                                                                        {locale === 'ar'
+                                                                            ? (item.prenom_ar || item.prenom_fr || '') + ' ' + (item.nom_ar || item.nom_fr || '')
+                                                                            : (item.prenom_fr || '') + ' ' + (item.nom_fr || '')}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <code className="text-xs font-mono text-slate-400">{item.CNE || '—'}</code>
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <span className="text-sm text-slate-600 dark:text-slate-300">{item.filier || '—'}</span>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-center">
+                                                            <span className="inline-flex items-center justify-center h-6 min-w-6 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-xs font-semibold text-indigo-700 dark:text-indigo-300 px-2">
+                                                                {item.inscriptions_count}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-3" />
+                                                    </>
+                                                )}
+                                            </tr>
+
+                                            {/* Expanded children rows */}
+                                            {isOpen && children?.length > 0 && children.map(child => (
+                                                <tr key={`${item.id}-${child.id}`}
+                                                    className="bg-slate-50/50 dark:bg-slate-700/10 border-t border-slate-100/50 dark:border-slate-700/30">
+                                                    <td className="px-4 py-2.5" />
+                                                    {isModuleView ? (
+                                                        <>
+                                                            <td className="px-4 py-2.5" colSpan={3}>
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="h-7 w-7 shrink-0 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center overflow-hidden">
+                                                                        {child.photo_url
+                                                                            ? <img src={child.photo_url} alt="" className="h-full w-full object-cover" />
+                                                                            : <span className="text-[9px] font-bold text-slate-500">{(child.prenom_fr?.[0] || child.nom_fr?.[0] || '?').toUpperCase()}</span>
+                                                                        }
+                                                                    </div>
+                                                                    <span className="text-sm text-slate-700 dark:text-slate-300">
+                                                                        {locale === 'ar'
+                                                                            ? (child.prenom_ar || child.prenom_fr || '') + ' ' + (child.nom_ar || child.nom_fr || '')
+                                                                            : (child.prenom_fr || '') + ' ' + (child.nom_fr || '')}
+                                                                    </span>
+                                                                    {child.CNE && <code className="text-[10px] font-mono text-slate-400">{child.CNE}</code>}
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-4 py-2.5 text-center" colSpan={1}>
+                                                                <button onClick={() => deleteForm.delete(route('inscriptions.destroy', child.pivot_id), { preserveScroll: true })}
+                                                                    disabled={deleteForm.processing}
+                                                                    className="inline-flex items-center gap-1 rounded-lg border border-red-200 dark:border-red-800 px-2 py-1 text-[10px] font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition disabled:opacity-50">
+                                                                    <Icon d={I.trash} className="h-3 w-3" />
+                                                                    {locale === 'ar' ? 'إلغاء' : 'Retirer'}
+                                                                </button>
+                                                            </td>
+                                                            <td />
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <td className="px-4 py-2.5" colSpan={2}>
+                                                                <div className="flex items-center gap-3">
+                                                                    <span className="text-sm text-slate-700 dark:text-slate-300">
+                                                                        {locale === 'ar'
+                                                                            ? (child.nom_ar || child.nom_fr)
+                                                                            : (child.nom_fr || child.nom_ar || '')}
+                                                                    </span>
+                                                                    {child.code_module && <code className="text-[10px] font-mono text-slate-400">{child.code_module}</code>}
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-4 py-2.5">
+                                                                <span className="text-xs text-slate-400">{locale === 'ar' ? 'المعامل:' : 'Coeff:'} {child.coefficient ?? '—'}</span>
+                                                            </td>
+                                                            <td className="px-4 py-2.5 text-center" />
+                                                            <td className="px-4 py-2.5">
+                                                                <button onClick={() => deleteForm.delete(route('inscriptions.destroy', child.pivot_id), { preserveScroll: true })}
+                                                                    disabled={deleteForm.processing}
+                                                                    className="inline-flex items-center gap-1 rounded-lg border border-red-200 dark:border-red-800 px-2 py-1 text-[10px] font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition disabled:opacity-50">
+                                                                    <Icon d={I.trash} className="h-3 w-3" />
+                                                                    {locale === 'ar' ? 'إلغاء' : 'Retirer'}
+                                                                </button>
+                                                            </td>
+                                                        </>
+                                                    )}
+                                                </tr>
+                                            ))}
+
+                                            {/* Empty expanded state */}
+                                            {isOpen && (!children || children.length === 0) && (
+                                                <tr className="bg-slate-50/50 dark:bg-slate-700/10">
+                                                    <td colSpan={isModuleView ? 7 : 6} className="px-4 py-4 text-center">
+                                                        <p className="text-xs text-slate-400 italic">
+                                                            {isModuleView
+                                                                ? (locale === 'ar' ? 'لا يوجد طلاب مسجلون' : 'Aucun étudiant inscrit')
+                                                                : (locale === 'ar' ? 'لا توجد وحدات مسجلة' : 'Aucun module inscrit')}
+                                                        </p>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </Fragment>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            ) : (
+                <div className="rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm flex flex-col items-center justify-center py-16 px-5">
+                    <Icon d={isModuleView ? I.book : I.users} className="h-10 w-10 text-slate-300 dark:text-slate-600 mb-3" />
+                    <p className="text-sm font-medium text-slate-400">
+                        {search
+                            ? (locale === 'ar' ? 'لا توجد نتائج للبحث' : 'Aucun résultat')
+                            : (locale === 'ar' ? 'لا توجد تسجيلات بعد' : 'Aucune inscription pour le moment')}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1">
+                        {locale === 'ar' ? 'استخدم زر "تسجيل جديد" لإضافة تسجيل' : 'Utilisez le bouton "Nouvelle inscription" pour ajouter'}
+                    </p>
+                </div>
+            )}
+
+            {/* Pagination */}
+            {items?.last_page > 1 && (
+                <div className="mt-5 flex items-center justify-between">
+                    <p className="text-xs text-slate-400">
+                        {items.from}–{items.to} / {items.total}
+                    </p>
+                    <div className="flex gap-1">
+                        {items.links?.filter(l => !['...'].includes(l.label)).map((link, i) => (
+                            <button key={i} onClick={() => link.url && router.get(link.url, {}, { preserveState: true, replace: true })}
+                                disabled={!link.url}
+                                className={`h-8 min-w-8 rounded-lg text-xs font-medium transition
+                                    ${link.active ? 'bg-indigo-600 text-white' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
+                                {link.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Modals */}
+            {showAdd && <AddModal allEtudiants={allEtudiants} allModules={allModules} onClose={() => setShowAdd(false)} t={t} locale={locale} />}
+            {showExcel && <ExcelModal onClose={() => { setShowExcel(false); router.reload({ only: ['items', 'stats'] }); }} t={t} locale={locale} />}
+        </>
+    );
+}
+
+export default function InscriptionsIndex(props) {
+    return (
+        <LanguageProvider>
+            <AdminLayout>
+                <PageContent {...props} />
+            </AdminLayout>
+        </LanguageProvider>
+    );
+}

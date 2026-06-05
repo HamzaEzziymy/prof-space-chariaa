@@ -84,6 +84,14 @@ Route::middleware(['auth', 'admin'])->prefix('etudiants')->name('etudiants.')->g
     Route::delete('/{etudiant}/photo', [EtudiantController::class, 'removePhoto'])->name('photo.remove');
 });
 
+// ── Inscription pédagogique (admin + super_admin) ────────────────────────────
+Route::middleware(['auth', 'admin'])->prefix('inscriptions')->name('inscriptions.')->group(function () {
+    Route::get('/',             [\App\Http\Controllers\InscriptionPedagogiqueController::class, 'index'])->name('index');
+    Route::post('/',            [\App\Http\Controllers\InscriptionPedagogiqueController::class, 'store'])->name('store');
+    Route::delete('/{inscription}', [\App\Http\Controllers\InscriptionPedagogiqueController::class, 'destroy'])->name('destroy');
+    Route::post('/import',      [\App\Http\Controllers\InscriptionPedagogiqueController::class, 'import'])->name('import');
+});
+
 // ── Users management (super_admin only) ───────────────────────────────────────
 Route::middleware(['auth', 'super_admin'])->prefix('users')->name('users.')->group(function () {
     Route::get('/',                    [UserController::class, 'index'])->name('index');

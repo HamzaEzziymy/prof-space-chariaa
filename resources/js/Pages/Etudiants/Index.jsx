@@ -170,29 +170,19 @@ function Toast({ flash, t }) {
     );
 }
 
-// ─── Photo upload ─────────────────────────────────────────────────────────────
-function PhotoUpload({ etudiant, t, locale }) {
+// ─── Photo upload preview (no immediate upload) ───────────────────────────────
+function PhotoUpload({ currentUrl, onFileSelect, onRemove, t, locale }) {
     const fileRef = useRef();
-    const uploadForm = useForm({ photo: null });
     const [preview, setPreview] = useState(null);
 
     const handleFile = (file) => {
         if (!file || !file.type.startsWith('image/')) return;
-        setPreview(URL.createObjectURL(file));
-        uploadForm.setData('photo', file);
-        uploadForm.post(route('etudiants.photo', etudiant.id), {
-            forceFormData: true,
-            onSuccess: () => setPreview(null),
-        });
+        const url = URL.createObjectURL(file);
+        setPreview(url);
+        onFileSelect(file, url);
     };
 
-    const handleRemove = () => {
-        uploadForm.delete(route('etudiants.photo.remove', etudiant.id), {
-            onSuccess: () => setPreview(null),
-        });
-    };
-
-    const src = preview || etudiant.photo_url;
+    const src = preview || currentUrl;
 
     return (
         <div className="space-y-2">
@@ -207,21 +197,20 @@ function PhotoUpload({ etudiant, t, locale }) {
                 <div className="flex items-center gap-2">
                     <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
                         onChange={(e) => { const f = e.target.files[0]; e.target.value = ''; handleFile(f); }} />
-                    <button type="button" onClick={() => fileRef.current?.click()} disabled={uploadForm.processing}
-                        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition disabled:opacity-50">
+                    <button type="button" onClick={() => fileRef.current?.click()}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
                         <Icon d={ICONS.upload} className="h-3.5 w-3.5" />
                         {t('etudiantPhotoUpload')}
                     </button>
-                    {etudiant.photo_url && (
-                        <button type="button" onClick={handleRemove} disabled={uploadForm.processing}
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 dark:border-red-800 px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition disabled:opacity-50">
+                    {currentUrl && (
+                        <button type="button" onClick={onRemove}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 dark:border-red-800 px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition">
                             <Icon d={ICONS.trash} className="h-3.5 w-3.5" />
                             {t('etudiantPhotoRemove')}
                         </button>
                     )}
                 </div>
             </div>
-            {uploadForm.processing && <p className="text-xs text-slate-400 animate-pulse">{locale === 'ar' ? 'جاري الرفع...' : 'Téléchargement...'}</p>}
         </div>
     );
 }
@@ -246,9 +235,30 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale }) {
         filier:         etudiant?.filier         ?? '',
     });
 
+    const [pendingPhoto, setPendingPhoto] = useState(null);
+    const [pendingPhotoPreview, setPendingPhotoPreview] = useState(null);
+    const [pendingRemove, setPendingRemove] = useState(false);
+
     const submit = (e) => {
         e.preventDefault();
-        const opts = { onSuccess: () => { reset(); onClose(); } };
+        const afterSave = () => {
+            if (pendingRemove && isEdit) {
+                router.delete(route('etudiants.photo.remove', etudiant.id), {
+                    preserveScroll: true,
+                    onFinish: () => { reset(); onClose(); },
+                });
+            } else if (pendingPhoto && isEdit) {
+                router.post(route('etudiants.photo', etudiant.id), { photo: pendingPhoto }, {
+                    forceFormData: true,
+                    preserveScroll: true,
+                    onFinish: () => { reset(); onClose(); },
+                });
+            } else {
+                reset();
+                onClose();
+            }
+        };
+        const opts = { preserveScroll: true, onSuccess: afterSave };
         isEdit ? put(route('etudiants.update', etudiant.id), opts) : post(route('etudiants.store'), opts);
     };
 
@@ -348,7 +358,7 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale }) {
                                     error={errors.lieu_naissance}
                                     dir={locale === 'ar' ? 'rtl' : 'ltr'} />
                             </div>
-                            {isEdit && <PhotoUpload etudiant={etudiant} t={t} locale={locale} />}
+                            {isEdit && <PhotoUpload currentUrl={etudiant.photo_url} onFileSelect={(file, url) => { setPendingPhoto(file); setPendingPhotoPreview(url); setPendingRemove(false); }} onRemove={() => { setPendingRemove(true); setPendingPhoto(null); setPendingPhotoPreview(null); }} t={t} locale={locale} />}
                             <div className="space-y-1.5">
                                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">{t('etudiantSexe')}</label>
                                 <div className="flex gap-2">
@@ -397,7 +407,7 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale }) {
                                     {locale === 'ar' ? 'معاينة' : 'Aperçu'}
                                 </p>
                                 <div className="flex items-center gap-3">
-                                    <EtudiantAvatar etudiant={{ prenom_fr: data.prenom_fr, nom_fr: data.nom_fr, photo_url: etudiant?.photo_url }} size="md" />
+                                    <EtudiantAvatar etudiant={{ prenom_fr: data.prenom_fr, nom_fr: data.nom_fr, photo_url: pendingPhotoPreview || etudiant?.photo_url }} size="md" />
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">
                                             {locale === 'ar'
