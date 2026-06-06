@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Module;
 use App\Models\Prof;
+use App\Models\Semestre;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,7 +22,7 @@ class ModuleController extends Controller
     public function index(Request $request): Response
     {
         $query = Module::query()
-            ->with(['prof.user:id,nom_fr,prenom_fr,nom_ar,prenom_ar'])
+            ->with(['prof.user:id,nom_fr,prenom_fr,nom_ar,prenom_ar', 'semestre.niveau'])
             ->withCount('etudiants')
             ->orderBy('created_at', 'desc');
 
@@ -35,6 +36,10 @@ class ModuleController extends Controller
 
         if ($type = $request->get('type')) {
             $query->where('type_module', $type);
+        }
+
+        if ($semestreId = $request->get('semestre_id')) {
+            $query->where('semestre_id', $semestreId);
         }
 
         $modules = $query->paginate(12)->withQueryString();
@@ -51,6 +56,11 @@ class ModuleController extends Controller
 
         $types = Module::distinct()->pluck('type_module')->filter()->values();
 
+        $semestres = Semestre::with('niveau')
+            ->orderBy('numero')
+            ->orderBy('code')
+            ->get(['id', 'code', 'nom_fr', 'nom_ar', 'niveau_id']);
+
         $stats = [
             'total'        => Module::count(),
             'withProf'     => Module::whereNotNull('prof_id')->count(),
@@ -59,11 +69,12 @@ class ModuleController extends Controller
         ];
 
         return Inertia::render('Modules/Index', [
-            'modules' => $modules,
-            'profs'   => $profs,
-            'types'   => $types,
-            'filters' => $request->only(['search', 'type']),
-            'stats'   => $stats,
+            'modules'  => $modules,
+            'profs'    => $profs,
+            'semestres'=> $semestres,
+            'types'    => $types,
+            'filters'  => $request->only(['search', 'type', 'semestre_id']),
+            'stats'    => $stats,
         ]);
     }
 
@@ -79,6 +90,7 @@ class ModuleController extends Controller
             'coefficient' => 'nullable|integer|min:1|max:10',
             'type_module' => 'nullable|string|max:255',
             'prof_id'     => 'nullable|exists:prof,id',
+            'semestre_id' => 'nullable|exists:semestres,id',
         ]);
 
         Module::create($validated);
@@ -99,6 +111,7 @@ class ModuleController extends Controller
             'coefficient' => 'nullable|integer|min:1|max:10',
             'type_module' => 'nullable|string|max:255',
             'prof_id'     => 'nullable|exists:prof,id',
+            'semestre_id' => 'nullable|exists:semestres,id',
         ]);
 
         $module->update($validated);
@@ -207,6 +220,12 @@ class ModuleController extends Controller
                 continue;
             }
 
+            $semestreId = null;
+            if (!empty($data['code_semestre'])) {
+                $semestre = Semestre::where('code', $data['code_semestre'])->first();
+                if ($semestre) $semestreId = $semestre->id;
+            }
+
             Module::create([
                 'nom_fr'      => $nom_fr,
                 'nom_ar'      => $data['nom_ar']      ?? null,
@@ -216,6 +235,7 @@ class ModuleController extends Controller
                 'type_module' => $data['type_module']  ?? null,
                 'prof_id'     => is_numeric($data['prof_id'] ?? null)
                                     ? (int) $data['prof_id'] : null,
+                'semestre_id' => $semestreId,
             ]);
 
             $rows_report[] = [

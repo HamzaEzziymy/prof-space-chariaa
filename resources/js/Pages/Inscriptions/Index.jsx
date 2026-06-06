@@ -50,7 +50,7 @@ function StatCard({ icon, label, value, color }) {
 }
 
 /* ── Student search combobox ─────────────────────────────────────────────────*/
-function StudentCombo({ items, value, onChange, placeholder }) {
+function StudentCombo({ items, value, onChange, placeholder, disabled }) {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
     const ref = useRef();
@@ -67,6 +67,14 @@ function StudentCombo({ items, value, onChange, placeholder }) {
         return !q || (i.nom_fr + ' ' + i.prenom_fr + ' ' + (i.CNE || '') + ' ' + i.nom_ar + ' ' + i.prenom_ar).toLowerCase().includes(q);
     }) || [];
 
+    if (disabled && selected) {
+        return (
+            <div className="relative">
+                <input type="text" value={selected.nom_fr + ' ' + selected.prenom_fr + (selected.CNE ? ' (' + selected.CNE + ')' : '')} readOnly
+                    className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/60 px-4 py-2.5 text-sm text-slate-600 dark:text-slate-400 cursor-not-allowed" />
+            </div>
+        );
+    }
     return (
         <div ref={ref} className="relative">
             <input type="text" value={open ? query : (selected ? (selected.nom_fr + ' ' + selected.prenom_fr + (selected.CNE ? ' (' + selected.CNE + ')' : '')) : '')}
@@ -96,7 +104,7 @@ function StudentCombo({ items, value, onChange, placeholder }) {
 }
 
 /* ── Module search combobox ──────────────────────────────────────────────────*/
-function ModuleCombo({ items, value, onChange, placeholder }) {
+function ModuleCombo({ items, value, onChange, placeholder, disabled }) {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
     const ref = useRef();
@@ -113,6 +121,14 @@ function ModuleCombo({ items, value, onChange, placeholder }) {
         return !q || (i.nom_fr + ' ' + i.nom_ar + ' ' + (i.code_module || '')).toLowerCase().includes(q);
     }) || [];
 
+    if (disabled && selected) {
+        return (
+            <div className="relative">
+                <input type="text" value={selected.nom_fr + (selected.code_module ? ' (' + selected.code_module + ')' : '')} readOnly
+                    className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/60 px-4 py-2.5 text-sm text-slate-600 dark:text-slate-400 cursor-not-allowed" />
+            </div>
+        );
+    }
     return (
         <div ref={ref} className="relative">
             <input type="text" value={open ? query : (selected ? (selected.nom_fr + (selected.code_module ? ' (' + selected.code_module + ')' : '')) : '')}
@@ -139,10 +155,10 @@ function ModuleCombo({ items, value, onChange, placeholder }) {
 }
 
 /* ── Add single inscription modal ────────────────────────────────────────────*/
-function AddModal({ allEtudiants, allModules, onClose, t, locale }) {
+function AddModal({ allEtudiants, allModules, preselectedModuleId, preselectedStudentId, onClose, t, locale }) {
     const { data, setData, post, processing, errors, reset } = useForm({
-        etudiant_id: null,
-        module_id: null,
+        etudiant_id: preselectedStudentId ?? null,
+        module_id: preselectedModuleId ?? null,
     });
 
     const selectedStudent = allEtudiants?.find(e => e.id === data.etudiant_id);
@@ -177,7 +193,8 @@ function AddModal({ allEtudiants, allModules, onClose, t, locale }) {
                             </label>
                             <StudentCombo items={allEtudiants} value={data.etudiant_id}
                                 onChange={v => setData('etudiant_id', v)}
-                                placeholder={locale === 'ar' ? 'ابحث عن طالب...' : 'Rechercher un étudiant...'} />
+                                placeholder={locale === 'ar' ? 'ابحث عن طالب...' : 'Rechercher un étudiant...'}
+                                disabled={!!preselectedStudentId} />
                             {errors.etudiant_id && <p className="text-xs text-red-500">{errors.etudiant_id}</p>}
                         </div>
                         <div className="space-y-1.5">
@@ -186,7 +203,8 @@ function AddModal({ allEtudiants, allModules, onClose, t, locale }) {
                             </label>
                             <ModuleCombo items={availableModules} value={data.module_id}
                                 onChange={v => setData('module_id', v)}
-                                placeholder={locale === 'ar' ? 'ابحث عن وحدة...' : 'Rechercher un module...'} />
+                                placeholder={locale === 'ar' ? 'ابحث عن وحدة...' : 'Rechercher un module...'}
+                                disabled={!!preselectedModuleId} />
                             {errors.module_id && <p className="text-xs text-red-500">{errors.module_id}</p>}
                         </div>
                         <div className="flex items-center justify-end gap-3 pt-2">
@@ -638,6 +656,8 @@ function PageContent() {
     const [expanded, setExpanded] = useState(new Set());
     const [showAdd, setShowAdd] = useState(false);
     const [showExcel, setShowExcel] = useState(false);
+    const [preselectedModuleId, setPreselectedModuleId] = useState(null);
+    const [preselectedStudentId, setPreselectedStudentId] = useState(null);
     const [toast, setToast] = useState(null);
 
     /* Toast flash messages */
@@ -757,205 +777,179 @@ function PageContent() {
                 </div>
             </div>
 
-            {/* Table */}
+            {/* Tree view */}
             {items?.data?.length > 0 ? (
-                <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead>
-                                <tr className="border-b border-slate-100 dark:border-slate-700/60 bg-slate-50/70 dark:bg-slate-700/30">
+                <div className="space-y-3">
+                    {items.data.map(item => {
+                        const isOpen = expanded.has(item.id);
+                        const children = isModuleView ? item.etudiants : item.modules;
+                        const hasChildren = children?.length > 0;
+                        return (
+                            <div key={item.id} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm overflow-hidden">
+                                {/* Parent card */}
+                                <div className="flex cursor-pointer items-center justify-between px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-700/40 transition"
+                                    onClick={() => toggleExpand(item.id)}>
                                     {isModuleView ? (
-                                        <>
-                                            <th className="w-10 px-4 py-3" />
-                                            <th className="text-start px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                                {locale === 'ar' ? 'الوحدة' : 'Module'}
-                                            </th>
-                                            <th className="text-start px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                                {locale === 'ar' ? 'الرمز' : 'Code'}
-                                            </th>
-                                            <th className="text-start px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                                {locale === 'ar' ? 'الأستاذ' : 'Professeur'}
-                                            </th>
-                                            <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                                {locale === 'ar' ? 'المعامل' : 'Coeff'}
-                                            </th>
-                                            <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                                {locale === 'ar' ? 'الطلاب المسجلين' : 'Inscrits'}
-                                            </th>
-                                            <th className="w-20 px-4 py-3" />
-                                        </>
+                                        <div className="flex items-center gap-4 min-w-0">
+                                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-100 dark:bg-violet-900/30">
+                                                <Icon d={I.book} className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-semibold text-slate-800 dark:text-white truncate">
+                                                        {locale === 'ar' ? (item.nom_ar || item.nom_fr) : (item.nom_fr || item.nom_ar || '')}
+                                                    </span>
+                                                    <code className="rounded-lg bg-slate-100 dark:bg-slate-700 px-2 py-0.5 font-mono text-[10px] font-bold text-slate-500 dark:text-slate-400">{item.code_module || ''}</code>
+                                                </div>
+                                                <div className="flex items-center gap-3 mt-0.5">
+                                                    <span className="text-xs text-slate-400">{item.prof || '—'}</span>
+                                                    <span className={`text-xs ${hasChildren ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>
+                                                        {hasChildren
+                                                            ? (locale === 'ar' ? `${children.length} طالب` : `${children.length} étudiant${children.length > 1 ? 's' : ''}`)
+                                                            : (locale === 'ar' ? 'لا يوجد طلاب' : 'Aucun étudiant')}
+                                                    </span>
+                                                    {item.coefficient && <span className="text-xs text-slate-400">{locale === 'ar' ? 'المعامل:' : 'Coeff:'} {item.coefficient}</span>}
+                                                </div>
+                                            </div>
+                                        </div>
                                     ) : (
-                                        <>
-                                            <th className="w-10 px-4 py-3" />
-                                            <th className="text-start px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                                {locale === 'ar' ? 'الطالب' : 'Étudiant'}
-                                            </th>
-                                            <th className="text-start px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                                CNE
-                                            </th>
-                                            <th className="text-start px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                                {locale === 'ar' ? 'الشعبة' : 'Filière'}
-                                            </th>
-                                            <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                                {locale === 'ar' ? 'الوحدات المسجلة' : 'Modules'}
-                                            </th>
-                                            <th className="w-20 px-4 py-3" />
-                                        </>
+                                        <div className="flex items-center gap-4 min-w-0">
+                                            <div className="h-10 w-10 shrink-0 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center overflow-hidden ring-2 ring-indigo-300 dark:ring-indigo-600">
+                                                {item.photo_url
+                                                    ? <img src={item.photo_url} alt="" className="h-full w-full object-cover" />
+                                                    : <span className="text-xs font-bold text-slate-500">{(item.prenom_fr?.[0] || item.nom_fr?.[0] || '?').toUpperCase()}</span>
+                                                }
+                                            </div>
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-semibold text-slate-800 dark:text-white truncate">
+                                                        {locale === 'ar'
+                                                            ? (item.prenom_ar || item.prenom_fr || '') + ' ' + (item.nom_ar || item.nom_fr || '')
+                                                            : (item.prenom_fr || '') + ' ' + (item.nom_fr || '')}
+                                                    </span>
+                                                    {item.CNE && <code className="rounded-lg bg-slate-100 dark:bg-slate-700 px-2 py-0.5 font-mono text-[10px] font-bold text-slate-500 dark:text-slate-400">{item.CNE}</code>}
+                                                </div>
+                                                <div className="flex items-center gap-3 mt-0.5">
+                                                    <span className="text-xs text-slate-400">{item.filier || '—'}</span>
+                                                    <span className={`text-xs ${hasChildren ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>
+                                                        {hasChildren
+                                                            ? (locale === 'ar' ? `${children.length} وحدة` : `${children.length} module${children.length > 1 ? 's' : ''}`)
+                                                            : (locale === 'ar' ? 'لا توجد وحدات' : 'Aucun module')}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     )}
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
-                                {items.data.map(item => {
-                                    const isOpen = expanded.has(item.id);
-                                    const children = isModuleView ? item.etudiants : item.modules;
-                                    return (
-                                        <Fragment key={item.id}>
-                                            {/* Parent row */}
-                                            <tr className={`hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition cursor-pointer ${isOpen ? 'bg-slate-50/80 dark:bg-slate-700/20' : ''}`}
-                                                onClick={() => toggleExpand(item.id)}>
-                                                <td className="px-4 py-3">
-                                                    <button className="p-0.5 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition">
-                                                        <Icon d={isOpen ? I.up : I.down} className="h-4 w-4" />
-                                                    </button>
-                                                </td>
+                                    <Icon d={isOpen ? I.down : I.up} className="h-4 w-4 text-slate-400 shrink-0" />
+                                </div>
+
+                                {/* Expanded children */}
+                                {isOpen && hasChildren && (
+                                    <div className="border-t border-slate-100 dark:border-slate-700/60">
+                                        {children.map((child, cIdx) => (
+                                            <div key={`${item.id}-${child.id}`}
+                                                className={`flex items-center justify-between px-5 py-3 ${cIdx < children.length - 1 ? 'border-b border-slate-50 dark:border-slate-700/30' : ''} hover:bg-slate-50/70 dark:hover:bg-slate-700/20 transition`}>
                                                 {isModuleView ? (
                                                     <>
-                                                        <td className="px-4 py-3">
-                                                            <p className="text-sm font-medium text-slate-800 dark:text-white">
-                                                                {locale === 'ar' ? (item.nom_ar || item.nom_fr) : (item.nom_fr || item.nom_ar || '')}
-                                                            </p>
-                                                        </td>
-                                                        <td className="px-4 py-3">
-                                                            <code className="text-xs font-mono text-slate-400">{item.code_module || '—'}</code>
-                                                        </td>
-                                                        <td className="px-4 py-3">
-                                                            <span className="text-sm text-slate-600 dark:text-slate-300">{item.prof || '—'}</span>
-                                                        </td>
-                                                        <td className="px-4 py-3 text-center">
-                                                            <span className="text-sm text-slate-600 dark:text-slate-300">{item.coefficient ?? '—'}</span>
-                                                        </td>
-                                                        <td className="px-4 py-3 text-center">
-                                                            <span className="inline-flex items-center justify-center h-6 min-w-6 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-xs font-semibold text-indigo-700 dark:text-indigo-300 px-2">
-                                                                {item.inscriptions_count}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-4 py-3" />
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <td className="px-4 py-3">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="h-8 w-8 shrink-0 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center overflow-hidden">
-                                                                    {item.photo_url
-                                                                        ? <img src={item.photo_url} alt="" className="h-full w-full object-cover" />
-                                                                        : <span className="text-[10px] font-bold text-slate-500">{(item.prenom_fr?.[0] || item.nom_fr?.[0] || '?').toUpperCase()}</span>
+                                                        <div className="flex items-center gap-3 min-w-0">
+                                                            <div className="relative flex items-center">
+                                                                <div className="absolute start-0 top-1/2 w-4 border-t border-slate-300 dark:border-slate-600" style={{ [isRTL ? 'right' : 'left']: '-8px' }} />
+                                                                <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden ${isRTL ? 'mr-5' : 'ml-5'}`}>
+                                                                    {child.photo_url
+                                                                        ? <img src={child.photo_url} alt="" className="h-full w-full object-cover" />
+                                                                        : <span className="text-[9px] font-bold text-slate-500">{(child.prenom_fr?.[0] || child.nom_fr?.[0] || '?').toUpperCase()}</span>
                                                                     }
                                                                 </div>
-                                                                <div>
-                                                                    <p className="text-sm font-medium text-slate-800 dark:text-white">
-                                                                        {locale === 'ar'
-                                                                            ? (item.prenom_ar || item.prenom_fr || '') + ' ' + (item.nom_ar || item.nom_fr || '')
-                                                                            : (item.prenom_fr || '') + ' ' + (item.nom_fr || '')}
-                                                                    </p>
-                                                                </div>
                                                             </div>
-                                                        </td>
-                                                        <td className="px-4 py-3">
-                                                            <code className="text-xs font-mono text-slate-400">{item.CNE || '—'}</code>
-                                                        </td>
-                                                        <td className="px-4 py-3">
-                                                            <span className="text-sm text-slate-600 dark:text-slate-300">{item.filier || '—'}</span>
-                                                        </td>
-                                                        <td className="px-4 py-3 text-center">
-                                                            <span className="inline-flex items-center justify-center h-6 min-w-6 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-xs font-semibold text-indigo-700 dark:text-indigo-300 px-2">
-                                                                {item.inscriptions_count}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-4 py-3" />
-                                                    </>
-                                                )}
-                                            </tr>
-
-                                            {/* Expanded children rows */}
-                                            {isOpen && children?.length > 0 && children.map(child => (
-                                                <tr key={`${item.id}-${child.id}`}
-                                                    className="bg-slate-50/50 dark:bg-slate-700/10 border-t border-slate-100/50 dark:border-slate-700/30">
-                                                    <td className="px-4 py-2.5" />
-                                                    {isModuleView ? (
-                                                        <>
-                                                            <td className="px-4 py-2.5" colSpan={3}>
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className="h-7 w-7 shrink-0 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center overflow-hidden">
-                                                                        {child.photo_url
-                                                                            ? <img src={child.photo_url} alt="" className="h-full w-full object-cover" />
-                                                                            : <span className="text-[9px] font-bold text-slate-500">{(child.prenom_fr?.[0] || child.nom_fr?.[0] || '?').toUpperCase()}</span>
-                                                                        }
-                                                                    </div>
-                                                                    <span className="text-sm text-slate-700 dark:text-slate-300">
+                                                            <div className="min-w-0">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
                                                                         {locale === 'ar'
                                                                             ? (child.prenom_ar || child.prenom_fr || '') + ' ' + (child.nom_ar || child.nom_fr || '')
                                                                             : (child.prenom_fr || '') + ' ' + (child.nom_fr || '')}
                                                                     </span>
                                                                     {child.CNE && <code className="text-[10px] font-mono text-slate-400">{child.CNE}</code>}
                                                                 </div>
-                                                            </td>
-                                                            <td className="px-4 py-2.5 text-center" colSpan={1}>
-                                                                <button onClick={() => deleteForm.delete(route('inscriptions.destroy', child.pivot_id), { preserveScroll: true })}
-                                                                    disabled={deleteForm.processing}
-                                                                    className="inline-flex items-center gap-1 rounded-lg border border-red-200 dark:border-red-800 px-2 py-1 text-[10px] font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition disabled:opacity-50">
-                                                                    <Icon d={I.trash} className="h-3 w-3" />
-                                                                    {locale === 'ar' ? 'إلغاء' : 'Retirer'}
-                                                                </button>
-                                                            </td>
-                                                            <td />
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <td className="px-4 py-2.5" colSpan={2}>
-                                                                <div className="flex items-center gap-3">
-                                                                    <span className="text-sm text-slate-700 dark:text-slate-300">
-                                                                        {locale === 'ar'
-                                                                            ? (child.nom_ar || child.nom_fr)
-                                                                            : (child.nom_fr || child.nom_ar || '')}
+                                                            </div>
+                                                        </div>
+                                                        <button onClick={(e) => { e.stopPropagation(); deleteForm.delete(route('inscriptions.destroy', child.pivot_id), { preserveScroll: true }); }}
+                                                            disabled={deleteForm.processing}
+                                                            className="inline-flex items-center gap-1 rounded-lg border border-red-200 dark:border-red-800 px-2.5 py-1 text-[10px] font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition disabled:opacity-50 shrink-0">
+                                                            <Icon d={I.trash} className="h-3 w-3" />
+                                                            {locale === 'ar' ? 'إلغاء' : 'Retirer'}
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <div className="flex items-center gap-3 min-w-0">
+                                                            <div className="relative flex items-center">
+                                                                <div className="absolute start-0 top-1/2 w-4 border-t border-slate-300 dark:border-slate-600" style={{ [isRTL ? 'right' : 'left']: '-8px' }} />
+                                                                <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-900/20 ${isRTL ? 'mr-5' : 'ml-5'}`}>
+                                                                    <Icon d={I.book} className="h-3.5 w-3.5 text-violet-500" />
+                                                                </div>
+                                                            </div>
+                                                            <div className="min-w-0">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
+                                                                        {locale === 'ar' ? (child.nom_ar || child.nom_fr) : (child.nom_fr || child.nom_ar || '')}
                                                                     </span>
                                                                     {child.code_module && <code className="text-[10px] font-mono text-slate-400">{child.code_module}</code>}
                                                                 </div>
-                                                            </td>
-                                                            <td className="px-4 py-2.5">
                                                                 <span className="text-xs text-slate-400">{locale === 'ar' ? 'المعامل:' : 'Coeff:'} {child.coefficient ?? '—'}</span>
-                                                            </td>
-                                                            <td className="px-4 py-2.5 text-center" />
-                                                            <td className="px-4 py-2.5">
-                                                                <button onClick={() => deleteForm.delete(route('inscriptions.destroy', child.pivot_id), { preserveScroll: true })}
-                                                                    disabled={deleteForm.processing}
-                                                                    className="inline-flex items-center gap-1 rounded-lg border border-red-200 dark:border-red-800 px-2 py-1 text-[10px] font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition disabled:opacity-50">
-                                                                    <Icon d={I.trash} className="h-3 w-3" />
-                                                                    {locale === 'ar' ? 'إلغاء' : 'Retirer'}
-                                                                </button>
-                                                            </td>
-                                                        </>
-                                                    )}
-                                                </tr>
-                                            ))}
+                                                            </div>
+                                                        </div>
+                                                        <button onClick={(e) => { e.stopPropagation(); deleteForm.delete(route('inscriptions.destroy', child.pivot_id), { preserveScroll: true }); }}
+                                                            disabled={deleteForm.processing}
+                                                            className="inline-flex items-center gap-1 rounded-lg border border-red-200 dark:border-red-800 px-2.5 py-1 text-[10px] font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition disabled:opacity-50 shrink-0">
+                                                            <Icon d={I.trash} className="h-3 w-3" />
+                                                            {locale === 'ar' ? 'إلغاء' : 'Retirer'}
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        ))}
+                                        {isModuleView ? (
+                                            <div className="border-t border-slate-50 dark:border-slate-700/30 px-5 py-2.5 text-center">
+                                                <button onClick={() => { setPreselectedModuleId(item.id); setShowAdd(true); }}
+                                                    className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition">
+                                                    <Icon d={I.plus} className="h-3 w-3" />{locale === 'ar' ? 'تسجيل طالب' : 'Inscrire un étudiant'}
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="border-t border-slate-50 dark:border-slate-700/30 px-5 py-2.5 text-center">
+                                                <button onClick={() => { setPreselectedStudentId(item.id); setShowAdd(true); }}
+                                                    className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition">
+                                                    <Icon d={I.plus} className="h-3 w-3" />{locale === 'ar' ? 'تسجيل وحدة' : 'Inscrire un module'}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
 
-                                            {/* Empty expanded state */}
-                                            {isOpen && (!children || children.length === 0) && (
-                                                <tr className="bg-slate-50/50 dark:bg-slate-700/10">
-                                                    <td colSpan={isModuleView ? 7 : 6} className="px-4 py-4 text-center">
-                                                        <p className="text-xs text-slate-400 italic">
-                                                            {isModuleView
-                                                                ? (locale === 'ar' ? 'لا يوجد طلاب مسجلون' : 'Aucun étudiant inscrit')
-                                                                : (locale === 'ar' ? 'لا توجد وحدات مسجلة' : 'Aucun module inscrit')}
-                                                        </p>
-                                                    </td>
-                                                </tr>
-                                            )}
-                                        </Fragment>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
+                                {/* Empty expanded state */}
+                                {isOpen && !hasChildren && (
+                                    <div className="border-t border-slate-100 dark:border-slate-700/60 px-5 py-6 text-center space-y-3">
+                                        <p className="text-xs text-slate-400">
+                                            {isModuleView
+                                                ? (locale === 'ar' ? 'لا يوجد طلاب مسجلون في هذه الوحدة' : 'Aucun étudiant inscrit dans ce module')
+                                                : (locale === 'ar' ? 'هذا الطالب غير مسجل في أي وحدة' : 'Aucun module inscrit pour cet étudiant')}
+                                        </p>
+                                        {isModuleView ? (
+                                            <button onClick={() => { setPreselectedModuleId(item.id); setShowAdd(true); }}
+                                                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition">
+                                                <Icon d={I.plus} className="h-3 w-3" />{locale === 'ar' ? 'تسجيل طالب' : 'Inscrire un étudiant'}
+                                            </button>
+                                        ) : (
+                                            <button onClick={() => { setPreselectedStudentId(item.id); setShowAdd(true); }}
+                                                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition">
+                                                <Icon d={I.plus} className="h-3 w-3" />{locale === 'ar' ? 'تسجيل وحدة' : 'Inscrire un module'}
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
             ) : (
                 <div className="rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm flex flex-col items-center justify-center py-16 px-5">
@@ -991,7 +985,7 @@ function PageContent() {
             )}
 
             {/* Modals */}
-            {showAdd && <AddModal allEtudiants={allEtudiants} allModules={allModules} onClose={() => setShowAdd(false)} t={t} locale={locale} />}
+            {showAdd && <AddModal allEtudiants={allEtudiants} allModules={allModules} preselectedModuleId={preselectedModuleId} preselectedStudentId={preselectedStudentId} onClose={() => { setShowAdd(false); setPreselectedModuleId(null); setPreselectedStudentId(null); }} t={t} locale={locale} />}
             {showExcel && <ExcelModal onClose={() => { setShowExcel(false); router.reload({ only: ['items', 'stats'] }); }} t={t} locale={locale} />}
         </>
     );

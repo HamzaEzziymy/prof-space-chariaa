@@ -84,6 +84,27 @@ Route::middleware(['auth', 'admin'])->prefix('etudiants')->name('etudiants.')->g
     Route::delete('/{etudiant}/photo', [EtudiantController::class, 'removePhoto'])->name('photo.remove');
 });
 
+// ── Structure pédagogique (admin + super_admin) ────────────────────────────
+Route::middleware(['auth', 'admin'])->prefix('structure')->name('structure.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\StructureController::class, 'index'])->name('index');
+});
+
+// ── Niveaux — redirect old index to structure (API routes for CRUD) ────────
+Route::middleware(['auth', 'admin'])->prefix('niveaux')->group(function () {
+    Route::get('/',                 fn () => redirect()->route('structure.index'))->name('niveaux.index');
+    Route::post('/',                [\App\Http\Controllers\NiveauController::class, 'store'])->name('niveaux.store');
+    Route::put('/{niveau}',         [\App\Http\Controllers\NiveauController::class, 'update'])->name('niveaux.update');
+    Route::delete('/{niveau}',      [\App\Http\Controllers\NiveauController::class, 'destroy'])->name('niveaux.destroy');
+});
+
+// ── Semestres — redirect old index to structure (API routes for CRUD) ───────
+Route::middleware(['auth', 'admin'])->prefix('semestres')->group(function () {
+    Route::get('/',                 fn () => redirect()->route('structure.index'))->name('semestres.index');
+    Route::post('/',                [\App\Http\Controllers\SemestreController::class, 'store'])->name('semestres.store');
+    Route::put('/{semestre}',       [\App\Http\Controllers\SemestreController::class, 'update'])->name('semestres.update');
+    Route::delete('/{semestre}',    [\App\Http\Controllers\SemestreController::class, 'destroy'])->name('semestres.destroy');
+});
+
 // ── Inscription pédagogique (admin + super_admin) ────────────────────────────
 Route::middleware(['auth', 'admin'])->prefix('inscriptions')->name('inscriptions.')->group(function () {
     Route::get('/',             [\App\Http\Controllers\InscriptionPedagogiqueController::class, 'index'])->name('index');

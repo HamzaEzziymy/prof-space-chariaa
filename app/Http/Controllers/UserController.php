@@ -128,6 +128,7 @@ class UserController extends Controller
 
         if (!empty($validated['password'])) {
             $user->password = Hash::make($validated['password']);
+            $user->must_change_password = true;
         }
 
         $user->save();

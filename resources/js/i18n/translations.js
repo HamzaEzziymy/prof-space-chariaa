@@ -26,6 +26,7 @@ export const translations = {
         examRooms: 'Salles d\'examen',
         inscriptions: 'Inscriptions pédagogiques',
         inscriptionPedagogique: 'Inscription pédagogique',
+        structure: 'Structure',
         grades: 'Notes',
         users: 'Utilisateurs',
         user:  'Utilisateur',
@@ -270,6 +271,7 @@ export const translations = {
         moduleProfessor: 'Professeur responsable',
         moduleProfessorHint: 'Sélectionner un professeur',
         noProfessorAssigned: 'Aucun professeur assigné',
+        moduleSemestre: 'Semestre',
         noModules: 'Aucun module trouvé',
         totalModulesStat: 'Total modules',
         modulesWithProf: 'Avec professeur',
@@ -305,6 +307,30 @@ export const translations = {
         importOptional: 'optionnel',
         addViaForm: 'Saisie manuelle',
         addViaExcel: 'Import Excel / CSV',
+
+        // Niveaux
+        niveauxManagement: 'Gestion des niveaux',
+        addNiveau: 'Ajouter un niveau',
+        editNiveau: 'Modifier le niveau',
+        deleteNiveau: 'Supprimer le niveau',
+        confirmDeleteNiveau: 'Confirmer la suppression',
+        confirmDeleteNiveauMsg: 'Êtes-vous sûr de vouloir supprimer ce niveau ? Cette action est irréversible.',
+        noNiveaux: 'Aucun niveau trouvé',
+        niveauCreated: 'Niveau créé avec succès',
+        niveauUpdated: 'Niveau mis à jour',
+        niveauDeleted: 'Niveau supprimé',
+
+        // Semestres
+        semestresManagement: 'Gestion des semestres',
+        addSemestre: 'Ajouter un semestre',
+        editSemestre: 'Modifier le semestre',
+        deleteSemestre: 'Supprimer le semestre',
+        confirmDeleteSemestre: 'Confirmer la suppression',
+        confirmDeleteSemestreMsg: 'Êtes-vous sûr de vouloir supprimer ce semestre ? Cette action est irréversible.',
+        noSemestres: 'Aucun semestre trouvé',
+        semestreCreated: 'Semestre créé avec succès',
+        semestreUpdated: 'Semestre mis à jour',
+        semestreDeleted: 'Semestre supprimé',
 
         // Professors management
         professorsManagement: 'Gestion des professeurs',
@@ -373,6 +399,7 @@ export const translations = {
         examRooms: 'قاعات الامتحان',
         inscriptions: 'التسجيلات البيداغوجية',
         inscriptionPedagogique: 'التسجيل البيداغوجي',
+        structure: 'الهيكل البيداغوجي',
         grades: 'النتائج',
         users: 'المستخدمون',
         user:  'المستخدم',
@@ -591,6 +618,7 @@ export const translations = {
         moduleProfessor: 'الأستاذ المسؤول',
         moduleProfessorHint: 'اختر أستاذاً',
         noProfessorAssigned: 'لا يوجد أستاذ مُعيَّن',
+        moduleSemestre: 'الفصل الدراسي',
         noModules: 'لم يتم العثور على وحدات',
         totalModulesStat: 'إجمالي الوحدات',
         modulesWithProf: 'مع أستاذ',
@@ -626,6 +654,30 @@ export const translations = {
         importOptional: 'اختياري',
         addViaForm: 'إضافة يدوية',
         addViaExcel: 'استيراد Excel / CSV',
+
+        // Niveaux
+        niveauxManagement: 'إدارة المستويات',
+        addNiveau: 'إضافة مستوى',
+        editNiveau: 'تعديل المستوى',
+        deleteNiveau: 'حذف المستوى',
+        confirmDeleteNiveau: 'تأكيد الحذف',
+        confirmDeleteNiveauMsg: 'هل أنت متأكد من حذف هذا المستوى؟ هذا الإجراء لا يمكن التراجع عنه.',
+        noNiveaux: 'لم يتم العثور على مستويات',
+        niveauCreated: 'تم إنشاء المستوى بنجاح',
+        niveauUpdated: 'تم تحديث المستوى',
+        niveauDeleted: 'تم حذف المستوى',
+
+        // Semestres
+        semestresManagement: 'إدارة الفصول',
+        addSemestre: 'إضافة فصل',
+        editSemestre: 'تعديل الفصل',
+        deleteSemestre: 'حذف الفصل',
+        confirmDeleteSemestre: 'تأكيد الحذف',
+        confirmDeleteSemestreMsg: 'هل أنت متأكد من حذف هذا الفصل؟ هذا الإجراء لا يمكن التراجع عنه.',
+        noSemestres: 'لم يتم العثور على فصول',
+        semestreCreated: 'تم إنشاء الفصل بنجاح',
+        semestreUpdated: 'تم تحديث الفصل',
+        semestreDeleted: 'تم حذف الفصل',
 
         // Professors management
         professorsManagement: 'إدارة الأساتذة',

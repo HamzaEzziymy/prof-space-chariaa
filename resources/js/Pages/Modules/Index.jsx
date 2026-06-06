@@ -212,12 +212,13 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale }) {
     const fileInput               = useRef(null);
 
     const COLS = [
-        { name: 'nom_fr',      req: true  },
-        { name: 'nom_ar',      req: false },
-        { name: 'code_module', req: true  },
-        { name: 'coefficient', req: false },
-        { name: 'type_module', req: false },
-        { name: 'prof_id',     req: false },
+        { name: 'nom_fr',        req: true  },
+        { name: 'nom_ar',        req: false },
+        { name: 'code_module',   req: true  },
+        { name: 'coefficient',   req: false },
+        { name: 'type_module',   req: false },
+        { name: 'prof_id',       req: false },
+        { name: 'code_semestre', req: false },
     ];
 
     // ── Parse any file with SheetJS ───────────────────────────────────────
@@ -326,7 +327,7 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale }) {
 
     const downloadTemplate = () => {
         const header  = COLS.map(c => c.name).join(',');
-        const example = 'Mathématiques Appliquées,الرياضيات التطبيقية,MATH101,3,Fondamental,';
+        const example = 'Mathématiques Appliquées,الرياضيات التطبيقية,MATH101,3,Fondamental,,S1';
         const blob    = new Blob([header + '\n' + example], { type: 'text/csv;charset=utf-8;' });
         const url     = URL.createObjectURL(blob);
         const a       = document.createElement('a');
@@ -644,7 +645,7 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale }) {
 }
 
 // ─── Form modal (create / edit) ───────────────────────────────────────────────
-function ModuleFormModal({ mode, module, profs, onClose, t, isRTL, locale }) {
+function ModuleFormModal({ mode, module, profs, semestres, onClose, t, isRTL, locale }) {
     const isEdit = mode === 'edit';
 
     const { data, setData, post, put, processing, errors, reset } = useForm({
@@ -654,6 +655,7 @@ function ModuleFormModal({ mode, module, profs, onClose, t, isRTL, locale }) {
         coefficient: module?.coefficient ?? '',
         type_module: module?.type_module ?? '',
         prof_id:     module?.prof_id     ?? '',
+        semestre_id: module?.semestre_id ?? '',
     });
 
     const submit = (e) => {
@@ -775,6 +777,21 @@ function ModuleFormModal({ mode, module, profs, onClose, t, isRTL, locale }) {
                                 {profs.map(p => (
                                     <option key={p.id} value={p.id}>
                                         {locale === 'ar' ? (p.nom_ar || p.nom_fr) : p.nom_fr}
+                                    </option>
+                                ))}
+                            </SelectField>
+                        </div>
+
+                        {/* Semestre */}
+                        <div className="space-y-3">
+                            <SectionDivider emoji="📚" label={locale === 'ar' ? 'الفصل' : 'Semestre'} />
+                            <SelectField id="semestre_id" label={locale === 'ar' ? 'الفصل الدراسي' : 'Semestre'} value={data.semestre_id}
+                                onChange={e => setData('semestre_id', e.target.value)} error={errors.semestre_id}>
+                                <option value="">{locale === 'ar' ? '— بدون فصل —' : '— Sans semestre —'}</option>
+                                {semestres.map(s => (
+                                    <option key={s.id} value={s.id}>
+                                        {s.code} — {locale === 'ar' ? (s.nom_ar || s.nom_fr) : (s.nom_fr || s.nom_ar)}
+                                        {s.niveau ? ` (${locale === 'ar' ? (s.niveau.nom_ar || s.niveau.nom_fr) : (s.niveau.nom_fr || s.niveau.nom_ar)})` : ''}
                                     </option>
                                 ))}
                             </SelectField>
@@ -943,6 +960,17 @@ function ModuleCard({ module, onEdit, onDelete, t, locale }) {
                     <Icon d={ICONS.user} className="h-3.5 w-3.5 shrink-0" />
                     <span className="truncate">{profName || <em className="not-italic text-slate-300 dark:text-slate-600">{t('noProfessorAssigned')}</em>}</span>
                 </div>
+
+                {/* Semestre */}
+                {module.semestre && (
+                    <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                        <Icon d={ICONS.tag} className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                        <span className="truncate">
+                            {module.semestre.code}
+                            {module.semestre.niveau ? ` · ${locale === 'ar' ? (module.semestre.niveau.nom_ar || module.semestre.niveau.nom_fr) : (module.semestre.niveau.nom_fr || module.semestre.niveau.nom_ar)}` : ''}
+                        </span>
+                    </div>
+                )}
             </div>
 
             {/* Actions footer */}
@@ -1005,6 +1033,14 @@ function ModuleRow({ module, onEdit, onDelete, t, locale }) {
                 {profName
                     ? <span className="text-sm text-slate-700 dark:text-slate-200">{profName}</span>
                     : <span className="text-xs italic text-slate-300 dark:text-slate-600">{t('noProfessorAssigned')}</span>}
+            </td>
+            <td className="px-5 py-3.5 text-xs">
+                {module.semestre
+                    ? <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 font-medium text-amber-700 dark:text-amber-400">
+                        {module.semestre.code}
+                        {module.semestre.niveau ? <span className="text-slate-400 dark:text-slate-500">· {module.semestre.niveau.code}</span> : ''}
+                      </span>
+                    : <span className="text-xs italic text-slate-300 dark:text-slate-600">—</span>}
             </td>
             <td className="px-5 py-3.5">
                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1096,28 +1132,30 @@ function StatCard({ label, value, colorClass, iconPath }) {
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
-function ModulesContent({ modules, profs, types, filters, stats }) {
+function ModulesContent({ modules, profs, semestres, types, filters, stats }) {
     const { t, locale, isRTL } = useLanguage();
     const { flash } = usePage().props;
 
     const [modal, setModal]           = useState(null); // null | {type:'picker'|'form'|'excel'|'edit'|'delete', ...}
     const [search, setSearch]         = useState(filters?.search ?? '');
-    const [typeFilter, setTypeFilter] = useState(filters?.type ?? '');
-    const [viewMode, setViewMode]     = useViewMode('modules_view', 'grid');
+    const [typeFilter, setTypeFilter]     = useState(filters?.type ?? '');
+    const [semestreFilter, setSemestreFilter] = useState(filters?.semestre_id ?? '');
+    const [viewMode, setViewMode]         = useViewMode('modules_view', 'grid');
     const [importToast, setImportToast] = useState(null); // { count: number } | null
     const searchTimeout               = useRef(null);
 
-    const doSearch = (val, tf = typeFilter) => {
+    const doSearch = (val, tf = typeFilter, sf = semestreFilter) => {
         clearTimeout(searchTimeout.current);
         searchTimeout.current = setTimeout(() =>
-            router.get(route('modules.index'), { search: val, type: tf }, { preserveState: true, replace: true }), 320);
+            router.get(route('modules.index'), { search: val, type: tf, semestre_id: sf }, { preserveState: true, replace: true }), 320);
     };
 
-    const handleSearch = (val) => { setSearch(val); doSearch(val); };
-    const handleType   = (val) => { setTypeFilter(val); doSearch(search, val); };
+    const handleSearch   = (val) => { setSearch(val); doSearch(val); };
+    const handleType     = (val) => { setTypeFilter(val); doSearch(search, val); };
+    const handleSemestre = (val) => { setSemestreFilter(val); doSearch(search, typeFilter, val); };
 
     const items     = modules?.data ?? [];
-    const hasFilter = !!(search || typeFilter);
+    const hasFilter = !!(search || typeFilter || semestreFilter);
 
     const statCards = [
         { label: t('totalModulesStat'),  value: stats.total,        colorClass: 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400', iconPath: ICONS.module   },
@@ -1149,7 +1187,7 @@ function ModulesContent({ modules, profs, types, filters, stats }) {
                 />
             )}
             {modal?.type === 'form' && (
-                <ModuleFormModal mode="create" profs={profs} onClose={() => setModal(null)} t={t} isRTL={isRTL} locale={locale} />
+                <ModuleFormModal mode="create" profs={profs} semestres={semestres} onClose={() => setModal(null)} t={t} isRTL={isRTL} locale={locale} />
             )}
             {modal?.type === 'excel' && (
                 <ExcelImportModal
@@ -1162,7 +1200,7 @@ function ModulesContent({ modules, profs, types, filters, stats }) {
                 />
             )}
             {modal?.type === 'edit' && (
-                <ModuleFormModal mode="edit" module={modal.module} profs={profs} onClose={() => setModal(null)} t={t} isRTL={isRTL} locale={locale} />
+                <ModuleFormModal mode="edit" module={modal.module} profs={profs} semestres={semestres} onClose={() => setModal(null)} t={t} isRTL={isRTL} locale={locale} />
             )}
             {modal?.type === 'delete' && (
                 <DeleteModal module={modal.module} onClose={() => setModal(null)} t={t} isRTL={isRTL} locale={locale} />
@@ -1247,6 +1285,29 @@ function ModulesContent({ modules, profs, types, filters, stats }) {
                         </span>
                     </div>
 
+                    {/* Semestre filter */}
+                    <div className="relative">
+                        <span className={`pointer-events-none absolute inset-y-0 ${isRTL ? 'end-3' : 'start-3'} flex items-center text-slate-400`}>
+                            <Icon d={ICONS.tag} className="h-4 w-4" />
+                        </span>
+                        <select value={semestreFilter} onChange={e => handleSemestre(e.target.value)}
+                            className={`appearance-none rounded-xl border border-slate-200 bg-white py-2.5 text-sm text-slate-700 shadow-sm transition
+                                focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100
+                                dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200
+                                ${isRTL ? 'ps-8 pe-9' : 'ps-9 pe-8'}`}>
+                            <option value="">{locale === 'ar' ? 'جميع الفصول' : 'Tous les semestres'}</option>
+                            {semestres.map(s => (
+                                <option key={s.id} value={s.id}>
+                                    {s.code} — {locale === 'ar' ? (s.nom_ar || s.nom_fr) : (s.nom_fr || s.nom_ar)}
+                                    {s.niveau ? ` (${s.niveau.code})` : ''}
+                                </option>
+                            ))}
+                        </select>
+                        <span className={`pointer-events-none absolute inset-y-0 ${isRTL ? 'start-3' : 'end-3'} flex items-center text-slate-400`}>
+                            <Icon d={ICONS.chevDown} className="h-4 w-4" />
+                        </span>
+                    </div>
+
                     {/* View toggle */}
                     <div className="flex overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
                         {['grid', 'list'].map(v => (
@@ -1280,7 +1341,13 @@ function ModulesContent({ modules, profs, types, filters, stats }) {
                                 <button onClick={() => handleType('')} className="ms-1 hover:text-red-500"><Icon d={ICONS.close} className="h-3 w-3" /></button>
                             </span>
                         )}
-                        <button onClick={() => { handleSearch(''); handleType(''); }} className="text-xs text-slate-400 hover:text-red-400 transition">
+                        {semestreFilter && (
+                            <span className="flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/30 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                                {semestres?.find(s => s.id == semestreFilter)?.code || semestreFilter}
+                                <button onClick={() => handleSemestre('')} className="ms-1 hover:text-red-500"><Icon d={ICONS.close} className="h-3 w-3" /></button>
+                            </span>
+                        )}
+                        <button onClick={() => { handleSearch(''); handleType(''); handleSemestre(''); }} className="text-xs text-slate-400 hover:text-red-400 transition">
                             {locale === 'ar' ? 'مسح الكل' : 'Tout effacer'}
                         </button>
                     </div>
@@ -1304,11 +1371,11 @@ function ModulesContent({ modules, profs, types, filters, stats }) {
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
-                                        {['name','code','type','coefficient','students','professor','actions'].map(col => (
+                                        {['name','code','type','coefficient','students','professor','semestre','actions'].map(col => (
                                             <th key={col}
                                                 className={`px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400
                                                     ${col === 'actions' ? 'text-end' : (isRTL ? 'text-right' : 'text-left')}`}>
-                                                {t(col === 'coefficient' ? 'moduleCoefficient' : col === 'professor' ? 'moduleProfessor' : col)}
+                                                {t(col === 'coefficient' ? 'moduleCoefficient' : col === 'professor' ? 'moduleProfessor' : col === 'semestre' ? 'moduleSemestre' : col)}
                                             </th>
                                         ))}
                                     </tr>
@@ -1334,11 +1401,11 @@ function ModulesContent({ modules, profs, types, filters, stats }) {
 }
 
 // ─── Page root ────────────────────────────────────────────────────────────────
-export default function ModulesIndex({ modules, profs, types, filters, stats }) {
+export default function ModulesIndex({ modules, profs, semestres, types, filters, stats }) {
     return (
         <LanguageProvider>
             <AdminLayout>
-                <ModulesContent modules={modules} profs={profs} types={types} filters={filters} stats={stats} />
+                <ModulesContent modules={modules} profs={profs} semestres={semestres} types={types} filters={filters} stats={stats} />
             </AdminLayout>
         </LanguageProvider>
     );

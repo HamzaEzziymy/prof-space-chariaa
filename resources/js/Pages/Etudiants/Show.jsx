@@ -123,7 +123,26 @@ function PhotoUpload({ currentUrl, onFileSelect, onRemove, t, locale }) {
     );
 }
 
-function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale }) {
+function SelectField({ id, label, value, onChange, required, error, children }) {
+    return (
+        <div className="space-y-1">
+            <label htmlFor={id} className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                {label}{required && <span className="ms-0.5 text-red-400">*</span>}
+            </label>
+            <select id={id} value={value ?? ''} onChange={onChange}
+                className={`block w-full rounded-xl border px-4 py-2.5 text-sm shadow-sm transition focus:outline-none focus:ring-2 dark:text-white
+                    ${error
+                        ? 'border-red-400 bg-red-50 focus:border-red-400 focus:ring-red-100 dark:bg-red-900/10 dark:border-red-600'
+                        : 'border-slate-200 bg-white focus:border-indigo-400 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800'
+                    }`}>
+                {children}
+            </select>
+            {error && <p className="text-xs text-red-500">{error}</p>}
+        </div>
+    );
+}
+
+function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux }) {
     const isEdit = mode === 'edit';
 
     const { data, setData, post, put, processing, errors, reset } = useForm({
@@ -140,6 +159,7 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale }) {
         telephone:      etudiant?.telephone      ?? '',
         email:          etudiant?.email          ?? '',
         filier:         etudiant?.filier         ?? '',
+        niveau_id:      etudiant?.niveau_id      ?? '',
     });
 
     const [pendingPhoto, setPendingPhoto] = useState(null);
@@ -305,6 +325,13 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale }) {
                                 onChange={e => setData('filier', e.target.value)}
                                 placeholder={locale === 'ar' ? 'مثال: SMI، S6' : 'Ex: SMI, S6'}
                                 hint={t('etudiantFilierHint')} error={errors.filier} />
+                            <SelectField id="niveau_id" label={locale === 'ar' ? 'المستوى' : 'Niveau'} value={data.niveau_id}
+                                onChange={e => setData('niveau_id', e.target.value)} error={errors.niveau_id}>
+                                <option value="">{locale === 'ar' ? 'اختر المستوى...' : 'Choisir un niveau...'}</option>
+                                {(niveaux || []).map(n => (
+                                    <option key={n.id} value={n.id}>{n.nom_fr} ({n.code})</option>
+                                ))}
+                            </SelectField>
                         </div>
 
                         {/* Live preview card */}
@@ -395,7 +422,8 @@ function SectionCard({ title, icon, children }) {
 
 function ShowPage() {
     const { t, locale, isRTL } = useLanguage();
-    const { etudiant } = usePage().props;
+    const props = usePage().props;
+    const { etudiant, niveaux } = props;
     const { auth } = usePage().props;
     const user = auth?.user;
     const [showEditModal, setShowEditModal] = useState(false);
@@ -541,6 +569,10 @@ function ShowPage() {
                     </SectionCard>
 
                     <SectionCard title={t('etudiantAcademique')} icon={ICONS.book}>
+                        {etudiant.niveau && (
+                            <InfoRow icon={ICONS.tag} label={locale === 'ar' ? 'المستوى' : 'Niveau'}
+                                value={locale === 'ar' ? (etudiant.niveau.nom_ar || etudiant.niveau.nom_fr) : (etudiant.niveau.nom_fr || etudiant.niveau.nom_ar)} />
+                        )}
                         {etudiant.modules?.length > 0 ? etudiant.modules.map(mod => (
                             <InfoRow key={mod.id} icon={ICONS.book} label={mod.code || ''} value={mod.intitule_fr || mod.intitule_ar || mod.nom || '—'} />
                         )) : (
@@ -551,7 +583,7 @@ function ShowPage() {
             </div>
 
             {showEditModal && (
-                <EtudiantFormModal mode="edit" etudiant={etudiant} onClose={() => setShowEditModal(false)} t={t} isRTL={isRTL} locale={locale} />
+                <EtudiantFormModal mode="edit" etudiant={etudiant} onClose={() => setShowEditModal(false)} t={t} isRTL={isRTL} locale={locale} niveaux={niveaux} />
             )}
         </>
     );

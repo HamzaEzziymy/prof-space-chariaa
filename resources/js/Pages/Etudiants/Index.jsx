@@ -216,7 +216,7 @@ function PhotoUpload({ currentUrl, onFileSelect, onRemove, t, locale }) {
 }
 
 // ─── Etudiant form modal ──────────────────────────────────────────────────────
-function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale }) {
+function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux }) {
     const isEdit = mode === 'edit';
 
     const { data, setData, post, put, processing, errors, reset } = useForm({
@@ -233,6 +233,7 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale }) {
         telephone:      etudiant?.telephone      ?? '',
         email:          etudiant?.email          ?? '',
         filier:         etudiant?.filier         ?? '',
+        niveau_id:      etudiant?.niveau_id      ?? '',
     });
 
     const [pendingPhoto, setPendingPhoto] = useState(null);
@@ -398,6 +399,13 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale }) {
                                 onChange={e => setData('filier', e.target.value)}
                                 placeholder={locale === 'ar' ? 'مثال: SMI، S6' : 'Ex: SMI, S6'}
                                 hint={t('etudiantFilierHint')} error={errors.filier} />
+                            <SelectField id="niveau_id" label={locale === 'ar' ? 'المستوى' : 'Niveau'} value={data.niveau_id}
+                                onChange={e => setData('niveau_id', e.target.value)} error={errors.niveau_id}>
+                                <option value="">{locale === 'ar' ? 'اختر المستوى...' : 'Choisir un niveau...'}</option>
+                                {(niveaux || []).map(n => (
+                                    <option key={n.id} value={n.id}>{n.nom_fr} ({n.code})</option>
+                                ))}
+                            </SelectField>
                         </div>
 
                         {/* Live preview card */}
@@ -524,6 +532,7 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale }) {
         { name: 'telephone',      req: false },
         { name: 'email',          req: false },
         { name: 'filier',         req: false },
+        { name: 'code_niveau',    req: false },
     ];
 
     const parseFileWithSheetJS = (f) => new Promise((resolve, reject) => {
@@ -624,7 +633,7 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale }) {
 
     const downloadTemplate = () => {
         const header  = COLS.map(c => c.name).join(',');
-        const example = 'Jean,Dupont,جان,دوبون,CNE123456,A123456,INS001,2000-01-15,Casablanca,test@email.com,M,+212600000000,SMI';
+        const example = 'Jean,Dupont,جان,دوبون,CNE123456,A123456,INS001,2000-01-15,Casablanca,test@email.com,M,+212600000000,SMI,L1';
         const blob    = new Blob([header + '\n' + example], { type: 'text/csv;charset=utf-8;' });
         const url     = URL.createObjectURL(blob);
         const a       = document.createElement('a');
@@ -1003,6 +1012,11 @@ function EtudiantCard({ etudiant, onEdit, onDelete, t, locale }) {
                             {etudiant.filier}
                         </span>
                     )}
+                    {etudiant.niveau && (
+                        <span className="rounded-full bg-violet-100 dark:bg-violet-900/30 px-2 py-0.5 text-[10px] font-medium text-violet-700 dark:text-violet-300">
+                            {locale === 'ar' ? (etudiant.niveau.nom_ar || etudiant.niveau.nom_fr) : (etudiant.niveau.nom_fr || etudiant.niveau.nom_ar)}
+                        </span>
+                    )}
                 </div>
 
                 {/* Contact */}
@@ -1083,6 +1097,13 @@ function EtudiantRow({ etudiant, onEdit, onDelete, t, locale }) {
             <td className="px-5 py-3.5">
                 {etudiant.filier
                     ? <span className="inline-flex rounded-full bg-indigo-100 dark:bg-indigo-900/30 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">{etudiant.filier}</span>
+                    : <span className="text-xs italic text-slate-300 dark:text-slate-600">—</span>}
+            </td>
+            <td className="px-5 py-3.5">
+                {etudiant.niveau
+                    ? <span className="inline-flex rounded-full bg-violet-100 dark:bg-violet-900/30 px-2.5 py-0.5 text-xs font-medium text-violet-700 dark:text-violet-300">
+                        {locale === 'ar' ? (etudiant.niveau.nom_ar || etudiant.niveau.nom_fr) : (etudiant.niveau.nom_fr || etudiant.niveau.nom_ar)}
+                      </span>
                     : <span className="text-xs italic text-slate-300 dark:text-slate-600">—</span>}
             </td>
             <td className="px-5 py-3.5 text-xs text-slate-500 dark:text-slate-400 max-w-[160px] truncate">
@@ -1167,7 +1188,7 @@ function EmptyState({ hasFilter, onAdd, t, locale }) {
 }
 
 // ─── Main content ─────────────────────────────────────────────────────────────
-function EtudiantsContent({ etudiants, filieres, filters, stats }) {
+function EtudiantsContent({ etudiants, filieres, niveaux, filters, stats }) {
     const { t, locale, isRTL } = useLanguage();
     const { flash } = usePage().props;
 
@@ -1175,22 +1196,24 @@ function EtudiantsContent({ etudiants, filieres, filters, stats }) {
     const [search, setSearch]           = useState(filters?.search ?? '');
     const [sexeFilter, setSexeFilter]   = useState(filters?.sexe ?? '');
     const [filierFilter, setFilierFilter] = useState(filters?.filier ?? '');
+    const [niveauFilter, setNiveauFilter] = useState(filters?.niveau_id ?? '');
     const [viewMode, setViewMode]       = useViewMode('etudiants_view', 'grid');
     const [importToast, setImportToast] = useState(null);
     const searchTimeout                 = useRef(null);
 
-    const doSearch = (val, sf = sexeFilter, ff = filierFilter) => {
+    const doSearch = (val, sf = sexeFilter, ff = filierFilter, nf = niveauFilter) => {
         clearTimeout(searchTimeout.current);
         searchTimeout.current = setTimeout(() =>
-            router.get(route('etudiants.index'), { search: val, sexe: sf, filier: ff }, { preserveState: true, replace: true }), 320);
+            router.get(route('etudiants.index'), { search: val, sexe: sf, filier: ff, niveau_id: nf || undefined }, { preserveState: true, replace: true }), 320);
     };
 
     const handleSearch = (val) => { setSearch(val); doSearch(val); };
     const handleSexe   = (val) => { setSexeFilter(val); doSearch(search, val); };
     const handleFilier = (val) => { setFilierFilter(val); doSearch(search, sexeFilter, val); };
+    const handleNiveau = (val) => { setNiveauFilter(val); doSearch(search, sexeFilter, filierFilter, val); };
 
     const items     = etudiants?.data ?? [];
-    const hasFilter = !!(search || sexeFilter || filierFilter);
+    const hasFilter = !!(search || sexeFilter || filierFilter || niveauFilter);
 
     const statCards = [
         { label: t('totalEtudiantsStat'), value: stats.total,   color: 'sky',    icon: ICONS.etudiant },
@@ -1216,7 +1239,7 @@ function EtudiantsContent({ etudiants, filieres, filters, stats }) {
 
             {/* Modals */}
             {modal?.type === 'form' && (
-                <EtudiantFormModal mode="create" onClose={() => setModal(null)} t={t} isRTL={isRTL} locale={locale} />
+                <EtudiantFormModal mode="create" onClose={() => setModal(null)} t={t} isRTL={isRTL} locale={locale} niveaux={niveaux} />
             )}
             {modal?.type === 'excel' && (
                 <ExcelImportModal
@@ -1229,7 +1252,7 @@ function EtudiantsContent({ etudiants, filieres, filters, stats }) {
                 />
             )}
             {modal?.type === 'edit' && (
-                <EtudiantFormModal mode="edit" etudiant={modal.etudiant} onClose={() => setModal(null)} t={t} isRTL={isRTL} locale={locale} />
+                <EtudiantFormModal mode="edit" etudiant={modal.etudiant} onClose={() => setModal(null)} t={t} isRTL={isRTL} locale={locale} niveaux={niveaux} />
             )}
             {modal?.type === 'delete' && (
                 <DeleteModal etudiant={modal.etudiant} onClose={() => setModal(null)} t={t} isRTL={isRTL} locale={locale} />
@@ -1329,6 +1352,23 @@ function EtudiantsContent({ etudiants, filieres, filters, stats }) {
                         </div>
                     )}
 
+                    {/* Niveau filter */}
+                    {niveaux?.length > 0 && (
+                        <div className="relative">
+                            <select value={niveauFilter} onChange={e => handleNiveau(e.target.value)}
+                                className={`appearance-none rounded-xl border border-slate-200 bg-white py-2.5 text-sm text-slate-700 shadow-sm transition pe-9
+                                    focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100
+                                    dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200
+                                    ${isRTL ? 'ps-8' : 'ps-9'}`}>
+                                <option value="">{locale === 'ar' ? 'جميع المستويات' : 'Tous les niveaux'}</option>
+                                {niveaux.map(n => <option key={n.id} value={n.id}>{n.nom_fr} ({n.code})</option>)}
+                            </select>
+                            <span className={`pointer-events-none absolute inset-y-0 ${isRTL ? 'start-3' : 'end-3'} flex items-center text-slate-400`}>
+                                <Icon d={ICONS.chevDown} className="h-4 w-4" />
+                            </span>
+                        </div>
+                    )}
+
                     {/* View toggle */}
                     <div className="flex overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
                         {['grid', 'list'].map(v => (
@@ -1372,7 +1412,13 @@ function EtudiantsContent({ etudiants, filieres, filters, stats }) {
                                 <button onClick={() => handleFilier('')} className="ms-1 hover:text-red-500"><Icon d={ICONS.close} className="h-3 w-3" /></button>
                             </span>
                         )}
-                        <button onClick={() => { handleSearch(''); handleSexe(''); handleFilier(''); }} className="text-xs text-slate-400 hover:text-red-400 transition">
+                        {niveauFilter && (
+                            <span className="flex items-center gap-1 rounded-full bg-violet-100 dark:bg-violet-900/30 px-2.5 py-0.5 text-xs font-medium text-violet-700 dark:text-violet-300">
+                                {niveaux?.find(n => n.id == niveauFilter)?.nom_fr || niveauFilter}
+                                <button onClick={() => handleNiveau('')} className="ms-1 hover:text-red-500"><Icon d={ICONS.close} className="h-3 w-3" /></button>
+                            </span>
+                        )}
+                        <button onClick={() => { handleSearch(''); handleSexe(''); handleFilier(''); handleNiveau(''); }} className="text-xs text-slate-400 hover:text-red-400 transition">
                             {locale === 'ar' ? 'مسح الكل' : 'Tout effacer'}
                         </button>
                     </div>
@@ -1412,6 +1458,9 @@ function EtudiantsContent({ etudiants, filieres, filters, stats }) {
                                             {t('etudiantFilier')}
                                         </th>
                                         <th className={`px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 ${isRTL ? 'text-right' : 'text-left'}`}>
+                                            {locale === 'ar' ? 'المستوى' : 'Niveau'}
+                                        </th>
+                                        <th className={`px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 ${isRTL ? 'text-right' : 'text-left'}`}>
                                             {t('email')}
                                         </th>
                                         <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 text-end">
@@ -1440,11 +1489,11 @@ function EtudiantsContent({ etudiants, filieres, filters, stats }) {
 }
 
 // ─── Page root ────────────────────────────────────────────────────────────────
-export default function EtudiantsIndex({ etudiants, filieres, filters, stats }) {
+export default function EtudiantsIndex({ etudiants, filieres, niveaux, filters, stats }) {
     return (
         <LanguageProvider>
             <AdminLayout>
-                <EtudiantsContent etudiants={etudiants} filieres={filieres} filters={filters} stats={stats} />
+                <EtudiantsContent etudiants={etudiants} filieres={filieres} niveaux={niveaux} filters={filters} stats={stats} />
             </AdminLayout>
         </LanguageProvider>
     );

@@ -13,6 +13,7 @@ class Module extends Model
 
     protected $fillable = [
         'prof_id',
+        'semestre_id',
         'nom_ar',
         'nom_fr',
         'code_module',
@@ -26,6 +27,14 @@ class Module extends Model
     public function prof(): BelongsTo
     {
         return $this->belongsTo(Prof::class, 'prof_id');
+    }
+
+    /**
+     * Get the semestre this module belongs to.
+     */
+    public function semestre(): BelongsTo
+    {
+        return $this->belongsTo(Semestre::class, 'semestre_id');
     }
 
     /**

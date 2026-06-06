@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Etudiant;
+use App\Models\Niveau;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,6 +20,7 @@ class EtudiantController extends Controller
     public function index(Request $request): Response
     {
         $query = Etudiant::query()
+            ->with('niveau')
             ->orderBy('created_at', 'desc');
 
         if ($search = $request->get('search')) {
@@ -42,9 +44,14 @@ class EtudiantController extends Controller
             $query->where('filier', $filier);
         }
 
+        if ($niveauId = $request->get('niveau_id')) {
+            $query->where('niveau_id', $niveauId);
+        }
+
         $etudiants = $query->paginate(12)->withQueryString();
 
         $filieres = Etudiant::distinct()->whereNotNull('filier')->pluck('filier')->values();
+        $niveaux  = Niveau::orderBy('ordre')->get(['id', 'code', 'nom_fr', 'nom_ar']);
 
         $stats = [
             'total'   => Etudiant::count(),
@@ -55,8 +62,9 @@ class EtudiantController extends Controller
 
         return Inertia::render('Etudiants/Index', [
             'etudiants' => $etudiants,
-            'filters'   => $request->only(['search', 'sexe', 'filier']),
+            'filters'   => $request->only(['search', 'sexe', 'filier', 'niveau_id']),
             'filieres'  => $filieres,
+            'niveaux'   => $niveaux,
             'stats'     => $stats,
         ]);
     }
@@ -67,7 +75,8 @@ class EtudiantController extends Controller
     public function show(Etudiant $etudiant): Response
     {
         return Inertia::render('Etudiants/Show', [
-            'etudiant' => $etudiant->load('modules'),
+            'etudiant' => $etudiant->load('modules', 'niveau'),
+            'niveaux'  => Niveau::orderBy('ordre')->get(['id', 'code', 'nom_fr', 'nom_ar']),
         ]);
     }
 
@@ -91,6 +100,7 @@ class EtudiantController extends Controller
             'email'          => 'nullable|string|email|max:255',
             'photo_url'      => 'nullable|string|max:255',
             'filier'         => 'nullable|string|max:255',
+            'niveau_id'      => 'nullable|exists:niveaux,id',
         ]);
 
         Etudiant::create($validated);
@@ -118,6 +128,7 @@ class EtudiantController extends Controller
             'email'          => 'nullable|string|email|max:255',
             'photo_url'      => 'nullable|string|max:255',
             'filier'         => 'nullable|string|max:255',
+            'niveau_id'      => 'nullable|exists:niveaux,id',
         ]);
 
         $etudiant->update($validated);
@@ -220,6 +231,12 @@ class EtudiantController extends Controller
                 continue;
             }
 
+            $niveauId = null;
+            if (!empty($data['code_niveau'])) {
+                $niveau = Niveau::where('code', $data['code_niveau'])->first();
+                if ($niveau) $niveauId = $niveau->id;
+            }
+
             Etudiant::create([
                 'Nins'           => $data['nins']           ?? null,
                 'CNE'            => $cne,
@@ -234,6 +251,7 @@ class EtudiantController extends Controller
                 'telephone'      => $data['telephone']      ?? null,
                 'email'          => $data['email']          ?? null,
                 'filier'         => $data['filier']         ?? null,
+                'niveau_id'      => $niveauId,
             ]);
 
             $rows_report[] = [

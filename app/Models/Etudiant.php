@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -25,6 +26,7 @@ class Etudiant extends Model
         'email',
         'photo_url',
         'filier',
+        'niveau_id',
     ];
 
     protected function casts(): array
@@ -49,5 +51,10 @@ class Etudiant extends Model
     public function etudiantModules(): HasMany
     {
         return $this->hasMany(EtudiantModule::class, 'etudiant_id');
+    }
+
+    public function niveau(): BelongsTo
+    {
+        return $this->belongsTo(Niveau::class, 'niveau_id');
     }
 }
