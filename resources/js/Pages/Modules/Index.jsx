@@ -788,12 +788,18 @@ function ModuleFormModal({ mode, module, profs, semestres, onClose, t, isRTL, lo
                             <SelectField id="semestre_id" label={locale === 'ar' ? 'الفصل الدراسي' : 'Semestre'} value={data.semestre_id}
                                 onChange={e => setData('semestre_id', e.target.value)} error={errors.semestre_id}>
                                 <option value="">{locale === 'ar' ? '— بدون فصل —' : '— Sans semestre —'}</option>
-                                {semestres.map(s => (
-                                    <option key={s.id} value={s.id}>
-                                        {s.code} — {locale === 'ar' ? (s.nom_ar || s.nom_fr) : (s.nom_fr || s.nom_ar)}
-                                        {s.niveau ? ` (${locale === 'ar' ? (s.niveau.nom_ar || s.niveau.nom_fr) : (s.niveau.nom_fr || s.niveau.nom_ar)})` : ''}
-                                    </option>
-                                ))}
+                                {semestres.map(s => {
+                                    const niveauName = locale === 'ar'
+                                        ? (s.niveau?.nom_ar || s.niveau?.nom_fr || '')
+                                        : (s.niveau?.nom_fr || s.niveau?.nom_ar || '');
+                                    const filiereCode = s.niveau?.filiere?.code || '';
+                                    const suffix = niveauName ? (filiereCode ? ` — ${niveauName} (${filiereCode})` : ` — ${niveauName}`) : '';
+                                    return (
+                                        <option key={s.id} value={s.id}>
+                                            {s.code} — {locale === 'ar' ? (s.nom_ar || s.nom_fr) : (s.nom_fr || s.nom_ar)}{suffix}
+                                        </option>
+                                    );
+                                })}
                             </SelectField>
                         </div>
 
@@ -1296,12 +1302,16 @@ function ModulesContent({ modules, profs, semestres, types, filters, stats }) {
                                 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200
                                 ${isRTL ? 'ps-8 pe-9' : 'ps-9 pe-8'}`}>
                             <option value="">{locale === 'ar' ? 'جميع الفصول' : 'Tous les semestres'}</option>
-                            {semestres.map(s => (
+                            {semestres.map(s => {
+                                const filiereCode = s.niveau?.filiere?.code || '';
+                                const niveauCode = s.niveau?.code || '';
+                                const suffix = niveauCode ? (filiereCode ? ` — ${niveauCode} (${filiereCode})` : ` (${niveauCode})`) : '';
+                                return (
                                 <option key={s.id} value={s.id}>
-                                    {s.code} — {locale === 'ar' ? (s.nom_ar || s.nom_fr) : (s.nom_fr || s.nom_ar)}
-                                    {s.niveau ? ` (${s.niveau.code})` : ''}
+                                    {s.code} — {locale === 'ar' ? (s.nom_ar || s.nom_fr) : (s.nom_fr || s.nom_ar)}{suffix}
                                 </option>
-                            ))}
+                                );
+                            })}
                         </select>
                         <span className={`pointer-events-none absolute inset-y-0 ${isRTL ? 'start-3' : 'end-3'} flex items-center text-slate-400`}>
                             <Icon d={ICONS.chevDown} className="h-4 w-4" />

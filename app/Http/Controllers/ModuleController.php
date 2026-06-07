@@ -56,7 +56,7 @@ class ModuleController extends Controller
 
         $types = Module::distinct()->pluck('type_module')->filter()->values();
 
-        $semestres = Semestre::with('niveau')
+        $semestres = Semestre::with('niveau.filiere')
             ->orderBy('numero')
             ->orderBy('code')
             ->get(['id', 'code', 'nom_fr', 'nom_ar', 'niveau_id']);

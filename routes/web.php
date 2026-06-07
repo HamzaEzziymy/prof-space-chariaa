@@ -97,6 +97,13 @@ Route::middleware(['auth', 'admin'])->prefix('niveaux')->group(function () {
     Route::delete('/{niveau}',      [\App\Http\Controllers\NiveauController::class, 'destroy'])->name('niveaux.destroy');
 });
 
+// ── Filieres (admin + super_admin) ─────────────────────────────────────────
+Route::middleware(['auth', 'admin'])->prefix('filieres')->name('filieres.')->group(function () {
+    Route::post('/',            [\App\Http\Controllers\FiliereController::class, 'store'])->name('store');
+    Route::put('/{filiere}',    [\App\Http\Controllers\FiliereController::class, 'update'])->name('update');
+    Route::delete('/{filiere}', [\App\Http\Controllers\FiliereController::class, 'destroy'])->name('destroy');
+});
+
 // ── Semestres — redirect old index to structure (API routes for CRUD) ───────
 Route::middleware(['auth', 'admin'])->prefix('semestres')->group(function () {
     Route::get('/',                 fn () => redirect()->route('structure.index'))->name('semestres.index');

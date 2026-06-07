@@ -232,7 +232,6 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux 
         sexe:           etudiant?.sexe           ?? '',
         telephone:      etudiant?.telephone      ?? '',
         email:          etudiant?.email          ?? '',
-        filier:         etudiant?.filier         ?? '',
         niveau_id:      etudiant?.niveau_id      ?? '',
     });
 
@@ -395,15 +394,13 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux 
                                     placeholder="+212 6XX XXXXXX"
                                     error={errors.telephone} dir="ltr" />
                             </div>
-                            <Field id="filier" label={t('etudiantFilier')} value={data.filier}
-                                onChange={e => setData('filier', e.target.value)}
-                                placeholder={locale === 'ar' ? 'مثال: SMI، S6' : 'Ex: SMI, S6'}
-                                hint={t('etudiantFilierHint')} error={errors.filier} />
                             <SelectField id="niveau_id" label={locale === 'ar' ? 'المستوى' : 'Niveau'} value={data.niveau_id}
                                 onChange={e => setData('niveau_id', e.target.value)} error={errors.niveau_id}>
                                 <option value="">{locale === 'ar' ? 'اختر المستوى...' : 'Choisir un niveau...'}</option>
                                 {(niveaux || []).map(n => (
-                                    <option key={n.id} value={n.id}>{n.nom_fr} ({n.code})</option>
+                                    <option key={n.id} value={n.id}>
+                                        {n.nom_fr} ({n.code}) — {n.filiere?.code || '—'}
+                                    </option>
                                 ))}
                             </SelectField>
                         </div>
@@ -430,11 +427,6 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux 
                                             )}
                                             {data.sexe && (
                                                 <span className="text-[10px] text-slate-400">{data.sexe === 'M' ? '♂' : '♀'}</span>
-                                            )}
-                                            {data.filier && (
-                                                <span className="rounded-full bg-indigo-100 dark:bg-indigo-900/30 px-2 py-0.5 text-[10px] font-medium text-indigo-700 dark:text-indigo-300">
-                                                    {data.filier}
-                                                </span>
                                             )}
                                         </div>
                                     </div>
@@ -1000,24 +992,24 @@ function EtudiantCard({ etudiant, onEdit, onDelete, t, locale }) {
                 </div>
 
                 {/* Codes row */}
-                <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-                    {etudiant.CIN && (
-                        <span className="flex items-center gap-1 rounded-lg bg-slate-50 dark:bg-slate-700/60 px-2 py-1">
-                            <Icon d={ICONS.id} className="h-3.5 w-3.5" />
-                            <span className="font-semibold text-slate-700 dark:text-slate-200">{etudiant.CIN}</span>
-                        </span>
-                    )}
-                    {etudiant.filier && (
-                        <span className="rounded-full bg-indigo-100 dark:bg-indigo-900/30 px-2 py-0.5 text-[10px] font-medium text-indigo-700 dark:text-indigo-300">
-                            {etudiant.filier}
-                        </span>
-                    )}
-                    {etudiant.niveau && (
-                        <span className="rounded-full bg-violet-100 dark:bg-violet-900/30 px-2 py-0.5 text-[10px] font-medium text-violet-700 dark:text-violet-300">
-                            {locale === 'ar' ? (etudiant.niveau.nom_ar || etudiant.niveau.nom_fr) : (etudiant.niveau.nom_fr || etudiant.niveau.nom_ar)}
-                        </span>
-                    )}
-                </div>
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                        {etudiant.CIN && (
+                            <span className="flex items-center gap-1 rounded-lg bg-slate-50 dark:bg-slate-700/60 px-2 py-1">
+                                <Icon d={ICONS.id} className="h-3.5 w-3.5" />
+                                <span className="font-semibold text-slate-700 dark:text-slate-200">{etudiant.CIN}</span>
+                            </span>
+                        )}
+                        {etudiant.niveau?.filiere && (
+                            <span className="rounded-full bg-indigo-100 dark:bg-indigo-900/30 px-2 py-0.5 text-[10px] font-medium text-indigo-700 dark:text-indigo-300">
+                                {etudiant.niveau.filiere.code}
+                            </span>
+                        )}
+                        {etudiant.niveau && (
+                            <span className="rounded-full bg-violet-100 dark:bg-violet-900/30 px-2 py-0.5 text-[10px] font-medium text-violet-700 dark:text-violet-300">
+                                {locale === 'ar' ? (etudiant.niveau.nom_ar || etudiant.niveau.nom_fr) : (etudiant.niveau.nom_fr || etudiant.niveau.nom_ar)}
+                            </span>
+                        )}
+                    </div>
 
                 {/* Contact */}
                 <div className="space-y-1 text-xs text-slate-500 dark:text-slate-400">
@@ -1095,16 +1087,21 @@ function EtudiantRow({ etudiant, onEdit, onDelete, t, locale }) {
                     : <span className="text-xs italic text-slate-300 dark:text-slate-600">—</span>}
             </td>
             <td className="px-5 py-3.5">
-                {etudiant.filier
-                    ? <span className="inline-flex rounded-full bg-indigo-100 dark:bg-indigo-900/30 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">{etudiant.filier}</span>
-                    : <span className="text-xs italic text-slate-300 dark:text-slate-600">—</span>}
-            </td>
-            <td className="px-5 py-3.5">
-                {etudiant.niveau
-                    ? <span className="inline-flex rounded-full bg-violet-100 dark:bg-violet-900/30 px-2.5 py-0.5 text-xs font-medium text-violet-700 dark:text-violet-300">
-                        {locale === 'ar' ? (etudiant.niveau.nom_ar || etudiant.niveau.nom_fr) : (etudiant.niveau.nom_fr || etudiant.niveau.nom_ar)}
-                      </span>
-                    : <span className="text-xs italic text-slate-300 dark:text-slate-600">—</span>}
+                <div className="flex flex-col gap-0.5">
+                    {etudiant.niveau?.filiere && (
+                        <span className="inline-flex rounded-full bg-indigo-100 dark:bg-indigo-900/30 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300 self-start">
+                            {etudiant.niveau.filiere.code}
+                        </span>
+                    )}
+                    {etudiant.niveau && (
+                        <span className="text-[11px] leading-tight text-slate-500 dark:text-slate-400">
+                            {locale === 'ar' ? (etudiant.niveau.nom_ar || etudiant.niveau.nom_fr) : (etudiant.niveau.nom_fr || etudiant.niveau.nom_ar)}
+                        </span>
+                    )}
+                    {!etudiant.niveau && (
+                        <span className="text-xs italic text-slate-300 dark:text-slate-600">—</span>
+                    )}
+                </div>
             </td>
             <td className="px-5 py-3.5 text-xs text-slate-500 dark:text-slate-400 max-w-[160px] truncate">
                 {etudiant.email || '—'}
@@ -1192,28 +1189,32 @@ function EtudiantsContent({ etudiants, filieres, niveaux, filters, stats }) {
     const { t, locale, isRTL } = useLanguage();
     const { flash } = usePage().props;
 
-    const [modal, setModal]             = useState(null);
-    const [search, setSearch]           = useState(filters?.search ?? '');
-    const [sexeFilter, setSexeFilter]   = useState(filters?.sexe ?? '');
-    const [filierFilter, setFilierFilter] = useState(filters?.filier ?? '');
+    const [modal, setModal]               = useState(null);
+    const [search, setSearch]             = useState(filters?.search ?? '');
+    const [sexeFilter, setSexeFilter]     = useState(filters?.sexe ?? '');
+    const [filiereIdFilter, setFiliereIdFilter] = useState(filters?.filiere_id ?? '');
     const [niveauFilter, setNiveauFilter] = useState(filters?.niveau_id ?? '');
-    const [viewMode, setViewMode]       = useViewMode('etudiants_view', 'grid');
-    const [importToast, setImportToast] = useState(null);
-    const searchTimeout                 = useRef(null);
+    const [viewMode, setViewMode]         = useViewMode('etudiants_view', 'grid');
+    const [importToast, setImportToast]   = useState(null);
+    const searchTimeout                   = useRef(null);
 
-    const doSearch = (val, sf = sexeFilter, ff = filierFilter, nf = niveauFilter) => {
+    const filteredNiveaux = niveaux?.filter(
+        n => !filiereIdFilter || n.filiere_id == filiereIdFilter
+    ) ?? [];
+
+    const doSearch = (val, sf = sexeFilter, ff = filiereIdFilter, nf = niveauFilter) => {
         clearTimeout(searchTimeout.current);
         searchTimeout.current = setTimeout(() =>
-            router.get(route('etudiants.index'), { search: val, sexe: sf, filier: ff, niveau_id: nf || undefined }, { preserveState: true, replace: true }), 320);
+            router.get(route('etudiants.index'), { search: val, sexe: sf, filiere_id: ff || undefined, niveau_id: nf || undefined }, { preserveState: true, replace: true }), 320);
     };
 
-    const handleSearch = (val) => { setSearch(val); doSearch(val); };
-    const handleSexe   = (val) => { setSexeFilter(val); doSearch(search, val); };
-    const handleFilier = (val) => { setFilierFilter(val); doSearch(search, sexeFilter, val); };
-    const handleNiveau = (val) => { setNiveauFilter(val); doSearch(search, sexeFilter, filierFilter, val); };
+    const handleSearch    = (val) => { setSearch(val); doSearch(val); };
+    const handleSexe      = (val) => { setSexeFilter(val); doSearch(search, val); };
+    const handleFiliereId = (val) => { setFiliereIdFilter(val); setNiveauFilter(''); doSearch(search, sexeFilter, val, ''); };
+    const handleNiveau    = (val) => { setNiveauFilter(val); doSearch(search, sexeFilter, filiereIdFilter, val); };
 
     const items     = etudiants?.data ?? [];
-    const hasFilter = !!(search || sexeFilter || filierFilter || niveauFilter);
+    const hasFilter = !!(search || sexeFilter || filiereIdFilter || niveauFilter);
 
     const statCards = [
         { label: t('totalEtudiantsStat'), value: stats.total,   color: 'sky',    icon: ICONS.etudiant },
@@ -1336,15 +1337,15 @@ function EtudiantsContent({ etudiants, filieres, niveaux, filters, stats }) {
                     </div>
 
                     {/* Filière filter */}
-                    {filieres.length > 0 && (
+                    {filieres?.length > 0 && (
                         <div className="relative">
-                            <select value={filierFilter} onChange={e => handleFilier(e.target.value)}
+                            <select value={filiereIdFilter} onChange={e => handleFiliereId(e.target.value)}
                                 className={`appearance-none rounded-xl border border-slate-200 bg-white py-2.5 text-sm text-slate-700 shadow-sm transition pe-9
                                     focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100
                                     dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200
                                     ${isRTL ? 'ps-8' : 'ps-9'}`}>
                                 <option value="">{t('allFilieres')}</option>
-                                {filieres.map(f => <option key={f} value={f}>{f}</option>)}
+                                {filieres.map(f => <option key={f.id} value={f.id}>{f.code} — {f.nom_fr}</option>)}
                             </select>
                             <span className={`pointer-events-none absolute inset-y-0 ${isRTL ? 'start-3' : 'end-3'} flex items-center text-slate-400`}>
                                 <Icon d={ICONS.chevDown} className="h-4 w-4" />
@@ -1353,7 +1354,7 @@ function EtudiantsContent({ etudiants, filieres, niveaux, filters, stats }) {
                     )}
 
                     {/* Niveau filter */}
-                    {niveaux?.length > 0 && (
+                    {filteredNiveaux.length > 0 && (
                         <div className="relative">
                             <select value={niveauFilter} onChange={e => handleNiveau(e.target.value)}
                                 className={`appearance-none rounded-xl border border-slate-200 bg-white py-2.5 text-sm text-slate-700 shadow-sm transition pe-9
@@ -1361,7 +1362,7 @@ function EtudiantsContent({ etudiants, filieres, niveaux, filters, stats }) {
                                     dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200
                                     ${isRTL ? 'ps-8' : 'ps-9'}`}>
                                 <option value="">{locale === 'ar' ? 'جميع المستويات' : 'Tous les niveaux'}</option>
-                                {niveaux.map(n => <option key={n.id} value={n.id}>{n.nom_fr} ({n.code})</option>)}
+                                {filteredNiveaux.map(n => <option key={n.id} value={n.id}>{n.nom_fr} ({n.code})</option>)}
                             </select>
                             <span className={`pointer-events-none absolute inset-y-0 ${isRTL ? 'start-3' : 'end-3'} flex items-center text-slate-400`}>
                                 <Icon d={ICONS.chevDown} className="h-4 w-4" />
@@ -1406,10 +1407,10 @@ function EtudiantsContent({ etudiants, filieres, niveaux, filters, stats }) {
                                 <button onClick={() => handleSexe('')} className="ms-1 hover:text-red-500"><Icon d={ICONS.close} className="h-3 w-3" /></button>
                             </span>
                         )}
-                        {filierFilter && (
+                        {filiereIdFilter && (
                             <span className="flex items-center gap-1 rounded-full bg-indigo-100 dark:bg-indigo-900/30 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">
-                                {filierFilter}
-                                <button onClick={() => handleFilier('')} className="ms-1 hover:text-red-500"><Icon d={ICONS.close} className="h-3 w-3" /></button>
+                                {filieres?.find(f => f.id == filiereIdFilter)?.code || filiereIdFilter}
+                                <button onClick={() => handleFiliereId('')} className="ms-1 hover:text-red-500"><Icon d={ICONS.close} className="h-3 w-3" /></button>
                             </span>
                         )}
                         {niveauFilter && (
@@ -1418,7 +1419,7 @@ function EtudiantsContent({ etudiants, filieres, niveaux, filters, stats }) {
                                 <button onClick={() => handleNiveau('')} className="ms-1 hover:text-red-500"><Icon d={ICONS.close} className="h-3 w-3" /></button>
                             </span>
                         )}
-                        <button onClick={() => { handleSearch(''); handleSexe(''); handleFilier(''); handleNiveau(''); }} className="text-xs text-slate-400 hover:text-red-400 transition">
+                        <button onClick={() => { handleSearch(''); handleSexe(''); handleFiliereId(''); handleNiveau(''); }} className="text-xs text-slate-400 hover:text-red-400 transition">
                             {locale === 'ar' ? 'مسح الكل' : 'Tout effacer'}
                         </button>
                     </div>
@@ -1455,10 +1456,7 @@ function EtudiantsContent({ etudiants, filieres, niveaux, filters, stats }) {
                                             {t('etudiantSexe')}
                                         </th>
                                         <th className={`px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 ${isRTL ? 'text-right' : 'text-left'}`}>
-                                            {t('etudiantFilier')}
-                                        </th>
-                                        <th className={`px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 ${isRTL ? 'text-right' : 'text-left'}`}>
-                                            {locale === 'ar' ? 'المستوى' : 'Niveau'}
+                                            {locale === 'ar' ? 'الشعبة' : 'Filière'}
                                         </th>
                                         <th className={`px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 ${isRTL ? 'text-right' : 'text-left'}`}>
                                             {t('email')}

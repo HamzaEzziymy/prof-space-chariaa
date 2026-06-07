@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Niveau;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -35,10 +36,11 @@ class NiveauController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'code'   => 'required|string|max:10|unique:niveaux,code',
-            'nom_fr' => 'required|string|max:50',
-            'nom_ar' => 'required|string|max:50',
-            'ordre'  => 'required|integer|min:1',
+            'code'      => ['required', 'string', 'max:10', Rule::unique('niveaux', 'code')->where(fn ($q) => $q->where('filiere_id', $request->filiere_id))],
+            'nom_fr'    => 'required|string|max:50',
+            'nom_ar'    => 'required|string|max:50',
+            'ordre'     => 'required|integer|min:1',
+            'filiere_id'=> 'required|exists:filieres,id',
         ]);
 
         Niveau::create($validated);
@@ -49,10 +51,11 @@ class NiveauController extends Controller
     public function update(Request $request, Niveau $niveau): RedirectResponse
     {
         $validated = $request->validate([
-            'code'   => "required|string|max:10|unique:niveaux,code,{$niveau->id}",
-            'nom_fr' => 'required|string|max:50',
-            'nom_ar' => 'required|string|max:50',
-            'ordre'  => 'required|integer|min:1',
+            'code'      => ['required', 'string', 'max:10', Rule::unique('niveaux', 'code')->ignore($niveau->id)->where(fn ($q) => $q->where('filiere_id', $request->filiere_id))],
+            'nom_fr'    => 'required|string|max:50',
+            'nom_ar'    => 'required|string|max:50',
+            'ordre'     => 'required|integer|min:1',
+            'filiere_id'=> 'required|exists:filieres,id',
         ]);
 
         $niveau->update($validated);

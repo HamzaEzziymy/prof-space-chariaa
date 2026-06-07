@@ -158,7 +158,6 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux 
         sexe:           etudiant?.sexe           ?? '',
         telephone:      etudiant?.telephone      ?? '',
         email:          etudiant?.email          ?? '',
-        filier:         etudiant?.filier         ?? '',
         niveau_id:      etudiant?.niveau_id      ?? '',
     });
 
@@ -321,15 +320,13 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux 
                                     placeholder="+212 6XX XXXXXX"
                                     error={errors.telephone} dir="ltr" />
                             </div>
-                            <Field id="filier" label={t('etudiantFilier')} value={data.filier}
-                                onChange={e => setData('filier', e.target.value)}
-                                placeholder={locale === 'ar' ? 'مثال: SMI، S6' : 'Ex: SMI, S6'}
-                                hint={t('etudiantFilierHint')} error={errors.filier} />
                             <SelectField id="niveau_id" label={locale === 'ar' ? 'المستوى' : 'Niveau'} value={data.niveau_id}
                                 onChange={e => setData('niveau_id', e.target.value)} error={errors.niveau_id}>
                                 <option value="">{locale === 'ar' ? 'اختر المستوى...' : 'Choisir un niveau...'}</option>
                                 {(niveaux || []).map(n => (
-                                    <option key={n.id} value={n.id}>{n.nom_fr} ({n.code})</option>
+                                    <option key={n.id} value={n.id}>
+                                        {n.nom_fr} ({n.code}) — {n.filiere?.code || '—'}
+                                    </option>
                                 ))}
                             </SelectField>
                         </div>
@@ -356,11 +353,6 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux 
                                             )}
                                             {data.sexe && (
                                                 <span className="text-[10px] text-slate-400">{data.sexe === 'M' ? '♂' : '♀'}</span>
-                                            )}
-                                            {data.filier && (
-                                                <span className="rounded-full bg-indigo-100 dark:bg-indigo-900/30 px-2 py-0.5 text-[10px] font-medium text-indigo-700 dark:text-indigo-300">
-                                                    {data.filier}
-                                                </span>
                                             )}
                                         </div>
                                     </div>
@@ -510,12 +502,6 @@ function ShowPage() {
                                             : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
                                     }`}>
                                         {etudiant.sexe === 'M' ? '♂' : '♀'} {etudiant.sexe === 'M' ? t('etudiantSexeM') : t('etudiantSexeF')}
-                                    </span>
-                                )}
-                                {etudiant.filier && (
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 dark:bg-indigo-900/30 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300">
-                                        <Icon d={ICONS.tag} className="h-3 w-3" />
-                                        {etudiant.filier}
                                     </span>
                                 )}
                             </div>

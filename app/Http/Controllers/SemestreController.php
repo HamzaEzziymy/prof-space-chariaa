@@ -6,6 +6,7 @@ use App\Models\Semestre;
 use App\Models\Niveau;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -43,7 +44,7 @@ class SemestreController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'code'      => 'required|string|max:5|unique:semestres,code',
+            'code'      => ['required', 'string', 'max:5', Rule::unique('semestres', 'code')->where(fn ($q) => $q->where('niveau_id', $request->niveau_id))],
             'nom_fr'    => 'required|string|max:50',
             'nom_ar'    => 'required|string|max:50',
             'niveau_id' => 'required|exists:niveaux,id',
@@ -58,7 +59,7 @@ class SemestreController extends Controller
     public function update(Request $request, Semestre $semestre): RedirectResponse
     {
         $validated = $request->validate([
-            'code'      => "required|string|max:5|unique:semestres,code,{$semestre->id}",
+            'code'      => ['required', 'string', 'max:5', Rule::unique('semestres', 'code')->ignore($semestre->id)->where(fn ($q) => $q->where('niveau_id', $request->niveau_id))],
             'nom_fr'    => 'required|string|max:50',
             'nom_ar'    => 'required|string|max:50',
             'niveau_id' => 'required|exists:niveaux,id',

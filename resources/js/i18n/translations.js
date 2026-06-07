@@ -26,7 +26,7 @@ export const translations = {
         examRooms: 'Salles d\'examen',
         inscriptions: 'Inscriptions pédagogiques',
         inscriptionPedagogique: 'Inscription pédagogique',
-        structure: 'Structure',
+        structure: 'Structure pédagogique',
         grades: 'Notes',
         users: 'Utilisateurs',
         user:  'Utilisateur',
@@ -230,8 +230,8 @@ export const translations = {
         etudiantFilierHint: 'Ex: SMI, S6, MIP…',
         noEtudiants: 'Aucun étudiant trouvé',
         totalEtudiantsStat: 'Total étudiants',
-        etudiantsHommes: 'Hommes',
-        etudiantsFemmes: 'Femmes',
+        etudiantsHommes: 'Masculin',
+        etudiantsFemmes: 'Féminin',
         etudiantsFilieres: 'Filières',
         etudiantCreated: 'Étudiant créé avec succès',
         etudiantUpdated: 'Étudiant mis à jour',
@@ -331,6 +331,18 @@ export const translations = {
         semestreCreated: 'Semestre créé avec succès',
         semestreUpdated: 'Semestre mis à jour',
         semestreDeleted: 'Semestre supprimé',
+
+        // Filieres
+        filiere: 'Filière',
+        filieres: 'Filières',
+        addFiliere: 'Ajouter une filière',
+        editFiliere: 'Modifier la filière',
+        deleteFiliere: 'Supprimer la filière',
+        confirmDeleteFiliere: 'Confirmer la suppression',
+        confirmDeleteFiliereMsg: 'Êtes-vous sûr de vouloir supprimer cette filière ? Cette action est irréversible.',
+        filiereCreated: 'Filière créée avec succès',
+        filiereUpdated: 'Filière mise à jour',
+        filiereDeleted: 'Filière supprimée',
 
         // Professors management
         professorsManagement: 'Gestion des professeurs',
@@ -678,6 +690,18 @@ export const translations = {
         semestreCreated: 'تم إنشاء الفصل بنجاح',
         semestreUpdated: 'تم تحديث الفصل',
         semestreDeleted: 'تم حذف الفصل',
+
+        // Filieres
+        filiere: 'الشعبة',
+        filieres: 'الشعب',
+        addFiliere: 'إضافة شعبة',
+        editFiliere: 'تعديل الشعبة',
+        deleteFiliere: 'حذف الشعبة',
+        confirmDeleteFiliere: 'تأكيد الحذف',
+        confirmDeleteFiliereMsg: 'هل أنت متأكد من حذف هذه الشعبة؟ هذا الإجراء لا يمكن التراجع عنه.',
+        filiereCreated: 'تم إنشاء الشعبة بنجاح',
+        filiereUpdated: 'تم تحديث الشعبة',
+        filiereDeleted: 'تم حذف الشعبة',
 
         // Professors management
         professorsManagement: 'إدارة الأساتذة',

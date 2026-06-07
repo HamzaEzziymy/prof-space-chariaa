@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Etudiant;
+use App\Models\Filiere;
 use App\Models\Niveau;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -20,7 +21,7 @@ class EtudiantController extends Controller
     public function index(Request $request): Response
     {
         $query = Etudiant::query()
-            ->with('niveau')
+            ->with('niveau.filiere')
             ->orderBy('created_at', 'desc');
 
         if ($search = $request->get('search')) {
@@ -40,8 +41,9 @@ class EtudiantController extends Controller
             $query->where('sexe', $sexe);
         }
 
-        if ($filier = $request->get('filier')) {
-            $query->where('filier', $filier);
+        if ($filiereId = $request->get('filiere_id')) {
+            $niveauIds = Niveau::where('filiere_id', $filiereId)->pluck('id');
+            $query->whereIn('niveau_id', $niveauIds);
         }
 
         if ($niveauId = $request->get('niveau_id')) {
@@ -50,19 +52,19 @@ class EtudiantController extends Controller
 
         $etudiants = $query->paginate(12)->withQueryString();
 
-        $filieres = Etudiant::distinct()->whereNotNull('filier')->pluck('filier')->values();
-        $niveaux  = Niveau::orderBy('ordre')->get(['id', 'code', 'nom_fr', 'nom_ar']);
+        $filieres = Filiere::orderBy('code')->get(['id', 'code', 'nom_fr', 'nom_ar']);
+        $niveaux  = Niveau::with('filiere')->orderBy('ordre')->get(['id', 'code', 'nom_fr', 'nom_ar', 'filiere_id']);
 
         $stats = [
             'total'   => Etudiant::count(),
             'hommes'  => Etudiant::where('sexe', 'M')->count(),
             'femmes'  => Etudiant::where('sexe', 'F')->count(),
-            'filieres' => Etudiant::distinct()->whereNotNull('filier')->count('filier'),
+            'filieres' => Filiere::count(),
         ];
 
         return Inertia::render('Etudiants/Index', [
             'etudiants' => $etudiants,
-            'filters'   => $request->only(['search', 'sexe', 'filier', 'niveau_id']),
+            'filters'   => $request->only(['search', 'sexe', 'filiere_id', 'niveau_id']),
             'filieres'  => $filieres,
             'niveaux'   => $niveaux,
             'stats'     => $stats,
@@ -75,8 +77,8 @@ class EtudiantController extends Controller
     public function show(Etudiant $etudiant): Response
     {
         return Inertia::render('Etudiants/Show', [
-            'etudiant' => $etudiant->load('modules', 'niveau'),
-            'niveaux'  => Niveau::orderBy('ordre')->get(['id', 'code', 'nom_fr', 'nom_ar']),
+            'etudiant' => $etudiant->load('modules', 'niveau.filiere'),
+            'niveaux'  => Niveau::with('filiere')->orderBy('ordre')->get(['id', 'code', 'nom_fr', 'nom_ar', 'filiere_id']),
         ]);
     }
 
