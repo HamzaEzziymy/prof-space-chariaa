@@ -809,24 +809,24 @@ function ProfessorsPage() {
                                             </td>
                                             {/* Actions */}
                                             <td className="px-5 py-4">
-                                                <div className={`flex items-center gap-1.5 justify-end opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity`}>
+                                                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                                                     <a href={route('professors.show', prof.id)}
-                                                        className="flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
-                                                        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                                                        className="rounded-lg p-1.5 text-slate-400 hover:bg-indigo-100 hover:text-indigo-600 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-400 transition"
+                                                        title={locale === 'ar' ? 'عرض الملف' : 'Voir la fiche'}>
+                                                        <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
                                                             <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                                             <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                                         </svg>
-                                                        {locale === 'ar' ? 'عرض' : 'Voir'}
                                                     </a>
                                                     <button onClick={() => openEdit(prof)}
-                                                        className="flex items-center gap-1.5 rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1.5 text-xs font-medium text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition">
-                                                        <Icon d={ICONS.edit} className="h-3.5 w-3.5" />
-                                                        {t('edit')}
+                                                        title={t('edit')}
+                                                        className="rounded-lg p-1.5 text-slate-400 hover:bg-indigo-100 hover:text-indigo-600 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-400 transition">
+                                                        <Icon d={ICONS.edit} className="h-4 w-4" />
                                                     </button>
                                                     <button onClick={() => openDelete(prof)}
-                                                        className="flex items-center gap-1.5 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition">
-                                                        <Icon d={ICONS.trash} className="h-3.5 w-3.5" />
-                                                        {t('delete')}
+                                                        title={t('delete')}
+                                                        className="rounded-lg p-1.5 text-slate-400 hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/30 transition">
+                                                        <Icon d={ICONS.trash} className="h-4 w-4" />
                                                     </button>
                                                 </div>
                                             </td>

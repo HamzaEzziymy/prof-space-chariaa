@@ -523,7 +523,6 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale }) {
         { name: 'sexe',           req: false },
         { name: 'telephone',      req: false },
         { name: 'email',          req: false },
-        { name: 'filier',         req: false },
         { name: 'code_niveau',    req: false },
     ];
 
@@ -625,7 +624,7 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale }) {
 
     const downloadTemplate = () => {
         const header  = COLS.map(c => c.name).join(',');
-        const example = 'Jean,Dupont,جان,دوبون,CNE123456,A123456,INS001,2000-01-15,Casablanca,test@email.com,M,+212600000000,SMI,L1';
+        const example = 'Jean,Dupont,جان,دوبون,CNE123456,A123456,INS001,2000-01-15,Casablanca,test@email.com,M,+212600000000,L1';
         const blob    = new Blob([header + '\n' + example], { type: 'text/csv;charset=utf-8;' });
         const url     = URL.createObjectURL(blob);
         const a       = document.createElement('a');
@@ -777,7 +776,6 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale }) {
                                                         <th className="px-3 py-2 text-left font-semibold text-slate-500">nom_fr</th>
                                                         <th className="px-3 py-2 text-left font-semibold text-slate-500">CNE</th>
                                                         <th className="px-3 py-2 text-left font-semibold text-slate-500">CIN</th>
-                                                        <th className="px-3 py-2 text-left font-semibold text-slate-500">filier</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -788,7 +786,6 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale }) {
                                                             <td className="px-3 py-2 font-medium text-slate-700 dark:text-slate-200 max-w-[120px] truncate">{row.data['nom_fr'] || '—'}</td>
                                                             <td className="px-3 py-2"><code className="rounded bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-300">{row.data['cne'] || '—'}</code></td>
                                                             <td className="px-3 py-2 text-slate-500">{row.data['cin'] || '—'}</td>
-                                                            <td className="px-3 py-2 text-slate-500">{row.data['filier'] || '—'}</td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
