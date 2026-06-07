@@ -31,8 +31,8 @@ const ICONS = {
     mail:       'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
     filter:     'M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z',
     id:         'M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2',
-    male:       'M9 9l12 12m0 0v-6m0 6h-6M15 5h4v4M9 15a6 6 0 100-12 6 6 0 000 12z',
-    female:     'M12 14a6 6 0 1 0 0-12 6 6 0 0 0 0 12m0 0v8m0 0h-4m4 0h4',
+    male:       'M16 3h5m0 0v5m0-5l-6 6M9 15a6 6 0 100-12 6 6 0 000 12z',
+    female:     'M12 14a6 6 0 100-12 6 6 0 000 12zm0 0v8m-4-4h8',
     calendar:   'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
     upload:     'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12',
     download:   'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4',
@@ -362,7 +362,7 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux 
                             <div className="space-y-1.5">
                                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">{t('etudiantSexe')}</label>
                                 <div className="flex gap-2">
-                                    {[{ value: 'M', label: t('etudiantSexeM'), icon: '♂' }, { value: 'F', label: t('etudiantSexeF'), icon: '♀' }].map(opt => (
+                                    {[{ value: 'M', label: t('etudiantSexeM'), icon: ICONS.male }, { value: 'F', label: t('etudiantSexeF'), icon: ICONS.female }].map(opt => (
                                         <button key={opt.value} type="button"
                                             onClick={() => setData('sexe', data.sexe === opt.value ? '' : opt.value)}
                                             className={`flex items-center gap-2 rounded-xl border-2 px-4 py-2.5 text-sm font-medium transition-all
@@ -372,7 +372,7 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux 
                                                         : 'border-rose-400 bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300')
                                                     : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
                                                 }`}>
-                                            <span className="text-lg leading-none">{opt.icon}</span>
+                                            <Icon d={opt.icon} className="h-4 w-4" />
                                             {opt.label}
                                         </button>
                                     ))}
@@ -426,7 +426,7 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux 
                                                 </code>
                                             )}
                                             {data.sexe && (
-                                                <span className="text-[10px] text-slate-400">{data.sexe === 'M' ? '♂' : '♀'}</span>
+                                                <span className="text-[10px] text-slate-400 flex items-center"><Icon d={data.sexe === 'M' ? ICONS.male : ICONS.female} className="h-3.5 w-3.5" /></span>
                                             )}
                                         </div>
                                     </div>
@@ -996,8 +996,8 @@ function EtudiantCard({ etudiant, onEdit, onDelete, t, locale }) {
                         <div className="min-w-0">
                             <p className="text-sm font-bold text-slate-800 dark:text-white leading-tight truncate">{displayName}</p>
                             <div className="mt-0.5 flex items-center gap-1.5">
-                                {etudiant.sexe === 'M' && <span className="text-[11px] text-indigo-500">♂</span>}
-                                {etudiant.sexe === 'F' && <span className="text-[11px] text-rose-500">♀</span>}
+                                {etudiant.sexe === 'M' && <span className="flex items-center text-indigo-500"><Icon d={ICONS.male} className="h-3.5 w-3.5" /></span>}
+                                {etudiant.sexe === 'F' && <span className="flex items-center text-rose-500"><Icon d={ICONS.female} className="h-3.5 w-3.5" /></span>}
                                 {etudiant.CNE && (
                                     <code className="rounded bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 font-mono text-[10px] font-bold text-slate-600 dark:text-slate-300">
                                         {etudiant.CNE}
@@ -1094,12 +1094,13 @@ function EtudiantRow({ etudiant, onEdit, onDelete, t, locale }) {
             </td>
             <td className="px-5 py-3.5">
                 {etudiant.sexe
-                    ? <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                    ? <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                         etudiant.sexe === 'F'
                             ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
                             : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
                     }`}>
-                        {etudiant.sexe === 'M' ? '♂ ' + t('etudiantSexeM') : '♀ ' + t('etudiantSexeF')}
+                        <Icon d={etudiant.sexe === 'M' ? ICONS.male : ICONS.female} className="h-3.5 w-3.5 shrink-0" />
+                        {etudiant.sexe === 'M' ? t('etudiantSexeM') : t('etudiantSexeF')}
                     </span>
                     : <span className="text-xs italic text-slate-300 dark:text-slate-600">—</span>}
             </td>
@@ -1362,7 +1363,7 @@ function EtudiantsContent({ etudiants, filieres, niveaux, filters, stats }) {
                                     dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200
                                     ${isRTL ? 'ps-8' : 'ps-9'}`}>
                                 <option value="">{t('allFilieres')}</option>
-                                {filieres.map(f => <option key={f.id} value={f.id}>{f.code} — {f.nom_fr}</option>)}
+                                {filieres.map(f => <option key={f.id} value={f.id}>{f.code} — {locale === 'ar' ? (f.nom_ar || f.nom_fr) : f.nom_fr}</option>)}
                             </select>
                             <span className={`pointer-events-none absolute inset-y-0 ${isRTL ? 'start-3' : 'end-3'} flex items-center text-slate-400`}>
                                 <Icon d={ICONS.chevDown} className="h-4 w-4" />
@@ -1378,8 +1379,8 @@ function EtudiantsContent({ etudiants, filieres, niveaux, filters, stats }) {
                                     focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100
                                     dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200
                                     ${isRTL ? 'ps-8' : 'ps-9'}`}>
-                                <option value="">{locale === 'ar' ? 'جميع المستويات' : 'Tous les niveaux'}</option>
-                                {filteredNiveaux.map(n => <option key={n.id} value={n.id}>{n.nom_fr} ({n.code})</option>)}
+                                <option value="">{t('allNiveaux')}</option>
+                                {filteredNiveaux.map(n => <option key={n.id} value={n.id}>{locale === 'ar' ? (n.nom_ar || n.nom_fr) : n.nom_fr} ({n.code})</option>)}
                             </select>
                             <span className={`pointer-events-none absolute inset-y-0 ${isRTL ? 'start-3' : 'end-3'} flex items-center text-slate-400`}>
                                 <Icon d={ICONS.chevDown} className="h-4 w-4" />
@@ -1420,7 +1421,8 @@ function EtudiantsContent({ etudiants, filieres, niveaux, filters, stats }) {
                                     ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
                                     : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
                             }`}>
-                                {sexeFilter === 'M' ? '♂ ' + t('etudiantSexeM') : '♀ ' + t('etudiantSexeF')}
+                                <Icon d={sexeFilter === 'M' ? ICONS.male : ICONS.female} className="h-3.5 w-3.5 shrink-0" />
+                                {sexeFilter === 'M' ? t('etudiantSexeM') : t('etudiantSexeF')}
                                 <button onClick={() => handleSexe('')} className="ms-1 hover:text-red-500"><Icon d={ICONS.close} className="h-3 w-3" /></button>
                             </span>
                         )}
@@ -1432,7 +1434,9 @@ function EtudiantsContent({ etudiants, filieres, niveaux, filters, stats }) {
                         )}
                         {niveauFilter && (
                             <span className="flex items-center gap-1 rounded-full bg-violet-100 dark:bg-violet-900/30 px-2.5 py-0.5 text-xs font-medium text-violet-700 dark:text-violet-300">
-                                {niveaux?.find(n => n.id == niveauFilter)?.nom_fr || niveauFilter}
+                                {niveaux?.find(n => n.id == niveauFilter)
+                                    ? (locale === 'ar' ? (niveaux.find(n => n.id == niveauFilter).nom_ar || niveaux.find(n => n.id == niveauFilter).nom_fr) : niveaux.find(n => n.id == niveauFilter).nom_fr)
+                                    : niveauFilter}
                                 <button onClick={() => handleNiveau('')} className="ms-1 hover:text-red-500"><Icon d={ICONS.close} className="h-3 w-3" /></button>
                             </span>
                         )}

@@ -50,7 +50,7 @@ function StatCard({ icon, label, value, color }) {
 }
 
 /* ── Student search combobox ─────────────────────────────────────────────────*/
-function StudentCombo({ items, value, onChange, placeholder, disabled }) {
+function StudentCombo({ items, value, onChange, placeholder, disabled, locale }) {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
     const ref = useRef();
@@ -70,14 +70,14 @@ function StudentCombo({ items, value, onChange, placeholder, disabled }) {
     if (disabled && selected) {
         return (
             <div className="relative">
-                <input type="text" value={selected.nom_fr + ' ' + selected.prenom_fr + (selected.CNE ? ' (' + selected.CNE + ')' : '')} readOnly
+                <input type="text" value={locale === 'ar' ? (selected.nom_ar || selected.nom_fr) + ' ' + (selected.prenom_ar || selected.prenom_fr) : selected.nom_fr + ' ' + selected.prenom_fr + (selected.CNE ? ' (' + selected.CNE + ')' : '')} readOnly
                     className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/60 px-4 py-2.5 text-sm text-slate-600 dark:text-slate-400 cursor-not-allowed" />
             </div>
         );
     }
     return (
         <div ref={ref} className="relative">
-            <input type="text" value={open ? query : (selected ? (selected.nom_fr + ' ' + selected.prenom_fr + (selected.CNE ? ' (' + selected.CNE + ')' : '')) : '')}
+            <input type="text" value={open ? query : (selected ? (locale === 'ar' ? (selected.nom_ar || selected.nom_fr) + ' ' + (selected.prenom_ar || selected.prenom_fr) : selected.nom_fr + ' ' + selected.prenom_fr + (selected.CNE ? ' (' + selected.CNE + ')' : '')) : '')}
                 onChange={e => { setQuery(e.target.value); setOpen(true); if (!e.target.value) onChange(null); }}
                 onFocus={() => { setOpen(true); setQuery(''); }}
                 placeholder={placeholder || ''}
@@ -89,9 +89,9 @@ function StudentCombo({ items, value, onChange, placeholder, disabled }) {
                             className={`w-full text-start px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700/50 transition flex items-center gap-3
                                 ${value === i.id ? 'bg-indigo-50 dark:bg-indigo-900/20 font-medium' : ''}`}>
                             <div className="h-7 w-7 shrink-0 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-500">
-                                {(i.prenom_fr?.[0] || i.nom_fr?.[0] || '?').toUpperCase()}
+                                {(locale === 'ar' ? (i.prenom_ar?.[0] || i.prenom_fr?.[0] || i.nom_ar?.[0] || i.nom_fr?.[0] || '?') : (i.prenom_fr?.[0] || i.nom_fr?.[0] || '?')).toUpperCase()}
                             </div>
-                            <span>{i.nom_fr} {i.prenom_fr}</span>
+                            <span>{locale === 'ar' ? ((i.nom_ar || i.nom_fr) + ' ' + (i.prenom_ar || i.prenom_fr)) : (i.nom_fr + ' ' + i.prenom_fr)}</span>
                             {i.CNE && <code className="ml-auto text-[10px] text-slate-400 font-mono">{i.CNE}</code>}
                         </button>
                     )) : (
@@ -194,7 +194,7 @@ function AddModal({ allEtudiants, allModules, preselectedModuleId, preselectedSt
                             <StudentCombo items={allEtudiants} value={data.etudiant_id}
                                 onChange={v => setData('etudiant_id', v)}
                                 placeholder={locale === 'ar' ? 'ابحث عن طالب...' : 'Rechercher un étudiant...'}
-                                disabled={!!preselectedStudentId} />
+                                disabled={!!preselectedStudentId} locale={locale} />
                             {errors.etudiant_id && <p className="text-xs text-red-500">{errors.etudiant_id}</p>}
                         </div>
                         <div className="space-y-1.5">

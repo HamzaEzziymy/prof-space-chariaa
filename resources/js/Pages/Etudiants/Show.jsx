@@ -29,6 +29,8 @@ const ICONS = {
     chevDown:   'M19 9l-7 7-7-7',
     book:       'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
     upload:     'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12',
+    male:       'M16 3h5m0 0v5m0-5l-6 6M9 15a6 6 0 100-12 6 6 0 000 12z',
+    female:     'M12 14a6 6 0 100-12 6 6 0 000 12zm0 0v8m-4-4h8',
 };
 
 // ─── Avatar ────────────────────────────────────────────────────────────────────
@@ -288,7 +290,7 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux 
                             <div className="space-y-1.5">
                                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">{t('etudiantSexe')}</label>
                                 <div className="flex gap-2">
-                                    {[{ value: 'M', label: t('etudiantSexeM'), icon: '♂' }, { value: 'F', label: t('etudiantSexeF'), icon: '♀' }].map(opt => (
+                                    {[{ value: 'M', label: t('etudiantSexeM'), icon: ICONS.male }, { value: 'F', label: t('etudiantSexeF'), icon: ICONS.female }].map(opt => (
                                         <button key={opt.value} type="button"
                                             onClick={() => setData('sexe', data.sexe === opt.value ? '' : opt.value)}
                                             className={`flex items-center gap-2 rounded-xl border-2 px-4 py-2.5 text-sm font-medium transition-all
@@ -298,7 +300,7 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux 
                                                         : 'border-rose-400 bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300')
                                                     : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
                                                 }`}>
-                                            <span className="text-lg leading-none">{opt.icon}</span>
+                                            <Icon d={opt.icon} className="h-4 w-4" />
                                             {opt.label}
                                         </button>
                                     ))}
@@ -352,7 +354,7 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux 
                                                 </code>
                                             )}
                                             {data.sexe && (
-                                                <span className="text-[10px] text-slate-400">{data.sexe === 'M' ? '♂' : '♀'}</span>
+                                                <span className="flex items-center text-slate-400"><Icon d={data.sexe === 'M' ? ICONS.male : ICONS.female} className="h-3.5 w-3.5" /></span>
                                             )}
                                         </div>
                                     </div>
@@ -501,7 +503,7 @@ function ShowPage() {
                                             ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
                                             : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
                                     }`}>
-                                        {etudiant.sexe === 'M' ? '♂' : '♀'} {etudiant.sexe === 'M' ? t('etudiantSexeM') : t('etudiantSexeF')}
+                                        <Icon d={etudiant.sexe === 'M' ? ICONS.male : ICONS.female} className="h-3.5 w-3.5 shrink-0" /> {etudiant.sexe === 'M' ? t('etudiantSexeM') : t('etudiantSexeF')}
                                     </span>
                                 )}
                             </div>

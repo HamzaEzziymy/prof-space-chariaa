@@ -51,6 +51,7 @@ class SalleController extends Controller
             'nomSalle_fr' => 'required|string|max:255',
             'nomSalle_ar' => 'nullable|string|max:255',
             'code_salle'  => 'required|string|max:255|unique:salle,code_salle',
+            'capacite'    => 'nullable|integer|min:1|max:99999',
         ]);
 
         Salle::create($validated);
@@ -67,6 +68,7 @@ class SalleController extends Controller
             'nomSalle_fr' => 'required|string|max:255',
             'nomSalle_ar' => 'nullable|string|max:255',
             'code_salle'  => "required|string|max:255|unique:salle,code_salle,{$salle->id}",
+            'capacite'    => 'nullable|integer|min:1|max:99999',
         ]);
 
         $salle->update($validated);

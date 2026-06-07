@@ -128,6 +128,7 @@ function SalleModal({ mode, salle, onClose, t, isRTL, locale }) {
         nomSalle_fr: salle?.nomSalle_fr ?? '',
         nomSalle_ar: salle?.nomSalle_ar ?? '',
         code_salle:  salle?.code_salle  ?? '',
+        capacite:    salle?.capacite    ?? '',
     });
 
     const submit = (e) => {
@@ -224,6 +225,22 @@ function SalleModal({ mode, salle, onClose, t, isRTL, locale }) {
                             />
                         </div>
 
+                        {/* Capacité */}
+                        <div className="space-y-4">
+                            <SectionLabel icon="🪑" label={locale === 'ar' ? 'السعة' : 'Capacité'} />
+                            <Field
+                                id="capacite"
+                                label={t('salleCapacite')}
+                                value={data.capacite}
+                                onChange={e => setData('capacite', e.target.value === '' ? '' : parseInt(e.target.value))}
+                                placeholder={locale === 'ar' ? 'مثال: 30' : 'Ex: 30'}
+                                hint={t('salleCapaciteHint')}
+                                error={errors.capacite}
+                                type="number"
+                                min="1"
+                            />
+                        </div>
+
                         {/* Preview card */}
                         {(data.nomSalle_fr || data.code_salle) && (
                             <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-900/20">
@@ -240,6 +257,7 @@ function SalleModal({ mode, salle, onClose, t, isRTL, locale }) {
                                         </p>
                                         <p className="text-xs text-slate-500 dark:text-slate-400">
                                             {data.code_salle || '—'}
+                                            {data.capacite && <span className="ms-2">· {data.capacite} {t('salleCapacitePlaces')}</span>}
                                         </p>
                                     </div>
                                 </div>
@@ -374,13 +392,26 @@ function SalleCard({ salle, onEdit, onDelete, t, locale }) {
                     )}
                 </div>
 
-                {/* Exam count pill */}
-                <div className="flex items-center gap-1.5 rounded-lg bg-slate-50 dark:bg-slate-700/50 px-3 py-1.5">
-                    <Icon d={ICONS.exam} className="h-3.5 w-3.5 text-slate-400" />
-                    <span className="text-xs text-slate-500 dark:text-slate-400">
-                        <span className="font-semibold text-slate-700 dark:text-slate-200">{salle.note_exams_count}</span>
-                        {' '}{t('examsCount')}
-                    </span>
+                {/* Capacity + Exam count pills */}
+                <div className="flex items-center gap-2">
+                    {salle.capacite && (
+                        <div className="flex items-center gap-1.5 rounded-lg bg-slate-50 dark:bg-slate-700/50 px-3 py-1.5">
+                            <svg className="h-3.5 w-3.5 text-slate-400" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                                <span className="font-semibold text-slate-700 dark:text-slate-200">{salle.capacite}</span>
+                                {' '}{t('salleCapacitePlaces')}
+                            </span>
+                        </div>
+                    )}
+                    <div className="flex items-center gap-1.5 rounded-lg bg-slate-50 dark:bg-slate-700/50 px-3 py-1.5">
+                        <Icon d={ICONS.exam} className="h-3.5 w-3.5 text-slate-400" />
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                            <span className="font-semibold text-slate-700 dark:text-slate-200">{salle.note_exams_count}</span>
+                            {' '}{t('examsCount')}
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -435,6 +466,15 @@ function SalleRow({ salle, onEdit, onDelete, t, locale }) {
                 <span className="rounded-lg bg-slate-100 dark:bg-slate-700 px-2.5 py-1 font-mono text-xs font-bold text-slate-600 dark:text-slate-300">
                     {salle.code_salle || '—'}
                 </span>
+            </td>
+
+            {/* Capacité */}
+            <td className="px-5 py-3.5">
+                {salle.capacite ? (
+                    <span className="text-sm text-slate-600 dark:text-slate-300">{salle.capacite} <span className="text-xs text-slate-400">{t('salleCapacitePlaces')}</span></span>
+                ) : (
+                    <span className="text-sm text-slate-400">—</span>
+                )}
             </td>
 
             {/* Exams */}
@@ -725,6 +765,9 @@ function SallesContent({ salles, filters, stats }) {
                                     </th>
                                     <th className={`px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 ${isRTL ? 'text-right' : 'text-left'}`}>
                                         {t('code')}
+                                    </th>
+                                    <th className={`px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 ${isRTL ? 'text-right' : 'text-left'}`}>
+                                        {t('salleCapacite')}
                                     </th>
                                     <th className={`px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 ${isRTL ? 'text-right' : 'text-left'}`}>
                                         {t('examsCount')}

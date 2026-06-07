@@ -652,7 +652,7 @@ function NiveauRow({ niveau, isLast, expanded, onToggle, onEdit, onDelete, onAdd
 function FiliereCard({ filiere, niveauxList, expandedFilieres, expandedNiveaux,
     toggleFiliere, toggleNiveau, setModal, locale, isRTL, t }) {
 
-    const expanded   = expandedFilieres[filiere.id] ?? true;
+    const expanded   = expandedFilieres[filiere.id] ?? false;
     const name       = locale === 'ar' ? (filiere.nom_ar || filiere.code) : (filiere.nom_fr || filiere.code);
     const altName    = locale === 'ar' ? filiere.nom_fr : filiere.nom_ar;
     const hasNiveaux = niveauxList.length > 0;
@@ -740,7 +740,7 @@ function FiliereCard({ filiere, niveauxList, expandedFilieres, expandedNiveaux,
                                 <NiveauRow key={niveau.id}
                                     niveau={niveau}
                                     isLast={idx === niveauxList.length - 1}
-                                    expanded={expandedNiveaux[niveau.id] ?? true}
+                                    expanded={expandedNiveaux[niveau.id] ?? false}
                                     onToggle={() => toggleNiveau(niveau.id)}
                                     locale={locale} isRTL={isRTL} t={t}
                                     setModal={setModal}
@@ -786,10 +786,10 @@ function PageContent({ niveaux, filieres, filters }) {
     const [modal, setModal]   = useState(null);
     const [search, setSearch] = useState(filters?.search ?? '');
     const [expandedFilieres, setExpandedFilieres] = useState(
-        Object.fromEntries((filieres ?? []).map(f => [f.id, true]))
+        Object.fromEntries((filieres ?? []).map(f => [f.id, false]))
     );
     const [expandedNiveaux, setExpandedNiveaux] = useState(
-        Object.fromEntries((niveaux ?? []).map(n => [n.id, true]))
+        Object.fromEntries((niveaux ?? []).map(n => [n.id, false]))
     );
     const searchTimeout = useRef(null);
 

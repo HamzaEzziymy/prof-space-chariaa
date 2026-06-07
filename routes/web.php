@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\EtudiantController;
 use App\Http\Controllers\ModuleController;
+use App\Http\Controllers\NoteExamController;
+use App\Http\Controllers\RepartitionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProfessorController;
 use App\Http\Controllers\SalleController;
@@ -35,7 +37,19 @@ Route::middleware('auth')->group(function () {
     // Force password change on first login
     Route::get('/password/change',  [ForcePasswordChangeController::class, 'create'])->name('password.change');
     Route::post('/password/change', [ForcePasswordChangeController::class, 'store'])->name('password.change.store');
-});// ── Settings (super_admin only) ───────────────────────────────────────────────
+});// ── Examens (admin + super_admin) ────────────────────────────────────────────
+Route::middleware(['auth', 'admin'])->prefix('notes')->name('notes.')->group(function () {
+    Route::get('/',               [NoteExamController::class, 'index'])->name('index');
+    Route::post('/bulk',         [NoteExamController::class, 'bulkUpdate'])->name('bulk-update');
+    Route::delete('/{noteExam}', [NoteExamController::class, 'destroy'])->name('destroy');
+});
+
+// ── Répartition des examens (admin + super_admin) ────────────────────────────
+Route::middleware(['auth', 'admin'])->prefix('repartition')->name('repartition.')->group(function () {
+    Route::get('/',              [RepartitionController::class, 'index'])->name('index');
+    Route::post('/save',        [RepartitionController::class, 'save'])->name('save');
+});
+
 Route::middleware(['auth', 'super_admin'])->prefix('settings')->name('settings.')->group(function () {
     Route::get('/',             [SettingsController::class, 'index'])->name('index');
     Route::post('/general',     [SettingsController::class, 'updateGeneral'])->name('general');

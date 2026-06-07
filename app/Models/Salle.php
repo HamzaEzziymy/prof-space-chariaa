@@ -13,6 +13,7 @@ class Salle extends Model
         'nomSalle_ar',
         'nomSalle_fr',
         'code_salle',
+        'capacite',
     ];
 
     /**
