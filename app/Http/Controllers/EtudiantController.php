@@ -154,7 +154,8 @@ class EtudiantController extends Controller
     public function import(Request $request): JsonResponse
     {
         $request->validate([
-            'file' => 'required|file|max:5120',
+            'file'      => 'required|file|max:5120',
+            'niveau_id' => 'nullable|exists:niveaux,id',
         ]);
 
         $file      = $request->file('file');
@@ -190,9 +191,10 @@ class EtudiantController extends Controller
             $rows[0]
         );
 
-        $imported = 0;
-        $skipped  = 0;
+        $imported  = 0;
+        $skipped   = 0;
         $rows_report = [];
+        $batchNiveauId = $request->input('niveau_id');
 
         foreach (array_slice($rows, 1) as $lineNum => $row) {
             if (count(array_filter($row, fn($v) => $v !== '' && $v !== null)) === 0) continue;
@@ -233,8 +235,8 @@ class EtudiantController extends Controller
                 continue;
             }
 
-            $niveauId = null;
-            if (!empty($data['code_niveau'])) {
+            $niveauId = $batchNiveauId;
+            if (!$niveauId && !empty($data['code_niveau'])) {
                 $niveau = Niveau::where('code', $data['code_niveau'])->first();
                 if ($niveau) $niveauId = $niveau->id;
             }

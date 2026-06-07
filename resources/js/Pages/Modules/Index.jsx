@@ -203,12 +203,13 @@ function AddMethodPicker({ onSelect, t, isRTL, locale, onClose }) {
 }
 
 // ─── Excel import modal ───────────────────────────────────────────────────────
-function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale }) {
+function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale, semestres }) {
     const [file, setFile]         = useState(null);
     const [dragging, setDragging] = useState(false);
     const [status, setStatus]     = useState('idle'); // idle | previewing | loading | done | error
     const [preview, setPreview]   = useState(null);  // { valid: [], invalid: [] }
     const [report, setReport]     = useState(null);  // post-submit report
+    const [semestreId, setSemestreId] = useState('');
     const fileInput               = useRef(null);
 
     const COLS = [
@@ -217,8 +218,7 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale }) {
         { name: 'code_module',   req: true  },
         { name: 'coefficient',   req: false },
         { name: 'type_module',   req: false },
-        { name: 'prof_id',       req: false },
-        { name: 'code_semestre', req: false },
+        { name: 'prof_id',        req: false },
     ];
 
     // ── Parse any file with SheetJS ───────────────────────────────────────
@@ -295,7 +295,8 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale }) {
         if (!file) return;
         setStatus('loading');
         const fd = new FormData();
-        fd.append('file', file);
+            fd.append('file', file);
+            if (semestreId) fd.append('semestre_id', semestreId);
         try {
             const res = await window.axios.post(route('modules.import'), fd, {
                 headers: { 'Content-Type': 'multipart/form-data' },
@@ -327,7 +328,7 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale }) {
 
     const downloadTemplate = () => {
         const header  = COLS.map(c => c.name).join(',');
-        const example = 'Mathématiques Appliquées,الرياضيات التطبيقية,MATH101,3,Fondamental,,S1';
+        const example = 'Mathématiques Appliquées,الرياضيات التطبيقية,MATH101,3,Fondamental,';
         const blob    = new Blob([header + '\n' + example], { type: 'text/csv;charset=utf-8;' });
         const url     = URL.createObjectURL(blob);
         const a       = document.createElement('a');
@@ -382,6 +383,25 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale }) {
                                     </div>
                                 ))}
                             </div>
+                        </div>
+
+                        {/* Semestre selector */}
+                        <div className="space-y-1.5">
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                                {locale === 'ar' ? 'الفصل الدراسي' : 'Semestre'}
+                            </label>
+                            <select value={semestreId} onChange={e => setSemestreId(e.target.value)}
+                                className="block w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-700 dark:text-white shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:border-indigo-500">
+                                <option value="">{locale === 'ar' ? '— اختر الفصل —' : '— Choisir un semestre —'}</option>
+                                {semestres.map(s => (
+                                    <option key={s.id} value={s.id}>
+                                        {s.code} — {s.niveau?.nom_fr || s.niveau?.code || ''}{s.niveau?.filiere ? ` (${s.niveau.filiere.code})` : ''}
+                                    </option>
+                                ))}
+                            </select>
+                            <p className="text-xs text-slate-400">
+                                {locale === 'ar' ? 'سيتم تعيين هذا الفصل لجميع الوحدات المستوردة' : 'Ce semestre sera attribué à tous les modules importés'}
+                            </p>
                         </div>
 
                         {/* Drop zone — only show when no file yet */}
@@ -1202,7 +1222,7 @@ function ModulesContent({ modules, profs, semestres, types, filters, stats }) {
                         setImportToast({ count });
                         setTimeout(() => setImportToast(null), 4000);
                     }}
-                    t={t} isRTL={isRTL} locale={locale}
+                    t={t} isRTL={isRTL} locale={locale} semestres={semestres}
                 />
             )}
             {modal?.type === 'edit' && (

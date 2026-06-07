@@ -399,7 +399,7 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux 
                                 <option value="">{locale === 'ar' ? 'اختر المستوى...' : 'Choisir un niveau...'}</option>
                                 {(niveaux || []).map(n => (
                                     <option key={n.id} value={n.id}>
-                                        {n.nom_fr} ({n.code}) — {n.filiere?.code || '—'}
+                                        {locale === 'ar' ? (n.nom_ar || n.nom_fr) : n.nom_fr} ({n.code}) — {n.filiere?.code || '—'}
                                     </option>
                                 ))}
                             </SelectField>
@@ -502,12 +502,13 @@ function DeleteModal({ etudiant, onClose, t, isRTL, locale }) {
 }
 
 // ─── Excel import modal ───────────────────────────────────────────────────────
-function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale }) {
+function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale, niveaux }) {
     const [file, setFile]         = useState(null);
     const [dragging, setDragging] = useState(false);
     const [status, setStatus]     = useState('idle');
     const [preview, setPreview]   = useState(null);
     const [report, setReport]     = useState(null);
+    const [niveauId, setNiveauId] = useState('');
     const fileInput               = useRef(null);
 
     const COLS = [
@@ -523,7 +524,6 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale }) {
         { name: 'sexe',           req: false },
         { name: 'telephone',      req: false },
         { name: 'email',          req: false },
-        { name: 'code_niveau',    req: false },
     ];
 
     const parseFileWithSheetJS = (f) => new Promise((resolve, reject) => {
@@ -593,8 +593,9 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale }) {
     const submit = async () => {
         if (!file) return;
         setStatus('loading');
-        const fd = new FormData();
-        fd.append('file', file);
+            const fd = new FormData();
+            fd.append('file', file);
+            if (niveauId) fd.append('niveau_id', niveauId);
         try {
             const res = await window.axios.post(route('etudiants.import'), fd, {
                 headers: { 'Content-Type': 'multipart/form-data' },
@@ -624,7 +625,7 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale }) {
 
     const downloadTemplate = () => {
         const header  = COLS.map(c => c.name).join(',');
-        const example = 'Jean,Dupont,جان,دوبون,CNE123456,A123456,INS001,2000-01-15,Casablanca,test@email.com,M,+212600000000,L1';
+        const example = 'Jean,Dupont,جان,دوبون,CNE123456,A123456,INS001,2000-01-15,Casablanca,test@email.com,M,+212600000000';
         const blob    = new Blob([header + '\n' + example], { type: 'text/csv;charset=utf-8;' });
         const url     = URL.createObjectURL(blob);
         const a       = document.createElement('a');
@@ -696,6 +697,25 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale }) {
                                     </div>
                                 ))}
                             </div>
+                        </div>
+
+                        {/* Niveau selector */}
+                        <div className="space-y-1.5">
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                                {locale === 'ar' ? 'المستوى' : 'Niveau'}
+                            </label>
+                            <select value={niveauId} onChange={e => setNiveauId(e.target.value)}
+                                className="block w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-700 dark:text-white shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:border-indigo-500">
+                                <option value="">{locale === 'ar' ? '— اختر المستوى —' : '— Choisir un niveau —'}</option>
+                                {(niveaux || []).map(n => (
+                                    <option key={n.id} value={n.id}>
+                                        {locale === 'ar' ? (n.nom_ar || n.nom_fr) : n.nom_fr} ({n.code}) — {n.filiere?.code || '—'}
+                                    </option>
+                                ))}
+                            </select>
+                            <p className="text-xs text-slate-400">
+                                {locale === 'ar' ? 'سيتم تعيين هذا المستوى لجميع الطلاب المستوردين' : 'Ce niveau sera attribué à tous les étudiants importés'}
+                            </p>
                         </div>
 
                         {/* Drop zone */}
@@ -1246,7 +1266,7 @@ function EtudiantsContent({ etudiants, filieres, niveaux, filters, stats }) {
                         setImportToast({ count });
                         setTimeout(() => setImportToast(null), 4000);
                     }}
-                    t={t} isRTL={isRTL} locale={locale}
+                    t={t} isRTL={isRTL} locale={locale} niveaux={niveaux}
                 />
             )}
             {modal?.type === 'edit' && (

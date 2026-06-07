@@ -612,6 +612,14 @@ export const translations = {
         etudiantPhotoUpdated: 'تم تحديث الصورة',
         etudiantPhotoRemoved: 'تم حذف الصورة',
 
+        // Import étudiants
+        importEtudiants: 'استيراد من Excel',
+        importTitleEtudiants: 'استيراد الطلاب',
+        importSubtitleEtudiants: 'استورد عدة طلاب من ملف Excel أو CSV',
+        importTemplateEtudiants: 'تحميل نموذج CSV',
+        importSuccessEtudiants: 'طالب تم استيرادهم بنجاح',
+        importSkippedEtudiants: 'صفوف تم تجاهلها',
+
         // Modules
         modulesManagement: 'إدارة الوحدات الدراسية',
         addModule: 'إضافة وحدة',

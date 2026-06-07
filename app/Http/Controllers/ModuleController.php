@@ -140,7 +140,8 @@ class ModuleController extends Controller
     public function import(Request $request): JsonResponse
     {
         $request->validate([
-            'file' => 'required|file|max:5120',
+            'file'        => 'required|file|max:5120',
+            'semestre_id' => 'nullable|exists:semestres,id',
         ]);
 
         $file      = $request->file('file');
@@ -180,9 +181,10 @@ class ModuleController extends Controller
             $rows[0]
         );
 
-        $imported = 0;
-        $skipped  = 0;
+        $imported  = 0;
+        $skipped   = 0;
         $rows_report = [];
+        $batchSemestreId = $request->input('semestre_id');
 
         foreach (array_slice($rows, 1) as $lineNum => $row) {
             if (count(array_filter($row, fn($v) => $v !== '' && $v !== null)) === 0) continue;
@@ -220,8 +222,8 @@ class ModuleController extends Controller
                 continue;
             }
 
-            $semestreId = null;
-            if (!empty($data['code_semestre'])) {
+            $semestreId = $batchSemestreId;
+            if (!$semestreId && !empty($data['code_semestre'])) {
                 $semestre = Semestre::where('code', $data['code_semestre'])->first();
                 if ($semestre) $semestreId = $semestre->id;
             }
