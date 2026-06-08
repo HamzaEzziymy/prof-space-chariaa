@@ -251,6 +251,13 @@ export const translations = {
         repartitionUnassign: 'Retirer',
         repartitionOverCapacity: 'Dépassement de capacité !',
         repartitionFillRate: 'Taux de remplissage',
+        repartitionNiveauTitle: 'Vue d\'ensemble des niveaux',
+        repartitionNiveauSubtitle: 'Sélectionnez un niveau pour gérer sa répartition',
+        repartitionCreate: 'Créer une répartition',
+        repartitionCreateTitle: 'Nouvelle répartition',
+        repartitionCreateSubtitle: 'Sélectionnez une filière, un niveau, un semestre et un module pour répartir les étudiants',
+        repartitionViewDetails: 'Voir le détail',
+        repartitionGoBack: 'Retour aux niveaux',
 
         // Étudiants
         etudiantsManagement: 'Gestion des étudiants',
@@ -365,6 +372,11 @@ export const translations = {
         type: 'Type',
         professor: 'Professeur',
         noType: 'Sans type',
+        // Export Excel/CSV
+        exportModules: 'Exporter',
+        exportTitleModules: 'Exporter les modules',
+        exportSubtitleModules: 'Sélectionnez les champs et filtres pour l\'export',
+        exportModulesCount: 'modules exportés',
         // Import Excel/CSV
         importModules: 'Importer depuis Excel',
         importTitle: 'Importer des modules',
@@ -715,6 +727,13 @@ export const translations = {
         repartitionUnassign: 'إزالة',
         repartitionOverCapacity: 'تجاوز السعة!',
         repartitionFillRate: 'نسبة الامتلاء',
+        repartitionNiveauTitle: 'نظرة عامة على المستويات',
+        repartitionNiveauSubtitle: 'اختر مستوى لإدارة توزيعه',
+        repartitionCreate: 'إنشاء توزيع',
+        repartitionCreateTitle: 'توزيع جديد',
+        repartitionCreateSubtitle: 'اختر شعبة ومستوى وفصلاً ومادة لتوزيع الطلاب',
+        repartitionViewDetails: 'عرض التفاصيل',
+        repartitionGoBack: 'العودة إلى المستويات',
 
         // Étudiants
         etudiantsManagement: 'إدارة الطلاب',
@@ -819,6 +838,11 @@ export const translations = {
         type: 'النوع',
         professor: 'الأستاذ',
         noType: 'بدون نوع',
+        // Export Excel/CSV
+        exportModules: 'تصدير',
+        exportTitleModules: 'تصدير الوحدات الدراسية',
+        exportSubtitleModules: 'اختر الحقول والفلاتر للتصدير',
+        exportModulesCount: 'وحدة تم تصديرها',
         // Import Excel/CSV
         importModules: 'استيراد من Excel',
         importTitle: 'استيراد الوحدات',

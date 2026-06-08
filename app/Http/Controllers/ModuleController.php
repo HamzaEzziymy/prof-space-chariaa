@@ -130,6 +130,58 @@ class ModuleController extends Controller
     }
 
     /**
+     * Export modules as JSON with selected fields and filters.
+     */
+    public function export(Request $request): JsonResponse
+    {
+        $fields = $request->input('fields', []);
+
+        $query = Module::query()->with('semestre.niveau.filiere', 'prof.user:id,nom_fr,prenom_fr,nom_ar,prenom_ar')->withCount('etudiants');
+
+        if ($search = $request->get('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('nom_fr',      'like', "%{$search}%")
+                  ->orWhere('nom_ar',     'like', "%{$search}%")
+                  ->orWhere('code_module','like', "%{$search}%");
+            });
+        }
+
+        if ($type = $request->get('type')) {
+            $query->where('type_module', $type);
+        }
+
+        if ($semestreId = $request->get('semestre_id')) {
+            $query->where('semestre_id', $semestreId);
+        }
+
+        $modules = $query->orderBy('code_module')->get();
+        $locale  = $request->input('_locale', 'fr');
+
+        $data = $modules->map(function ($m) use ($fields, $locale) {
+            $row = [];
+            foreach ($fields as $field) {
+                $row[$field] = match ($field) {
+                    'prof_nom' => $m->prof?->user
+                        ? ($locale === 'ar'
+                            ? trim(($m->prof->user->prenom_ar ?? '') . ' ' . ($m->prof->user->nom_ar ?? ''))
+                            : trim(($m->prof->user->prenom_fr ?? '') . ' ' . ($m->prof->user->nom_fr ?? '')))
+                        : '',
+                    'semestre_code' => $m->semestre?->code ?? '',
+                    'niveau' => $m->semestre?->niveau
+                        ? ($locale === 'ar' ? ($m->semestre->niveau->nom_ar ?: $m->semestre->niveau->nom_fr) : ($m->semestre->niveau->nom_fr ?: $m->semestre->niveau->nom_ar))
+                        : '',
+                    'filiere_code' => $m->semestre?->niveau?->filiere?->code ?? '',
+                    'etudiants_count' => $m->etudiants_count,
+                    default => $m->$field ?? '',
+                };
+            }
+            return $row;
+        });
+
+        return response()->json($data);
+    }
+
+    /**
      * Import modules from a CSV / Excel file.
      *
      * Supported: .csv, .txt, .xlsx, .xls, .ods, .tsv

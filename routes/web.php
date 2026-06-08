@@ -46,8 +46,10 @@ Route::middleware(['auth', 'admin'])->prefix('notes')->name('notes.')->group(fun
 
 // ── Répartition des examens (admin + super_admin) ────────────────────────────
 Route::middleware(['auth', 'admin'])->prefix('repartition')->name('repartition.')->group(function () {
-    Route::get('/',              [RepartitionController::class, 'index'])->name('index');
-    Route::post('/save',        [RepartitionController::class, 'save'])->name('save');
+    Route::get('/',                        [RepartitionController::class, 'index'])->name('index');
+    Route::get('/niveau/{niveau}',         [RepartitionController::class, 'show'])->name('show');
+    Route::post('/save',                  [RepartitionController::class, 'save'])->name('save');
+    Route::get('/etudiants-modules',       [RepartitionController::class, 'getStudents'])->name('students');
 });
 
 Route::middleware(['auth', 'super_admin'])->prefix('settings')->name('settings.')->group(function () {
@@ -76,6 +78,7 @@ Route::middleware(['auth', 'admin'])->prefix('modules')->name('modules.')->group
     Route::delete('/{module}',  [ModuleController::class, 'destroy'])->name('destroy');
     Route::post('/import',      [ModuleController::class, 'import'])->name('import');
     Route::post('/import-rows', [ModuleController::class, 'importRows'])->name('importRows');
+    Route::post('/export',      [ModuleController::class, 'export'])->name('export');
 });
 
 // ── Salles d'examen (admin + super_admin) ─────────────────────────────────────

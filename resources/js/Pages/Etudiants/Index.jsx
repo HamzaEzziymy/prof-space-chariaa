@@ -1537,17 +1537,17 @@ function EtudiantsContent({ etudiants, filieres, niveaux, filters, stats }) {
                             <Icon d={ICONS.plus} className="h-4 w-4" />
                             {t('addEtudiant')}
                         </button>
-                        <button onClick={() => setModal({ type: 'export' })}
-                            title={t('exportEtudiants')}
-                            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 active:scale-95 transition">
-                            <Icon d={ICONS.download} className="h-4 w-4" />
-                            <span className="hidden sm:inline">{t('exportEtudiants')}</span>
-                        </button>
                         <button onClick={() => setModal({ type: 'excel' })}
                             title={t('importEtudiants')}
                             className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30 active:scale-95 transition">
                             <Icon d={ICONS.excel} className="h-4 w-4" />
                             <span className="hidden sm:inline">{locale === 'ar' ? 'استيراد Excel' : 'Import Excel'}</span>
+                        </button>
+                        <button onClick={() => setModal({ type: 'export' })}
+                            title={t('exportEtudiants')}
+                            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 active:scale-95 transition">
+                            <Icon d={ICONS.download} className="h-4 w-4" />
+                            <span className="hidden sm:inline">{t('exportEtudiants')}</span>
                         </button>
                     </div>
                 </div>
