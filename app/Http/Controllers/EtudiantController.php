@@ -8,6 +8,7 @@ use App\Models\Niveau;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -274,6 +275,62 @@ class EtudiantController extends Controller
             'skipped'  => $skipped,
             'rows'     => $rows_report,
         ]);
+    }
+
+    /**
+     * Export students as JSON with selected fields and filters.
+     */
+    public function export(Request $request): JsonResponse
+    {
+        $fields = $request->input('fields', []);
+
+        $query = Etudiant::query()->with('niveau.filiere');
+
+        if ($search = $request->get('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('nom_fr',      'like', "%{$search}%")
+                  ->orWhere('prenom_fr',  'like', "%{$search}%")
+                  ->orWhere('nom_ar',     'like', "%{$search}%")
+                  ->orWhere('prenom_ar',  'like', "%{$search}%")
+                  ->orWhere('CNE',        'like', "%{$search}%")
+                  ->orWhere('CIN',        'like', "%{$search}%")
+                  ->orWhere('Nins',       'like', "%{$search}%")
+                  ->orWhere('email',      'like', "%{$search}%");
+            });
+        }
+
+        if ($sexe = $request->get('sexe')) {
+            $query->where('sexe', $sexe);
+        }
+
+        if ($filiereId = $request->get('filiere_id')) {
+            $niveauIds = Niveau::where('filiere_id', $filiereId)->pluck('id');
+            $query->whereIn('niveau_id', $niveauIds);
+        }
+
+        if ($niveauId = $request->get('niveau_id')) {
+            $query->where('niveau_id', $niveauId);
+        }
+
+        $students = $query->orderBy('nom_fr')->orderBy('prenom_fr')->get();
+        $locale   = $request->input('_locale', 'fr');
+
+        $data = $students->map(function ($s) use ($fields, $locale) {
+            $row = [];
+            foreach ($fields as $field) {
+                $row[$field] = match ($field) {
+                    'filiere_code' => $s->niveau?->filiere?->code ?? '',
+                    'niveau'       => $s->niveau
+                        ? ($locale === 'ar' ? ($s->niveau->nom_ar ?: $s->niveau->nom_fr) : ($s->niveau->nom_fr ?: $s->niveau->nom_ar))
+                        : '',
+                    'sexe'         => $s->sexe === 'M' ? 'Masculin' : ($s->sexe === 'F' ? 'Féminin' : ''),
+                    default        => $s->$field ?? '',
+                };
+            }
+            return $row;
+        });
+
+        return response()->json($data);
     }
 
     // ── Internal parsers (shared with ModuleController) ───────────────────────

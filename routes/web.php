@@ -96,6 +96,7 @@ Route::middleware(['auth', 'admin'])->prefix('etudiants')->name('etudiants.')->g
     Route::post('/import',      [EtudiantController::class, 'import'])->name('import');
     Route::post('/{etudiant}/photo', [EtudiantController::class, 'uploadPhoto'])->name('photo');
     Route::delete('/{etudiant}/photo', [EtudiantController::class, 'removePhoto'])->name('photo.remove');
+    Route::post('/export',     [EtudiantController::class, 'export'])->name('export');
 });
 
 // ── Structure pédagogique (admin + super_admin) ────────────────────────────

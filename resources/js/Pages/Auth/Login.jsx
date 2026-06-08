@@ -2,11 +2,15 @@ import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
 import { LanguageProvider, useLanguage } from '@/i18n/LanguageContext';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 
 // ─── Login form (inner, needs language context) ───────────────────────────────
 function LoginForm({ status, canResetPassword }) {
     const { locale, toggleLocale, isRTL } = useLanguage();
+    const { appSettings } = usePage().props;
+    const appName  = appSettings?.app_name ?? 'ProfSpace';
+    const logoUrl  = appSettings?.app_logo_url;
+    const iconUrl  = appSettings?.app_favicon_url;
 
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
@@ -34,8 +38,13 @@ function LoginForm({ status, canResetPassword }) {
                     {/* Header */}
                     <div className="border-b border-slate-100 dark:border-slate-700 p-8 pb-6 text-center">
                         {/* Logo */}
-                        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/30">
-                            <span className="text-2xl font-bold text-white">P</span>
+                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white dark:bg-slate-700 shadow-lg ring-1 ring-slate-200 dark:ring-slate-600 overflow-hidden">
+                            {iconUrl
+                                ? <img src={iconUrl} alt={appName} className="h-full w-full object-contain p-2" />
+                                : logoUrl
+                                    ? <img src={logoUrl} alt={appName} className="h-full w-full object-contain p-2" />
+                                    : <span className="text-2xl font-bold text-primary">{appName?.[0] ?? 'P'}</span>
+                            }
                         </div>
                         <h1 className="text-xl font-bold text-slate-800 dark:text-white">
                             {locale === 'ar' ? 'تسجيل الدخول' : 'Connexion'}

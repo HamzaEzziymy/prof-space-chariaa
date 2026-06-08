@@ -977,6 +977,240 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale, niveaux }) {
     );
 }
 
+// ─── Export modal ─────────────────────────────────────────────────────────────
+function ExportModal({ onClose, t, isRTL, locale, filieres, niveaux, filters }) {
+    const EXPORT_FIELDS = [
+        { key: 'prenom_fr',      label_fr: 'Prénom (fr)',          label_ar: 'الاسم الأول (فر)' },
+        { key: 'nom_fr',         label_fr: 'Nom (fr)',             label_ar: 'اللقب (فر)' },
+        { key: 'prenom_ar',      label_fr: 'Prénom (ar)',          label_ar: 'الاسم الأول (ع)' },
+        { key: 'nom_ar',         label_fr: 'Nom (ar)',             label_ar: 'اللقب (ع)' },
+        { key: 'CNE',            label_fr: 'CNE',                  label_ar: 'CNE' },
+        { key: 'CIN',            label_fr: 'CIN',                  label_ar: 'رقم الهوية' },
+        { key: 'Nins',           label_fr: 'N° Inscription',       label_ar: 'رقم التسجيل' },
+        { key: 'date_naissance', label_fr: 'Date naissance',       label_ar: 'تاريخ الميلاد' },
+        { key: 'lieu_naissance', label_fr: 'Lieu naissance',       label_ar: 'مكان الميلاد' },
+        { key: 'sexe',           label_fr: 'Sexe',                 label_ar: 'الجنس' },
+        { key: 'telephone',      label_fr: 'Téléphone',            label_ar: 'الهاتف' },
+        { key: 'email',          label_fr: 'Email',                label_ar: 'البريد' },
+        { key: 'filiere_code',   label_fr: 'Code filière',         label_ar: 'رمز الشعبة' },
+        { key: 'niveau',         label_fr: 'Niveau',               label_ar: 'المستوى' },
+        { key: 'filier',         label_fr: 'Filière (texte libre)',label_ar: 'الشعبة (نص حر)' },
+    ];
+
+    const [selectedFields, setSelectedFields] = useState([
+        'nom_fr', 'prenom_fr', 'CNE', 'CIN', 'sexe', 'email', 'filiere_code', 'niveau',
+    ]);
+    const [format, setFormat] = useState('xlsx');
+    const [loading, setLoading] = useState(false);
+
+    const [fSearch, setFSearch]          = useState(filters?.search ?? '');
+    const [fSexe, setFSexe]              = useState(filters?.sexe ?? '');
+    const [fFiliereId, setFFiliereId]    = useState(filters?.filiere_id ?? '');
+    const [fNiveauId, setFNiveauId]      = useState(filters?.niveau_id ?? '');
+    const dragIdx = useRef(null);
+
+    const filteredNiveaux = niveaux?.filter(n => !fFiliereId || n.filiere_id == fFiliereId) ?? [];
+
+    const fieldLabel = (key) => {
+        const f = EXPORT_FIELDS.find(x => x.key === key);
+        return f ? (locale === 'ar' ? f.label_ar : f.label_fr) : key;
+    };
+
+    const moveUp = (idx) => {
+        if (idx <= 0) return;
+        setSelectedFields(prev => { const a = [...prev]; [a[idx-1], a[idx]] = [a[idx], a[idx-1]]; return a; });
+    };
+    const moveDown = (idx) => {
+        if (idx >= selectedFields.length - 1) return;
+        setSelectedFields(prev => { const a = [...prev]; [a[idx], a[idx+1]] = [a[idx+1], a[idx]]; return a; });
+    };
+
+    const handleDragStart = (e, idx) => { dragIdx.current = idx; e.dataTransfer.effectAllowed = 'move'; };
+    const handleDragOver = (e, idx) => {
+        e.preventDefault(); if (dragIdx.current == null || dragIdx.current === idx) return;
+        setSelectedFields(prev => {
+            const a = [...prev]; const [r] = a.splice(dragIdx.current, 1); a.splice(idx, 0, r); return a;
+        });
+        dragIdx.current = idx;
+    };
+    const handleDragEnd = () => { dragIdx.current = null; };
+
+    const doExport = async () => {
+        if (selectedFields.length === 0) return;
+        setLoading(true);
+        try {
+            const params = { fields: selectedFields, _locale: locale };
+            if (fSearch)   params.search = fSearch;
+            if (fSexe)     params.sexe = fSexe;
+            if (fFiliereId) params.filiere_id = fFiliereId;
+            if (fNiveauId) params.niveau_id = fNiveauId;
+            const res = await window.axios.post(route('etudiants.export'), params);
+            const data = res.data;
+
+            if (format === 'xlsx') {
+                const ws = XLSX.utils.json_to_sheet(data);
+                const colWidths = selectedFields.map(k => ({
+                    wch: Math.min(40, Math.max((fieldLabel(k) || k).length, ...data.map(r => String(r[k] || '').length)) + 3),
+                }));
+                ws['!cols'] = colWidths;
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Etudiants');
+                XLSX.writeFile(wb, 'etudiants_export.xlsx');
+            } else {
+                const ws = XLSX.utils.json_to_sheet(data);
+                const csv = XLSX.utils.sheet_to_csv(ws);
+                const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = 'etudiants_export.csv'; a.click();
+                URL.revokeObjectURL(url);
+            }
+            onClose();
+        } catch (err) { console.error(err); } finally { setLoading(false); }
+    };
+
+    const unselected = EXPORT_FIELDS.filter(f => !selectedFields.includes(f.key));
+
+    return (
+        <>
+            <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4" dir={isRTL ? 'rtl' : 'ltr'}>
+                <div className="w-full max-w-3xl rounded-2xl bg-white shadow-2xl dark:bg-slate-900 overflow-hidden flex flex-col max-h-[92vh]">
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-indigo-50 dark:bg-indigo-900/20 shrink-0">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-900/50">
+                                <Icon d={ICONS.download} className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                            </div>
+                            <div>
+                                <p className="font-bold text-slate-800 dark:text-white text-sm">{t('exportTitle')}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">{t('exportSubtitle')}</p>
+                            </div>
+                        </div>
+                        <button onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800 transition">
+                            <Icon d={ICONS.close} className="h-5 w-5" />
+                        </button>
+                    </div>
+
+                    <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+                        {/* Filters */}
+                        <div>
+                            <SectionDivider emoji="🔍" label={locale === 'ar' ? 'تصفية الطلاب' : 'Filtrer les étudiants'} />
+                            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                <div className="relative">
+                                    <span className={`pointer-events-none absolute inset-y-0 ${isRTL ? 'end-3' : 'start-3'} flex items-center text-slate-400`}>
+                                        <Icon d={ICONS.search} className="h-4 w-4" />
+                                    </span>
+                                    <input type="text" value={fSearch} onChange={e => setFSearch(e.target.value)}
+                                        placeholder={t('searchEtudiants')}
+                                        className={`w-full rounded-xl border border-slate-200 bg-white py-2.5 text-sm text-slate-800 placeholder-slate-400 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-white ${isRTL ? 'pe-10 ps-3' : 'ps-10 pe-3'}`} />
+                                </div>
+                                <select value={fSexe} onChange={e => setFSexe(e.target.value)}
+                                    className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
+                                    <option value="">{t('allSexes')}</option>
+                                    <option value="M">{locale === 'ar' ? 'ذكر' : 'Masculin'}</option>
+                                    <option value="F">{locale === 'ar' ? 'أنثى' : 'Féminin'}</option>
+                                </select>
+                                <select value={fFiliereId} onChange={e => { setFFiliereId(e.target.value); setFNiveauId(''); }}
+                                    className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
+                                    <option value="">{t('allFilieres')}</option>
+                                    {(filieres || []).map(f => <option key={f.id} value={f.id}>{f.code} — {locale === 'ar' ? (f.nom_ar || f.nom_fr) : f.nom_fr}</option>)}
+                                </select>
+                                <select value={fNiveauId} onChange={e => setFNiveauId(e.target.value)}
+                                    className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
+                                    <option value="">{t('allNiveaux')}</option>
+                                    {filteredNiveaux.map(n => <option key={n.id} value={n.id}>{locale === 'ar' ? (n.nom_ar || n.nom_fr) : n.nom_fr} ({n.code})</option>)}
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Fields */}
+                        <div>
+                            <SectionDivider emoji="📋" label={locale === 'ar' ? 'اختيار الحقول' : 'Sélection des champs'} />
+                            {selectedFields.length > 0 && (
+                                <div className="mt-3 space-y-1.5">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                                            {locale === 'ar' ? 'الحقول المحددة' : 'Champs sélectionnés'} ({selectedFields.length})
+                                        </p>
+                                        <button onClick={() => setSelectedFields([])}
+                                            className="text-xs text-red-400 hover:text-red-600 transition">{t('exportDeselectAll')}</button>
+                                    </div>
+                                    <div className="space-y-1">
+                                        {selectedFields.map((key, idx) => (
+                                            <div key={key} draggable
+                                                onDragStart={e => handleDragStart(e, idx)} onDragOver={e => handleDragOver(e, idx)} onDragEnd={handleDragEnd}
+                                                className="flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50/50 dark:border-indigo-800 dark:bg-indigo-900/10 px-3 py-2 transition hover:border-indigo-300 dark:hover:border-indigo-700 cursor-grab active:cursor-grabbing select-none">
+                                                <span className="text-slate-400"><Icon d="M8 6h2v2H8V6zm6 0h2v2h-2V6zM8 11h2v2H8v-2zm6 0h2v2h-2v-2zm-6 5h2v2H8v-2zm6 0h2v2h-2v-2z" className="h-4 w-4" /></span>
+                                                <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-200">{fieldLabel(key)}</span>
+                                                <code className="text-[10px] text-slate-400 font-mono hidden sm:inline">{key}</code>
+                                                <button onClick={() => moveUp(idx)} disabled={idx === 0}
+                                                    className="rounded-lg p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-100 disabled:opacity-30 disabled:cursor-not-allowed dark:hover:bg-indigo-900/30 transition">
+                                                    <Icon d={ICONS.chevLeft} className="h-3.5 w-3.5" />
+                                                </button>
+                                                <button onClick={() => moveDown(idx)} disabled={idx === selectedFields.length - 1}
+                                                    className="rounded-lg p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-100 disabled:opacity-30 disabled:cursor-not-allowed dark:hover:bg-indigo-900/30 transition">
+                                                    <Icon d={ICONS.chevRight} className="h-3.5 w-3.5" />
+                                                </button>
+                                                <button onClick={() => setSelectedFields(prev => prev.filter(k => k !== key))}
+                                                    className="rounded-lg p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition">
+                                                    <Icon d={ICONS.close} className="h-3.5 w-3.5" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            {unselected.length > 0 && (
+                                <div className="mt-3 space-y-1.5">
+                                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{t('exportAvailableFields')} ({unselected.length})</p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {unselected.map(f => (
+                                            <button key={f.key} onClick={() => setSelectedFields(prev => [...prev, f.key])}
+                                                className="inline-flex items-center gap-1 rounded-lg border border-dashed border-slate-300 dark:border-slate-600 px-2.5 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:border-indigo-700 dark:hover:text-indigo-400 dark:hover:bg-indigo-900/20 transition">
+                                                <Icon d={ICONS.plus} className="h-3 w-3" />
+                                                {locale === 'ar' ? f.label_ar : f.label_fr}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Format */}
+                        <div>
+                            <SectionDivider emoji="💾" label={t('exportFormat')} />
+                            <div className="mt-3 flex gap-2">
+                                {[
+                                    { value: 'xlsx', label: t('exportFormatExcel'), icon: ICONS.excel },
+                                    { value: 'csv', label: t('exportFormatCsv'), icon: ICONS.download },
+                                ].map(opt => (
+                                    <button key={opt.value} onClick={() => setFormat(opt.value)}
+                                        className={`flex items-center gap-2 rounded-xl border-2 px-4 py-2.5 text-sm font-medium transition-all ${format === opt.value ? 'border-indigo-400 bg-indigo-50 text-indigo-700 dark:border-indigo-500 dark:bg-indigo-900/20 dark:text-indigo-300' : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300'}`}>
+                                        <Icon d={opt.icon} className="h-4 w-4" />
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className={`shrink-0 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 py-4 flex items-center justify-between gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                        <button onClick={onClose} className="rounded-xl border border-slate-200 dark:border-slate-700 px-5 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition">{t('cancel')}</button>
+                        <button onClick={doExport} disabled={loading || selectedFields.length === 0}
+                            className="flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition active:scale-95">
+                            {loading ? (
+                                <><svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>...</>
+                            ) : (
+                                <><Icon d={ICONS.download} className="h-4 w-4" />{t('exportDownload')}</>
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </>
+    );
+}
+
 // ─── Etudiant card (grid) ─────────────────────────────────────────────────────
 function EtudiantCard({ etudiant, onEdit, onDelete, t, locale }) {
     const nameFr = (etudiant.prenom_fr || '') + ' ' + (etudiant.nom_fr || '');
@@ -1270,6 +1504,10 @@ function EtudiantsContent({ etudiants, filieres, niveaux, filters, stats }) {
                     t={t} isRTL={isRTL} locale={locale} niveaux={niveaux}
                 />
             )}
+            {modal?.type === 'export' && (
+                <ExportModal onClose={() => setModal(null)} t={t} isRTL={isRTL} locale={locale}
+                    filieres={filieres} niveaux={niveaux} filters={filters} />
+            )}
             {modal?.type === 'edit' && (
                 <EtudiantFormModal mode="edit" etudiant={modal.etudiant} onClose={() => setModal(null)} t={t} isRTL={isRTL} locale={locale} niveaux={niveaux} />
             )}
@@ -1298,6 +1536,12 @@ function EtudiantsContent({ etudiants, filieres, niveaux, filters, stats }) {
                             className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 active:scale-95 transition">
                             <Icon d={ICONS.plus} className="h-4 w-4" />
                             {t('addEtudiant')}
+                        </button>
+                        <button onClick={() => setModal({ type: 'export' })}
+                            title={t('exportEtudiants')}
+                            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 active:scale-95 transition">
+                            <Icon d={ICONS.download} className="h-4 w-4" />
+                            <span className="hidden sm:inline">{t('exportEtudiants')}</span>
                         </button>
                         <button onClick={() => setModal({ type: 'excel' })}
                             title={t('importEtudiants')}
