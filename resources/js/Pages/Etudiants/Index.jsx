@@ -416,8 +416,8 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux 
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">
                                             {locale === 'ar'
-                                                ? (data.prenom_ar || data.prenom_fr || '') + ' ' + (data.nom_ar || data.nom_fr || '')
-                                                : (data.prenom_fr || '') + ' ' + (data.nom_fr || '')}
+                                                ? (data.nom_ar || data.nom_fr || '') + ' ' + (data.prenom_ar || data.prenom_fr || '')
+                                                : (data.nom_fr || '') + ' ' + (data.prenom_fr || '')}
                                         </p>
                                         <div className="mt-1 flex flex-wrap items-center gap-1.5">
                                             {data.CNE && (
@@ -462,8 +462,8 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux 
 function DeleteModal({ etudiant, onClose, t, isRTL, locale }) {
     const { delete: destroy, processing } = useForm();
     const name = locale === 'ar'
-        ? (etudiant.prenom_ar || etudiant.prenom_fr || '') + ' ' + (etudiant.nom_ar || etudiant.nom_fr || '')
-        : (etudiant.prenom_fr || '') + ' ' + (etudiant.nom_fr || '');
+        ? (etudiant.nom_ar || etudiant.nom_fr || '') + ' ' + (etudiant.prenom_ar || etudiant.prenom_fr || '')
+        : (etudiant.nom_fr || '') + ' ' + (etudiant.prenom_fr || '');
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -1213,8 +1213,8 @@ function ExportModal({ onClose, t, isRTL, locale, filieres, niveaux, filters }) 
 
 // ─── Etudiant card (grid) ─────────────────────────────────────────────────────
 function EtudiantCard({ etudiant, onEdit, onDelete, t, locale }) {
-    const nameFr = (etudiant.prenom_fr || '') + ' ' + (etudiant.nom_fr || '');
-    const nameAr = (etudiant.prenom_ar || '') + ' ' + (etudiant.nom_ar || '');
+    const nameFr = (etudiant.nom_fr || '') + ' ' + (etudiant.prenom_fr || '');
+    const nameAr = (etudiant.nom_ar || '') + ' ' + (etudiant.prenom_ar || '');
     const displayName = locale === 'ar' ? (nameAr || nameFr) : nameFr;
 
     return (
@@ -1300,8 +1300,8 @@ function EtudiantCard({ etudiant, onEdit, onDelete, t, locale }) {
 
 // ─── Table row ────────────────────────────────────────────────────────────────
 function EtudiantRow({ etudiant, onEdit, onDelete, t, locale }) {
-    const nameFr = (etudiant.prenom_fr || '') + ' ' + (etudiant.nom_fr || '');
-    const nameAr = (etudiant.prenom_ar || '') + ' ' + (etudiant.nom_ar || '');
+    const nameFr = (etudiant.nom_fr || '') + ' ' + (etudiant.prenom_fr || '');
+    const nameAr = (etudiant.nom_ar || '') + ' ' + (etudiant.prenom_ar || '');
     const displayName = locale === 'ar' ? (nameAr || nameFr) : nameFr;
     const nameAlt = locale === 'ar' ? nameFr : nameAr;
 
@@ -1446,6 +1446,8 @@ function EtudiantsContent({ etudiants, filieres, niveaux, filters, stats }) {
     const [sexeFilter, setSexeFilter]     = useState(filters?.sexe ?? '');
     const [filiereIdFilter, setFiliereIdFilter] = useState(filters?.filiere_id ?? '');
     const [niveauFilter, setNiveauFilter] = useState(filters?.niveau_id ?? '');
+    const [sortField, setSortField]       = useState(filters?.sort_field ?? 'nom_fr');
+    const [sortDir, setSortDir]           = useState(filters?.sort_dir ?? 'asc');
     const [viewMode, setViewMode]         = useViewMode('etudiants_view', 'grid');
     const [importToast, setImportToast]   = useState(null);
     const searchTimeout                   = useRef(null);
@@ -1454,16 +1456,43 @@ function EtudiantsContent({ etudiants, filieres, niveaux, filters, stats }) {
         n => !filiereIdFilter || n.filiere_id == filiereIdFilter
     ) ?? [];
 
+    const navigate = (overrides = {}) => {
+        const params = {
+            search:     search,
+            sexe:       sexeFilter || undefined,
+            filiere_id: filiereIdFilter || undefined,
+            niveau_id:  niveauFilter || undefined,
+            sort_field: sortField,
+            sort_dir:   sortDir,
+            ...overrides,
+        };
+        Object.keys(params).forEach(k => params[k] === undefined && delete params[k]);
+        router.get(route('etudiants.index'), params, { preserveState: true, replace: true });
+    };
+
     const doSearch = (val, sf = sexeFilter, ff = filiereIdFilter, nf = niveauFilter) => {
         clearTimeout(searchTimeout.current);
-        searchTimeout.current = setTimeout(() =>
-            router.get(route('etudiants.index'), { search: val, sexe: sf, filiere_id: ff || undefined, niveau_id: nf || undefined }, { preserveState: true, replace: true }), 320);
+        searchTimeout.current = setTimeout(() => navigate({ search: val, sexe: sf, filiere_id: ff || undefined, niveau_id: nf || undefined }), 320);
     };
 
     const handleSearch    = (val) => { setSearch(val); doSearch(val); };
     const handleSexe      = (val) => { setSexeFilter(val); doSearch(search, val); };
     const handleFiliereId = (val) => { setFiliereIdFilter(val); setNiveauFilter(''); doSearch(search, sexeFilter, val, ''); };
     const handleNiveau    = (val) => { setNiveauFilter(val); doSearch(search, sexeFilter, filiereIdFilter, val); };
+
+    const nameSortField = locale === 'ar' ? 'nom_ar' : 'nom_fr';
+
+    const handleSort = (field) => {
+        const dir = sortField === field && sortDir === 'asc' ? 'desc' : 'asc';
+        setSortField(field);
+        setSortDir(dir);
+        navigate({ sort_field: field, sort_dir: dir });
+    };
+
+    const SortIcon = ({ field }) => {
+        if (sortField !== field) return <span className="ms-1 opacity-30">↕</span>;
+        return <span className="ms-1">{sortDir === 'asc' ? '↑' : '↓'}</span>;
+    };
 
     const items     = etudiants?.data ?? [];
     const hasFilter = !!(search || sexeFilter || filiereIdFilter || niveauFilter);
@@ -1708,23 +1737,28 @@ function EtudiantsContent({ etudiants, filieres, niveaux, filters, stats }) {
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
-                                        <th className={`px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 ${isRTL ? 'text-right' : 'text-left'}`}>
-                                            {t('etudiantNomComplet')}
+                                        <th onClick={() => handleSort(nameSortField)}
+                                            className={`px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 ${isRTL ? 'text-right' : 'text-left'} cursor-pointer select-none hover:text-indigo-600 dark:hover:text-indigo-400 transition`}>
+                                            {t('etudiantNomComplet')}<SortIcon field={nameSortField} />
                                         </th>
-                                        <th className={`px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 ${isRTL ? 'text-right' : 'text-left'}`}>
-                                            {t('etudiantCNE')}
+                                        <th onClick={() => handleSort('CNE')}
+                                            className={`px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 ${isRTL ? 'text-right' : 'text-left'} cursor-pointer select-none hover:text-indigo-600 dark:hover:text-indigo-400 transition`}>
+                                            {t('etudiantCNE')}<SortIcon field="CNE" />
                                         </th>
-                                        <th className={`px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 ${isRTL ? 'text-right' : 'text-left'}`}>
-                                            {t('etudiantCIN')}
+                                        <th onClick={() => handleSort('CIN')}
+                                            className={`px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 ${isRTL ? 'text-right' : 'text-left'} cursor-pointer select-none hover:text-indigo-600 dark:hover:text-indigo-400 transition`}>
+                                            {t('etudiantCIN')}<SortIcon field="CIN" />
                                         </th>
-                                        <th className={`px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 ${isRTL ? 'text-right' : 'text-left'}`}>
-                                            {t('etudiantSexe')}
+                                        <th onClick={() => handleSort('sexe')}
+                                            className={`px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 ${isRTL ? 'text-right' : 'text-left'} cursor-pointer select-none hover:text-indigo-600 dark:hover:text-indigo-400 transition`}>
+                                            {t('etudiantSexe')}<SortIcon field="sexe" />
                                         </th>
                                         <th className={`px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 ${isRTL ? 'text-right' : 'text-left'}`}>
                                             {locale === 'ar' ? 'الشعبة' : 'Filière'}
                                         </th>
-                                        <th className={`px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 ${isRTL ? 'text-right' : 'text-left'}`}>
-                                            {t('email')}
+                                        <th onClick={() => handleSort('email')}
+                                            className={`px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 ${isRTL ? 'text-right' : 'text-left'} cursor-pointer select-none hover:text-indigo-600 dark:hover:text-indigo-400 transition`}>
+                                            {t('email')}<SortIcon field="email" />
                                         </th>
                                         <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 text-end">
                                             {t('actions')}

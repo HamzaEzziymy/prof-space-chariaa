@@ -81,7 +81,6 @@ class RepartitionController extends Controller
             ->get(['id', 'code', 'nom_fr', 'nom_ar']);
 
         $moduleId = $request->get('module_id');
-        $nexam    = $request->get('Nexam', 1);
 
         $modules = Module::whereIn('semestre_id', $semestres->pluck('id'))
             ->orderBy('code_module')
@@ -95,18 +94,23 @@ class RepartitionController extends Controller
 
         if ($moduleId) {
             $etudMods = EtudiantModule::where('module_id', $moduleId)
-                ->with('etudiant:id,nom_fr,prenom_fr,nom_ar,prenom_ar,CNE,sexe,niveau_id')
-                ->with(['noteExams' => function ($q) use ($nexam) {
-                    $q->where('Nexam', $nexam);
-                }])
-                ->get();
+                ->with('etudiant:id,nom_fr,prenom_fr,nom_ar,prenom_ar,CNE,sexe')
+                ->with('noteExams:id,etud_mod_id,Nexam,id_salle')
+                ->get()
+                ->sortBy(function ($em) {
+                    $e = $em->etudiant;
+                    return ($e->nom_fr ?? '') . ' ' . ($e->prenom_fr ?? '');
+                });
 
-            $students = $etudMods->map(function ($em) use ($nexam) {
-                $note = $em->noteExams->first();
+            $students = $etudMods->values()->map(function ($em) {
+                $notes = $em->noteExams->map(fn ($n) => [
+                    'Nexam'    => $n->Nexam,
+                    'id_salle' => $n->id_salle,
+                ]);
                 return [
                     'etud_mod_id' => $em->id,
                     'etudiant'    => $em->etudiant,
-                    'id_salle'    => $note?->id_salle,
+                    'notes'       => $notes,
                 ];
             });
         }
@@ -122,7 +126,6 @@ class RepartitionController extends Controller
             'totalCapacite' => $totalCapacite,
             'filters' => [
                 'module_id' => $moduleId,
-                'Nexam'     => $nexam,
             ],
         ]);
     }
@@ -133,7 +136,6 @@ class RepartitionController extends Controller
     public function getStudents(Request $request)
     {
         $moduleId = $request->get('module_id');
-        $nexam    = $request->get('Nexam', 1);
 
         if (!$moduleId) {
             return response()->json([]);
@@ -141,17 +143,22 @@ class RepartitionController extends Controller
 
         $etudMods = EtudiantModule::where('module_id', $moduleId)
             ->with('etudiant:id,nom_fr,prenom_fr,nom_ar,prenom_ar,CNE,sexe')
-            ->with(['noteExams' => function ($q) use ($nexam) {
-                $q->where('Nexam', $nexam);
-            }])
-            ->get();
+            ->with('noteExams:id,etud_mod_id,Nexam,id_salle')
+            ->get()
+            ->sortBy(function ($em) {
+                $e = $em->etudiant;
+                return ($e->nom_fr ?? '') . ' ' . ($e->prenom_fr ?? '');
+            });
 
-        return response()->json($etudMods->map(function ($em) use ($nexam) {
-            $note = $em->noteExams->first();
+        return response()->json($etudMods->values()->map(function ($em) {
+            $notes = $em->noteExams->map(fn ($n) => [
+                'Nexam'    => $n->Nexam,
+                'id_salle' => $n->id_salle,
+            ]);
             return [
                 'etud_mod_id' => $em->id,
                 'etudiant'    => $em->etudiant,
-                'id_salle'    => $note?->id_salle,
+                'notes'       => $notes,
             ];
         }));
     }
@@ -159,10 +166,10 @@ class RepartitionController extends Controller
     public function save(Request $request)
     {
         $data = $request->validate([
-            'module_id'            => 'required|exists:module,id',
-            'Nexam'                => 'required|integer|min:1',
-            'repartition'          => 'required|array',
+            'module_id'                 => 'required|exists:module,id',
+            'repartition'               => 'required|array',
             'repartition.*.etud_mod_id' => 'required|exists:etudiant_module,id',
+            'repartition.*.Nexam'       => 'required|integer|min:1',
             'repartition.*.id_salle'    => 'nullable|exists:salle,id',
         ]);
 
@@ -171,7 +178,7 @@ class RepartitionController extends Controller
             $note = NoteExam::updateOrCreate(
                 [
                     'etud_mod_id' => $item['etud_mod_id'],
-                    'Nexam'       => $data['Nexam'],
+                    'Nexam'       => $item['Nexam'],
                 ],
                 [
                     'id_salle' => $item['id_salle'] ?? null,

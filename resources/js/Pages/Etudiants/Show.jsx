@@ -344,8 +344,8 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux 
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">
                                             {locale === 'ar'
-                                                ? (data.prenom_ar || data.prenom_fr || '') + ' ' + (data.nom_ar || data.nom_fr || '')
-                                                : (data.prenom_fr || '') + ' ' + (data.nom_fr || '')}
+                                                ? (data.nom_ar || data.nom_fr || '') + ' ' + (data.prenom_ar || data.prenom_fr || '')
+                                                : (data.nom_fr || '') + ' ' + (data.prenom_fr || '')}
                                         </p>
                                         <div className="mt-1 flex flex-wrap items-center gap-1.5">
                                             {data.CNE && (
@@ -423,12 +423,12 @@ function ShowPage() {
     const [showEditModal, setShowEditModal] = useState(false);
 
     const displayName = isRTL
-        ? `${etudiant.prenom_ar || etudiant.prenom_fr || ''} ${etudiant.nom_ar || etudiant.nom_fr || ''}`.trim()
-        : `${etudiant.prenom_fr || ''} ${etudiant.nom_fr || ''}`.trim();
+        ? `${etudiant.nom_ar || etudiant.nom_fr || ''} ${etudiant.prenom_ar || etudiant.prenom_fr || ''}`.trim()
+        : `${etudiant.nom_fr || ''} ${etudiant.prenom_fr || ''}`.trim();
 
     const displayNameAlt = isRTL
-        ? `${etudiant.prenom_fr || ''} ${etudiant.nom_fr || ''}`.trim()
-        : `${etudiant.prenom_ar || ''} ${etudiant.nom_ar || ''}`.trim();
+        ? `${etudiant.nom_fr || ''} ${etudiant.prenom_fr || ''}`.trim()
+        : `${etudiant.nom_ar || ''} ${etudiant.prenom_ar || ''}`.trim();
 
     const dateNaissance = etudiant.date_naissance
         ? new Date(etudiant.date_naissance).toLocaleDateString(

@@ -21,9 +21,13 @@ class EtudiantController extends Controller
      */
     public function index(Request $request): Response
     {
+        $allowedSort = ['nom_fr', 'nom_ar', 'prenom_fr', 'CNE', 'CIN', 'sexe', 'niveau_id', 'email', 'created_at'];
+        $sortField   = in_array($request->get('sort_field'), $allowedSort) ? $request->get('sort_field') : 'nom_fr';
+        $sortDir     = $request->get('sort_dir') === 'desc' ? 'desc' : 'asc';
+
         $query = Etudiant::query()
             ->with('niveau.filiere')
-            ->orderBy('created_at', 'desc');
+            ->orderBy($sortField, $sortDir);
 
         if ($search = $request->get('search')) {
             $query->where(function ($q) use ($search) {
@@ -65,7 +69,7 @@ class EtudiantController extends Controller
 
         return Inertia::render('Etudiants/Index', [
             'etudiants' => $etudiants,
-            'filters'   => $request->only(['search', 'sexe', 'filiere_id', 'niveau_id']),
+            'filters'   => $request->only(['search', 'sexe', 'filiere_id', 'niveau_id', 'sort_field', 'sort_dir']),
             'filieres'  => $filieres,
             'niveaux'   => $niveaux,
             'stats'     => $stats,
