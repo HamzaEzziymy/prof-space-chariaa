@@ -1,7 +1,7 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { LanguageProvider, useLanguage } from '@/i18n/LanguageContext';
 import { Head, router, usePage } from '@inertiajs/react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 // ─── Icon helper ──────────────────────────────────────────────────────────────
 function Icon({ d, className = 'w-5 h-5', fill = 'none' }) {
@@ -29,6 +29,7 @@ const ICONS = {
     empty:   'M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
     warn:    'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
     chevDown:'M19 9l-7 7-7-7',
+    trash:   'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16',
 };
 
 // ─── Grade colour map ─────────────────────────────────────────────────────────
@@ -94,6 +95,29 @@ function SectionCard({ title, icon, children, action }) {
 }
 
 // ─── Assign Module slide-over ─────────────────────────────────────────────────
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function Toast({ flash, t }) {
+    const [visible, setVisible] = useState(false);
+    const msg   = flash?.success || flash?.error;
+    const isErr = !!flash?.error;
+    const map   = {
+        module_assigned:   t('module_assigned'),
+        module_unassigned: t('module_unassigned'),
+    };
+    useEffect(() => {
+        if (msg) { setVisible(true); const id = setTimeout(() => setVisible(false), 3500); return () => clearTimeout(id); }
+    }, [msg]);
+    if (!visible || !msg) return null;
+    return (
+        <div className={`fixed bottom-6 end-6 z-[100] flex items-center gap-3 rounded-xl px-4 py-3 shadow-xl text-sm font-medium ${isErr ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'}`}>
+            <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d={isErr ? 'M6 18L18 6M6 6l12 12' : 'M5 13l4 4L19 7'} />
+            </svg>
+            {map[msg] ?? msg}
+        </div>
+    );
+}
+
 function AssignModuleModal({ prof, unassignedModules, onClose, locale, isRTL, t }) {
     const [search, setSearch] = useState('');
     const [selected, setSelected] = useState(null); // module object
@@ -214,12 +238,33 @@ function AssignModuleModal({ prof, unassignedModules, onClose, locale, isRTL, t 
                                                 <p className={`text-sm font-medium truncate ${isSelected ? 'text-violet-700 dark:text-violet-300' : 'text-slate-800 dark:text-white'}`}>
                                                     {name}
                                                 </p>
-                                                <p className="text-xs text-slate-400 font-mono mt-0.5">{mod.code_module}</p>
+                                                <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                                                    <code className="text-xs text-slate-400 font-mono">{mod.code_module}</code>
+                                                    {mod.semestre && (
+                                                        <span className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                                            <span className="inline-block h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-600" />
+                                                            {locale === 'ar'
+                                                                ? (mod.semestre.nom_ar || mod.semestre.nom_fr)
+                                                                : (mod.semestre.nom_fr || mod.semestre.nom_ar)}
+                                                            {mod.semestre.niveau && (
+                                                                <> — {locale === 'ar'
+                                                                    ? (mod.semestre.niveau.nom_ar || mod.semestre.niveau.nom_fr)
+                                                                    : (mod.semestre.niveau.nom_fr || mod.semestre.niveau.nom_ar)}
+                                                                    {mod.semestre.niveau.filiere && (
+                                                                        <span className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 font-medium text-[10px] text-slate-500 dark:text-slate-400">
+                                                                            {mod.semestre.niveau.filiere.code}
+                                                                        </span>
+                                                                    )}
+                                                                </>
+                                                            )}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
-                                            {/* Type chip */}
-                                            {mod.type_module && (
-                                                <span className={`hidden sm:inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${typePill(mod.type_module)}`}>
-                                                    {mod.type_module}
+                                            {/* Coefficient */}
+                                            {mod.coefficient && (
+                                                <span className="hidden sm:inline-flex shrink-0 items-center rounded-md bg-slate-100 dark:bg-slate-700 px-2 py-0.5 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                                                    Coef {mod.coefficient}
                                                 </span>
                                             )}
                                         </button>
@@ -273,11 +318,63 @@ function AssignModuleModal({ prof, unassignedModules, onClose, locale, isRTL, t 
     );
 }
 
+// ─── Unassign confirmation modal ──────────────────────────────────────────────
+function UnassignModal({ module: mod, prof, onClose, t, locale, isRTL }) {
+    const modName = locale === 'ar' ? (mod.nom_ar || mod.nom_fr) : (mod.nom_fr || mod.nom_ar);
+    return (
+        <>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+                <div className="relative z-10 w-full max-w-sm rounded-2xl bg-white shadow-2xl dark:bg-slate-800 overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
+                    <div className="px-6 pt-6 pb-4">
+                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+                            <Icon d={ICONS.trash} className="h-6 w-6 text-red-500" />
+                        </div>
+                        <h3 className="text-sm font-semibold text-slate-800 dark:text-white">
+                            {locale === 'ar' ? 'إزالة الوحدة' : 'Retirer le module'}
+                        </h3>
+                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                            {locale === 'ar'
+                                ? `هل أنت متأكد من إزالة "${modName}" من هذا الأستاذ؟`
+                                : `Êtes-vous sûr de retirer "${modName}" de ce professeur ?`}
+                        </p>
+                        <div className="mt-4 flex items-center gap-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 px-4 py-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-100 dark:bg-violet-900/30">
+                                <Icon d={ICONS.modules} className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{modName}</p>
+                                <p className="text-xs text-slate-400">{mod.code_module}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className={`flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-700 px-6 py-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                        <button onClick={onClose}
+                            className="rounded-xl border border-slate-200 dark:border-slate-600 px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+                            {locale === 'ar' ? 'إلغاء' : 'Annuler'}
+                        </button>
+                        <button onClick={() => {
+                            router.delete(route('professors.unassignModule', [prof.id, mod.id]), {
+                                preserveScroll: true,
+                                onSuccess: () => onClose(),
+                            });
+                        }}
+                            className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition">
+                            {locale === 'ar' ? 'إزالة' : 'Retirer'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </>
+    );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 function ShowPage() {
     const { t, locale, isRTL } = useLanguage();
     const { prof, unassignedModules } = usePage().props;
     const [addModuleOpen, setAddModuleOpen] = useState(false);
+    const [unassignTarget, setUnassignTarget] = useState(null);
 
     const user     = prof?.user;
     const isActive = user?.is_active !== false;
@@ -295,9 +392,12 @@ function ShowPage() {
         ? new Date(user.created_at).toLocaleDateString(locale === 'ar' ? 'ar-MA' : 'fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })
         : '—';
 
+    const { flash } = usePage().props;
+
     return (
         <>
             <Head title={displayName ?? t('viewProfessor')} />
+            <Toast flash={flash} t={t} />
 
             {/* ── Back bar ── */}
             <div className="mb-6">
@@ -434,15 +534,36 @@ function ShowPage() {
                                 {modules.map(mod => {
                                     const modName = locale === 'ar' ? (mod.nom_ar || mod.nom_fr) : (mod.nom_fr || mod.nom_ar);
                                     return (
-                                        <div key={mod.id} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50/60 dark:hover:bg-slate-700/20 transition-colors">
+                                        <div key={mod.id} className="group flex items-center gap-4 px-5 py-4 hover:bg-slate-50/60 dark:hover:bg-slate-700/20 transition-colors">
                                             {/* Icon bubble */}
                                             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-100 dark:bg-violet-900/30">
                                                 <Icon d={ICONS.modules} className="h-5 w-5 text-violet-600 dark:text-violet-400" />
                                             </div>
-                                            {/* Name + code */}
+                                            {/* Name + code + semestre/niveau/filiere */}
                                             <div className="min-w-0 flex-1">
                                                 <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{modName}</p>
-                                                <p className="text-xs text-slate-400 dark:text-slate-500 font-mono mt-0.5">{mod.code_module}</p>
+                                                <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                                    <code className="text-xs text-slate-400 dark:text-slate-500 font-mono">{mod.code_module}</code>
+                                                    {mod.semestre && (
+                                                        <span className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                                            <span className="inline-block h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-600" />
+                                                            {locale === 'ar'
+                                                                ? (mod.semestre.nom_ar || mod.semestre.nom_fr)
+                                                                : (mod.semestre.nom_fr || mod.semestre.nom_ar)}
+                                                            {mod.semestre.niveau && (
+                                                                <> — {locale === 'ar'
+                                                                    ? (mod.semestre.niveau.nom_ar || mod.semestre.niveau.nom_fr)
+                                                                    : (mod.semestre.niveau.nom_fr || mod.semestre.niveau.nom_ar)}
+                                                                    {mod.semestre.niveau.filiere && (
+                                                                        <span className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 font-medium text-[10px] text-slate-500 dark:text-slate-400">
+                                                                            {mod.semestre.niveau.filiere.code}
+                                                                        </span>
+                                                                    )}
+                                                                </>
+                                                            )}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                             {/* Meta chips */}
                                             <div className="flex items-center gap-2 flex-shrink-0">
@@ -460,6 +581,13 @@ function ShowPage() {
                                                     <Icon d={ICONS.users} className="h-3 w-3" />
                                                     {mod.etudiants_count ?? 0}
                                                 </span>
+                                                {/* Delete button */}
+                                                <button
+                                                    onClick={() => setUnassignTarget(mod)}
+                                                    className="rounded-lg p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                                                    title={locale === 'ar' ? 'إزالة' : 'Retirer'}>
+                                                    <Icon d={ICONS.trash} className="h-4 w-4" />
+                                                </button>
                                             </div>
                                         </div>
                                     );
@@ -479,6 +607,18 @@ function ShowPage() {
                     locale={locale}
                     isRTL={isRTL}
                     t={t}
+                />
+            )}
+
+            {/* ── Unassign confirmation modal ── */}
+            {unassignTarget && (
+                <UnassignModal
+                    module={unassignTarget}
+                    prof={prof}
+                    onClose={() => setUnassignTarget(null)}
+                    t={t}
+                    locale={locale}
+                    isRTL={isRTL}
                 />
             )}
         </>

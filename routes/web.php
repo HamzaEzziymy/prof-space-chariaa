@@ -68,6 +68,7 @@ Route::middleware(['auth', 'admin'])->prefix('professors')->name('professors.')-
     Route::put('/{prof}',                  [ProfessorController::class, 'update'])->name('update');
     Route::delete('/{prof}',               [ProfessorController::class, 'destroy'])->name('destroy');
     Route::post('/{prof}/assign-module',   [ProfessorController::class, 'assignModule'])->name('assignModule');
+    Route::delete('/{prof}/modules/{module}', [ProfessorController::class, 'unassignModule'])->name('unassignModule');
 });
 
 // ── Modules (admin + super_admin) ────────────────────────────────────────────

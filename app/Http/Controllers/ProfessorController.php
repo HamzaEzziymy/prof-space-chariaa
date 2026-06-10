@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Module;
 use App\Models\Prof;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -88,7 +89,8 @@ class ProfessorController extends Controller
     {
         $prof->load([
             'user:id,nom_fr,prenom_fr,nom_ar,prenom_ar,email,photo_profile_url,is_active,email_verified_at,created_at',
-            'modules:id,prof_id,nom_fr,nom_ar,code_module,coefficient,type_module',
+            'modules' => fn ($q) => $q->with('semestre.niveau.filiere')
+                ->select(['id', 'prof_id', 'nom_fr', 'nom_ar', 'code_module', 'coefficient', 'type_module', 'semestre_id']),
         ]);
         $prof->loadCount('modules');
 
@@ -106,8 +108,9 @@ class ProfessorController extends Controller
 
         // Modules not yet assigned to any professor (available to assign)
         $unassignedModules = \App\Models\Module::whereNull('prof_id')
+            ->with('semestre.niveau.filiere')
             ->orderBy('nom_fr')
-            ->get(['id', 'nom_fr', 'nom_ar', 'code_module', 'type_module', 'coefficient']);
+            ->get(['id', 'nom_fr', 'nom_ar', 'code_module', 'type_module', 'coefficient', 'semestre_id']);
 
         return Inertia::render('Professors/Show', [
             'prof'              => $prof,
@@ -124,10 +127,24 @@ class ProfessorController extends Controller
             'module_id' => ['required', 'exists:module,id'],
         ]);
 
-        $module = \App\Models\Module::findOrFail($validated['module_id']);
+        $module = Module::findOrFail($validated['module_id']);
         $module->update(['prof_id' => $prof->id]);
 
         return back()->with('success', 'module_assigned');
+    }
+
+    /**
+     * Unassign (remove) a module from this professor.
+     */
+    public function unassignModule(Prof $prof, Module $module): RedirectResponse
+    {
+        if ($module->prof_id !== $prof->id) {
+            return back()->with('error', 'module_not_assigned_to_prof');
+        }
+
+        $module->update(['prof_id' => null]);
+
+        return back()->with('success', 'module_unassigned');
     }
 
     /**
