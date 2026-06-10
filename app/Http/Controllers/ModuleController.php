@@ -21,10 +21,14 @@ class ModuleController extends Controller
      */
     public function index(Request $request): Response
     {
+        $allowedSort = ['nom_fr', 'nom_ar', 'code_module', 'type_module', 'coef', 'semestre_id', 'created_at'];
+        $sortField   = in_array($request->get('sort_field'), $allowedSort) ? $request->get('sort_field') : 'created_at';
+        $sortDir     = $request->get('sort_dir') === 'asc' ? 'asc' : 'desc';
+
         $query = Module::query()
             ->with(['prof.user:id,nom_fr,prenom_fr,nom_ar,prenom_ar', 'semestre.niveau'])
             ->withCount('etudiants')
-            ->orderBy('created_at', 'desc');
+            ->orderBy($sortField, $sortDir);
 
         if ($search = $request->get('search')) {
             $query->where(function ($q) use ($search) {
@@ -73,7 +77,7 @@ class ModuleController extends Controller
             'profs'    => $profs,
             'semestres'=> $semestres,
             'types'    => $types,
-            'filters'  => $request->only(['search', 'type', 'semestre_id']),
+            'filters'  => $request->only(['search', 'type', 'semestre_id', 'sort_field', 'sort_dir']),
             'stats'    => $stats,
         ]);
     }

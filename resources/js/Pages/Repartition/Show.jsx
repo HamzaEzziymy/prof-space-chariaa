@@ -26,6 +26,7 @@ const I = {
     alert:      'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z',
     doorOpen:   'M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z',
     empty:      'M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+    number:     'M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z',
 };
 
 function Toast({ flash, t }) {
@@ -76,7 +77,6 @@ function StatCard({ label, value, icon, color }) {
 function RepartitionShowContent({ niveau, semestres, modules, salles, students, totalCapacite, filters, t, locale, isRTL }) {
     const { flash } = usePage().props;
     const [moduleId, setModuleId]     = useState(filters?.module_id ?? '');
-    const [nexam, setNexam]           = useState(filters?.Nexam ?? 1);
     const [assignMap, setAssignMap]   = useState({});
     const [saving, setSaving]         = useState(false);
 
@@ -89,42 +89,55 @@ function RepartitionShowContent({ niveau, semestres, modules, salles, students, 
         label: `${locale === 'ar' ? (m.nom_ar || m.nom_fr) : m.nom_fr || m.nom_ar} (${m.code_module})`,
     }));
 
-    // Init assignMap from server data
+    const STUDENT_NEXAMS = [1, 2, 3, 4, 5, 6];
+
+    // Build assignMap from server data + add default Nexam=1 for students with no notes
     useEffect(() => {
         const map = {};
         (students ?? []).forEach(s => {
-            if (s.id_salle) map[s.etud_mod_id] = s.id_salle;
+            if (s.notes && s.notes.length > 0) {
+                s.notes.forEach(n => {
+                    if (n.id_salle) map[key_(s.etud_mod_id, n.Nexam)] = n.id_salle;
+                });
+            }
+            // Always ensure at least Nexam=1 entry
+            if (!(s.notes ?? []).some(n => n.Nexam === 1)) {
+                // student exists but has no Nexam=1 note yet
+            }
         });
         setAssignMap(map);
     }, [students]);
 
-    const applyFilters = (overrides = {}) => {
-        const params = {};
-        const f = { moduleId, nexam, ...overrides };
-        if (f.moduleId) params.module_id = f.moduleId;
-        params.Nexam = f.nexam;
-        router.get(route('repartition.show', niveau.id), params, { preserveState: true, replace: true });
-    };
+    const key_ = (etudModId, nexam) => `${etudModId}_${nexam}`;
+    const parseKey = (k) => { const [e, n] = k.split('_'); return { etudModId: parseInt(e), nexam: parseInt(n) }; };
 
-    const handleModule = (v) => { setModuleId(v); applyFilters({ moduleId: v }); };
-    const handleNexam  = (v) => { setNexam(v); applyFilters({ nexam: v }); };
+    // Flatten students into rows of (student, Nexam)
+    const studentRows = (students ?? []).flatMap(s => {
+        const existing = new Set((s.notes ?? []).map(n => n.Nexam));
+        // Show all 6 possible Nexam values, default Nexam=1 if nothing exists
+        const nexams = existing.size > 0 ? [...existing].sort((a, b) => a - b) : [1];
+        return nexams.map(nexam => ({
+            etud_mod_id: s.etud_mod_id,
+            Nexam: nexam,
+            etudiant: s.etudiant,
+        }));
+    });
 
-    const hasModule = !!moduleId;
     const sallesWithCap = salles.filter(s => s.capacite > 0);
 
-    const getRoomStudents = (salleId) =>
-        (students ?? []).filter(s => (assignMap[s.etud_mod_id] ?? null) === salleId);
+    const getRoomRows = (salleId) =>
+        studentRows.filter(r => (assignMap[key_(r.etud_mod_id, r.Nexam)] ?? null) === salleId);
 
     const getUnassigned = () =>
-        (students ?? []).filter(s => !assignMap[s.etud_mod_id]);
+        studentRows.filter(r => !assignMap[key_(r.etud_mod_id, r.Nexam)]);
 
-    const assignStudent = (etudModId, salleId) => {
-        setAssignMap(prev => ({ ...prev, [etudModId]: salleId }));
+    const assignRow = (etudModId, nexam, salleId) => {
+        setAssignMap(prev => ({ ...prev, [key_(etudModId, nexam)]: salleId }));
     };
 
     const autoDistribute = () => {
-        if (sallesWithCap.length === 0 || !students) return;
-        const sorted = [...students].sort((a, b) => {
+        if (sallesWithCap.length === 0 || studentRows.length === 0) return;
+        const sorted = [...studentRows].sort((a, b) => {
             const na = (a.etudiant?.nom_fr || '') + (a.etudiant?.prenom_fr || '');
             const nb = (b.etudiant?.nom_fr || '') + (b.etudiant?.prenom_fr || '');
             return na.localeCompare(nb);
@@ -137,10 +150,10 @@ function RepartitionShowContent({ niveau, semestres, modules, salles, students, 
             if (room.remaining <= 0) {
                 const avail = caps.find(c => c.remaining > 0);
                 if (!avail) break;
-                map[s.etud_mod_id] = avail.id;
+                map[key_(s.etud_mod_id, s.Nexam)] = avail.id;
                 avail.remaining--;
             } else {
-                map[s.etud_mod_id] = room.id;
+                map[key_(s.etud_mod_id, s.Nexam)] = room.id;
                 room.remaining--;
             }
             idx++;
@@ -150,13 +163,13 @@ function RepartitionShowContent({ niveau, semestres, modules, salles, students, 
 
     const save = () => {
         setSaving(true);
-        const repartition = Object.entries(assignMap).map(([etudModId, salleId]) => ({
-            etud_mod_id: parseInt(etudModId),
-            id_salle: salleId || null,
+        const repartition = studentRows.map(r => ({
+            etud_mod_id: r.etud_mod_id,
+            Nexam: r.Nexam,
+            id_salle: assignMap[key_(r.etud_mod_id, r.Nexam)] || null,
         }));
         router.post(route('repartition.save'), {
             module_id: parseInt(moduleId),
-            Nexam: parseInt(nexam),
             repartition,
         }, {
             preserveState: true,
@@ -166,14 +179,30 @@ function RepartitionShowContent({ niveau, semestres, modules, salles, students, 
     };
 
     const assignedCount = Object.keys(assignMap).length;
-    const unassignedStudents = getUnassigned();
+    const unassignedRows = getUnassigned();
 
     const roomStats = sallesWithCap.map(s => ({
         ...s,
-        count: getRoomStudents(s.id).length,
-        fillPct: s.capacite > 0 ? Math.round((getRoomStudents(s.id).length / s.capacite) * 100) : 0,
-        overCap: getRoomStudents(s.id).length > s.capacite,
+        count: getRoomRows(s.id).length,
+        fillPct: s.capacite > 0 ? Math.round((getRoomRows(s.id).length / s.capacite) * 100) : 0,
+        overCap: getRoomRows(s.id).length > s.capacite,
     }));
+
+    const studentName = (et) => {
+        if (!et) return '—';
+        return locale === 'ar'
+            ? `${et.nom_ar || et.nom_fr || ''} ${et.prenom_ar || et.prenom_fr || ''}`.trim()
+            : `${et.nom_fr || ''} ${et.prenom_fr || ''}`.trim();
+    };
+
+    const handleModule = (v) => {
+        setModuleId(v);
+        const params = {};
+        if (v) params.module_id = v;
+        router.get(route('repartition.show', niveau.id), params, { preserveState: true, replace: true });
+    };
+
+    const hasModule = !!moduleId;
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-4 sm:p-6 lg:p-8">
@@ -208,12 +237,10 @@ function RepartitionShowContent({ niveau, semestres, modules, salles, students, 
                     </div>
                 </div>
 
-                {/* Filters */}
-                <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {/* Module filter only */}
+                <div className="mb-6 max-w-xs">
                     <SelectFilter label={t('selectModule')} value={moduleId} onChange={handleModule}
                         options={moduleOptions} placeholder={locale === 'ar' ? 'اختر المادة...' : 'Module...'} />
-                    <SelectFilter label={t('selectNexam')} value={nexam} onChange={handleNexam}
-                        options={[1,2,3,4,5,6].map(n => ({ value: n, label: `${t('nexamLabel')} ${n}` }))} />
                 </div>
 
                 {!hasModule ? (
@@ -221,7 +248,7 @@ function RepartitionShowContent({ niveau, semestres, modules, salles, students, 
                         <Icon d={I.search} className="mb-3 h-12 w-12 text-slate-300 dark:text-slate-600" />
                         <p className="text-sm text-slate-400 dark:text-slate-500">{t('repartitionNoModule')}</p>
                     </div>
-                ) : !students || students.length === 0 ? (
+                ) : studentRows.length === 0 ? (
                     <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-white py-20 dark:border-slate-700 dark:bg-slate-800">
                         <Icon d={I.empty} className="mb-3 h-12 w-12 text-slate-300 dark:text-slate-600" />
                         <p className="text-sm text-slate-400 dark:text-slate-500">{t('repartitionNoStudents')}</p>
@@ -241,7 +268,7 @@ function RepartitionShowContent({ niveau, semestres, modules, salles, students, 
                                 icon={I.doorOpen} color="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" />
                             <StatCard label={t('repartitionAssigned')} value={assignedCount}
                                 icon={I.check} color="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" />
-                            <StatCard label={t('repartitionUnassigned')} value={unassignedStudents.length}
+                            <StatCard label={t('repartitionUnassigned')} value={unassignedRows.length}
                                 icon={I.alert} color="bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400" />
                         </div>
 
@@ -264,7 +291,7 @@ function RepartitionShowContent({ niveau, semestres, modules, salles, students, 
                         {/* Room grid */}
                         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
                             {roomStats.map(room => {
-                                const rStudents = getRoomStudents(room.id);
+                                const rRows = getRoomRows(room.id);
                                 return (
                                     <div key={room.id} className={`rounded-2xl border bg-white shadow-sm dark:bg-slate-800 overflow-hidden ${room.overCap ? 'border-red-400 dark:border-red-600' : 'border-slate-200 dark:border-slate-700'}`}>
                                         <div className={`px-4 py-3 flex items-center justify-between border-b ${room.overCap ? 'border-red-100 bg-red-50 dark:border-red-900/30 dark:bg-red-900/10' : 'border-slate-100 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50'}`}>
@@ -281,7 +308,7 @@ function RepartitionShowContent({ niveau, semestres, modules, salles, students, 
                                             </div>
                                             <div className="text-right">
                                                 <p className={`text-sm font-bold ${room.overCap ? 'text-red-600 dark:text-red-400' : 'text-slate-700 dark:text-slate-200'}`}>
-                                                    {rStudents.length}<span className="text-xs font-normal text-slate-400">/{room.capacite}</span>
+                                                    {rRows.length}<span className="text-xs font-normal text-slate-400">/{room.capacite}</span>
                                                 </p>
                                                 <p className="text-[10px] text-slate-400">{t('repartitionCapacity')}</p>
                                             </div>
@@ -293,27 +320,26 @@ function RepartitionShowContent({ niveau, semestres, modules, salles, students, 
                                         </div>
 
                                         <div className="max-h-60 overflow-y-auto p-2">
-                                            {rStudents.length === 0 ? (
+                                            {rRows.length === 0 ? (
                                                 <p className="py-4 text-center text-xs text-slate-400">{locale === 'ar' ? 'لا يوجد طلاب' : 'Aucun étudiant'}</p>
                                             ) : (
-                                                rStudents.map(s => (
-                                                    <div key={s.etud_mod_id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs hover:bg-slate-50 dark:hover:bg-slate-700/30 transition group/item">
+                                                rRows.map(r => (
+                                                    <div key={key_(r.etud_mod_id, r.Nexam)} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs hover:bg-slate-50 dark:hover:bg-slate-700/30 transition group/item">
                                                         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30">
-                                                            {s.etudiant?.sexe === 'F'
+                                                            {r.etudiant?.sexe === 'F'
                                                                 ? <Icon d={I.female} className="h-3 w-3 text-rose-500" />
                                                                 : <Icon d={I.male} className="h-3 w-3 text-indigo-500" />}
                                                         </span>
-                                                        <span className="flex-1 truncate text-slate-700 dark:text-slate-300">
-                                                            {locale === 'ar'
-                                                                ? `${s.etudiant?.prenom_ar || s.etudiant?.prenom_fr} ${s.etudiant?.nom_ar || s.etudiant?.nom_fr}`
-                                                                : `${s.etudiant?.prenom_fr} ${s.etudiant?.nom_fr}`}
+                                                        <span className="flex-1 truncate text-slate-700 dark:text-slate-300">{studentName(r.etudiant)}</span>
+                                                        <code className="text-[10px] text-slate-400 font-mono">{r.etudiant?.CNE}</code>
+                                                        <span className="rounded-md bg-indigo-100 dark:bg-indigo-900/30 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700 dark:text-indigo-300">
+                                                            {t('nexamLabel')} {r.Nexam}
                                                         </span>
-                                                        <code className="text-[10px] text-slate-400 font-mono">{s.etudiant?.CNE}</code>
                                                         <select value={room.id}
-                                                            onChange={e => assignStudent(s.etud_mod_id, e.target.value || null)}
+                                                            onChange={e => assignRow(r.etud_mod_id, r.Nexam, e.target.value || null)}
                                                             className="ml-1 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] opacity-0 group-hover/item:opacity-100 transition focus:opacity-100 dark:border-slate-600 dark:bg-slate-700 dark:text-white">
-                                                            {sallesWithCap.map(r => (
-                                                                <option key={r.id} value={r.id}>{r.code_salle}</option>
+                                                            {sallesWithCap.map(rm => (
+                                                                <option key={rm.id} value={rm.id}>{rm.code_salle}</option>
                                                             ))}
                                                             <option value="">—</option>
                                                         </select>
@@ -325,7 +351,7 @@ function RepartitionShowContent({ niveau, semestres, modules, salles, students, 
                                 );
                             })}
 
-                            {unassignedStudents.length > 0 && (
+                            {unassignedRows.length > 0 && (
                                 <div className="rounded-2xl border-2 border-dashed border-amber-200 bg-amber-50/50 shadow-sm dark:border-amber-800 dark:bg-amber-900/10 overflow-hidden">
                                     <div className="px-4 py-3 border-b border-amber-100 dark:border-amber-900/30">
                                         <div className="flex items-center gap-2.5">
@@ -334,30 +360,29 @@ function RepartitionShowContent({ niveau, semestres, modules, salles, students, 
                                             </div>
                                             <div>
                                                 <p className="text-sm font-semibold text-slate-800 dark:text-white">{t('repartitionUnassigned')}</p>
-                                                <p className="text-[11px] text-amber-600 dark:text-amber-400">{unassignedStudents.length} {t('repartitionStudents')}</p>
+                                                <p className="text-[11px] text-amber-600 dark:text-amber-400">{unassignedRows.length} {t('repartitionStudents')}</p>
                                             </div>
                                         </div>
                                     </div>
                                     <div className="max-h-60 overflow-y-auto p-2">
-                                        {unassignedStudents.map(s => (
-                                            <div key={s.etud_mod_id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs hover:bg-amber-50 dark:hover:bg-amber-900/20 transition group/item">
+                                        {unassignedRows.map(r => (
+                                            <div key={key_(r.etud_mod_id, r.Nexam)} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs hover:bg-amber-50 dark:hover:bg-amber-900/20 transition group/item">
                                                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-600">
-                                                    {s.etudiant?.sexe === 'F'
+                                                    {r.etudiant?.sexe === 'F'
                                                         ? <Icon d={I.female} className="h-3 w-3 text-rose-500" />
                                                         : <Icon d={I.male} className="h-3 w-3 text-indigo-500" />}
                                                 </span>
-                                                <span className="flex-1 truncate text-slate-700 dark:text-slate-300">
-                                                    {locale === 'ar'
-                                                        ? `${s.etudiant?.prenom_ar || s.etudiant?.prenom_fr} ${s.etudiant?.nom_ar || s.etudiant?.nom_fr}`
-                                                        : `${s.etudiant?.prenom_fr} ${s.etudiant?.nom_fr}`}
+                                                <span className="flex-1 truncate text-slate-700 dark:text-slate-300">{studentName(r.etudiant)}</span>
+                                                <code className="text-[10px] text-slate-400 font-mono">{r.etudiant?.CNE}</code>
+                                                <span className="rounded-md bg-indigo-100 dark:bg-indigo-900/30 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700 dark:text-indigo-300">
+                                                    {t('nexamLabel')} {r.Nexam}
                                                 </span>
-                                                <code className="text-[10px] text-slate-400 font-mono">{s.etudiant?.CNE}</code>
                                                 <select value=""
-                                                    onChange={e => assignStudent(s.etud_mod_id, e.target.value || null)}
+                                                    onChange={e => assignRow(r.etud_mod_id, r.Nexam, e.target.value || null)}
                                                     className="ml-1 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] opacity-0 group-hover/item:opacity-100 transition focus:opacity-100 dark:border-slate-600 dark:bg-slate-700 dark:text-white">
                                                     <option value="">{t('repartitionMove')}…</option>
-                                                    {sallesWithCap.map(r => (
-                                                        <option key={r.id} value={r.id}>{r.code_salle} — {locale === 'ar' ? (r.nomSalle_ar || r.nomSalle_fr) : (r.nomSalle_fr || r.nomSalle_ar)}</option>
+                                                    {sallesWithCap.map(rm => (
+                                                        <option key={rm.id} value={rm.id}>{rm.code_salle} — {locale === 'ar' ? (rm.nomSalle_ar || rm.nomSalle_fr) : (rm.nomSalle_fr || rm.nomSalle_ar)}</option>
                                                     ))}
                                                 </select>
                                             </div>
