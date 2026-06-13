@@ -32,7 +32,7 @@ function Tooltip({ children, label, visible }) {
 
 export default function ProfLayout({ children, wide }) {
     const { t, locale, toggleLocale, isRTL } = useLanguage();
-    const { auth, appSettings, profModules, profGroupes } = usePage().props;
+    const { auth, appSettings, profModules } = usePage().props;
     const user = auth?.user;
 
     const appName = isRTL
@@ -44,7 +44,6 @@ export default function ProfLayout({ children, wide }) {
         () => localStorage.getItem('prof_sidebar_collapsed') === 'true'
     );
     const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024);
-    const [expandedMod, setExpandedMod] = useState(null);
     const [profileOpen, setProfileOpen] = useState(false);
     const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
     const [tooltip, setTooltip] = useState(null);
@@ -90,17 +89,11 @@ export default function ProfLayout({ children, wide }) {
     const sidebarVisible = isDesktop || sidebarOpen;
 
     const modules = profModules ?? [];
-    const groupes = profGroupes ?? [];
-
-    const mods = modules.map(mod => ({
-        ...mod,
-        modGroupes: groupes.filter(g => g.module_id === mod.id),
-    }));
 
     const currentRoute = route().current();
     const currentParams = route().params;
     const isOnDashboard = currentRoute === 'prof.dashboard';
-    const selectedGroupeId = currentRoute === 'prof.groupes.show' ? Number(currentParams?.groupe) : null;
+    const selectedModuleId = currentRoute === 'prof.modules.show' ? Number(currentParams?.module) : null;
 
     const sidebarStyle = {
         position: 'fixed',
@@ -202,7 +195,7 @@ export default function ProfLayout({ children, wide }) {
                         </Link>
                     </div>
 
-                    {mods.length > 0 && (
+                    {modules.length > 0 && (
                         <>
                             <div className="my-3 border-t border-slate-200 dark:border-slate-700/60" />
 
@@ -213,79 +206,51 @@ export default function ProfLayout({ children, wide }) {
                                     </p>
                                 )}
 
-                                {mods.map(mod => {
+                                {modules.map(mod => {
                                     const name = isRTL ? (mod.nom_ar || mod.nom_fr) : (mod.nom_fr || mod.nom_ar);
-                                    const isOpen = expandedMod === mod.id;
-                                    const hasSelected = mod.modGroupes.some(g => g.id === selectedGroupeId);
+                                    const isSelected = selectedModuleId === mod.id;
 
                                     if (sidebarCollapsed) {
                                         return (
-                                            <button
+                                            <Link
                                                 key={mod.id}
-                                                onClick={() => setExpandedMod(isOpen ? null : mod.id)}
+                                                href={route('prof.modules.show', { module: mod.id })}
                                                 onMouseEnter={(e) => handleMouseEnter(e, name)}
                                                 onMouseLeave={() => setTooltip(null)}
                                                 className={`flex w-full items-center justify-center rounded-lg px-2 py-2.5 transition-all hover:bg-slate-100 dark:hover:bg-slate-800 ${
-                                                    hasSelected ? 'text-primary bg-primary/5' : 'text-slate-400 dark:text-slate-500'
+                                                    isSelected ? 'text-primary bg-primary/5' : 'text-slate-400 dark:text-slate-500'
                                                 }`}
                                             >
                                                 <Icon d={I.book} className="w-4 h-4" />
-                                            </button>
+                                            </Link>
                                         );
                                     }
 
                                     return (
-                                        <div key={mod.id}>
-                                            <button
-                                                onClick={() => setExpandedMod(isOpen ? null : mod.id)}
-                                                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-xs transition hover:bg-slate-100 dark:hover:bg-slate-800 ${
-                                                    hasSelected
-                                                        ? 'bg-gradient-to-r from-primary/5 to-transparent text-primary font-medium'
-                                                        : 'text-slate-600 dark:text-slate-300'
-                                                }`}
-                                            >
-                                                <Icon d={isOpen ? I.chevronDown : I.chevronRight} className="w-3.5 h-3.5 shrink-0 text-slate-300" />
-                                                <span className="truncate">{name}</span>
-                                                {mod.code_module && (
-                                                    <span className={`ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] ${
-                                                        hasSelected
-                                                            ? 'bg-primary/10 text-primary'
-                                                            : 'bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500'
-                                                    }`}>
-                                                        {mod.code_module}
-                                                    </span>
-                                                )}
-                                            </button>
-
-                                            <div className={`overflow-hidden transition-all duration-200 ${isOpen ? 'max-h-96' : 'max-h-0'}`}>
-                                                {mod.modGroupes.map(g => {
-                                                    const gname = isRTL ? (g.nom_ar || g.code) : (g.nom_fr || g.code);
-                                                    const isSelected = selectedGroupeId === g.id;
-
-                                                    return (
-                                                        <Link
-                                                            key={g.id}
-                                                            href={route('prof.groupes.show', { groupe: g.id })}
-                                                            className={`flex w-full items-center gap-2 py-2 text-xs transition-all rounded-lg ${
-                                                                isRTL ? 'pr-9 pl-3' : 'pl-9 pr-3'
-                                                            } ${
-                                                                isSelected
-                                                                    ? 'bg-primary/10 font-medium text-primary'
-                                                                    : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-700/50'
-                                                            }`}
-                                                        >
-                                                            <Icon d={I.group} className={`w-3.5 h-3.5 shrink-0 ${
-                                                                isSelected ? 'text-primary' : 'text-slate-300 dark:text-slate-500'
-                                                            }`} />
-                                                            <span className="truncate">{gname}</span>
-                                                            {isSelected && (
-                                                                <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
-                                                            )}
-                                                        </Link>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
+                                        <Link
+                                            key={mod.id}
+                                            href={route('prof.modules.show', { module: mod.id })}
+                                            className={`flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-xs transition hover:bg-slate-100 dark:hover:bg-slate-800 ${
+                                                isSelected
+                                                    ? 'bg-gradient-to-r from-primary/5 to-transparent text-primary font-medium'
+                                                    : 'text-slate-600 dark:text-slate-300'
+                                            }`}
+                                        >
+                                            <Icon d={I.book} className="w-3.5 h-3.5 shrink-0 text-slate-300" />
+                                            <span className="truncate">{name}</span>
+                                            {mod.code_module && (
+                                                <span className={`ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] ${
+                                                    isSelected
+                                                        ? 'bg-primary/10 text-primary'
+                                                        : 'bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500'
+                                                }`}>
+                                                    {mod.code_module}
+                                                </span>
+                                            )}
+                                            {isSelected && (
+                                                <span className="ml-1 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                                            )}
+                                        </Link>
                                     );
                                 })}
                             </div>

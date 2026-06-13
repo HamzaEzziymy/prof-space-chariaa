@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Groupe;
+use App\Models\Module;
 use App\Models\Prof;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -20,7 +20,7 @@ class ProfessorController extends Controller
     {
         $query = Prof::query()
             ->with(['user:id,nom_fr,prenom_fr,nom_ar,prenom_ar,email,photo_profile_url,is_active'])
-            ->withCount('groupes')
+            ->withCount('modules')
             ->orderBy('created_at', 'desc');
 
         if ($search = $request->get('search')) {
@@ -64,7 +64,7 @@ class ProfessorController extends Controller
             'total'    => Prof::count(),
             'active'   => Prof::whereHas('user', fn ($q) => $q->where('is_active', true))->count(),
             'inactive' => Prof::whereHas('user', fn ($q) => $q->where('is_active', false))->count(),
-            'withGroupes' => Prof::has('groupes')->count(),
+            'withModules' => Prof::has('modules')->count(),
         ];
 
         return Inertia::render('Professors/Index', [
@@ -83,9 +83,9 @@ class ProfessorController extends Controller
     {
         $prof->load([
             'user:id,nom_fr,prenom_fr,nom_ar,prenom_ar,email,photo_profile_url,is_active,email_verified_at,created_at,must_change_password',
-            'groupes' => fn ($q) => $q->with('module.semestre.niveau.filiere'),
+            'modules.semestre.niveau.filiere',
         ]);
-        $prof->loadCount('groupes');
+        $prof->loadCount('modules');
 
         if ($prof->user) {
             $prof->user->avatar_url = $prof->user->photo_profile_url
@@ -93,36 +93,19 @@ class ProfessorController extends Controller
                 : null;
         }
 
-        $prof->groupes->each(function ($groupe) {
-            $groupe->etudiants_count = $groupe->relationLoaded('module') && $groupe->module
-                ? $groupe->module->etudiants()->count()
-                : 0;
+        $prof->modules->each(function ($module) {
+            $module->etudiants_count = $module->etudiants()->count();
         });
 
-        $assignableGroupes = Groupe::whereNull('prof_id')
-            ->with('module.semestre.niveau.filiere')
-            ->orderBy('code')
-            ->get(['id', 'code', 'nom_fr', 'nom_ar', 'module_id']);
+        $assignableModules = Module::whereNull('prof_id')
+            ->with('semestre.niveau.filiere')
+            ->orderBy('code_module')
+            ->get(['id', 'code_module', 'nom_fr', 'nom_ar', 'semestre_id']);
 
         return Inertia::render('Professors/Show', [
             'prof' => $prof,
-            'assignableGroupes' => $assignableGroupes,
+            'assignableModules' => $assignableModules,
         ]);
-    }
-
-    public function assignGroupe(Prof $prof, Groupe $groupe): RedirectResponse
-    {
-        $groupe->update(['prof_id' => $prof->id]);
-        return back()->with('success', 'Groupe assigné avec succès.');
-    }
-
-    public function unassignGroupe(Prof $prof, Groupe $groupe): RedirectResponse
-    {
-        if ($groupe->prof_id !== $prof->id) {
-            return back()->with('error', 'Ce groupe n\'est pas assigné à ce professeur.');
-        }
-        $groupe->update(['prof_id' => null]);
-        return back()->with('success', 'Groupe désassigné avec succès.');
     }
 
     /**

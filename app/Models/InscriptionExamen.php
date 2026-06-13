@@ -10,10 +10,10 @@ class InscriptionExamen extends Model
     protected $table = 'inscription_examen';
 
     protected $fillable = [
-        'etud_mod_id',
-        'groupe_id',
-        'id_salle',
+        'module_id',
+        'etudiant_id',
         'Nexam',
+        'statut',
         'note_normale',
         'note_rattrapage',
         'note_finale',
@@ -56,18 +56,13 @@ class InscriptionExamen extends Model
         });
     }
 
-    public function etudiantModule(): BelongsTo
+    public function module(): BelongsTo
     {
-        return $this->belongsTo(EtudiantModule::class, 'etud_mod_id');
+        return $this->belongsTo(Module::class, 'module_id');
     }
 
-    public function groupe(): BelongsTo
+    public function etudiant(): BelongsTo
     {
-        return $this->belongsTo(Groupe::class, 'groupe_id');
-    }
-
-    public function salle(): BelongsTo
-    {
-        return $this->belongsTo(Salle::class, 'id_salle');
+        return $this->belongsTo(Etudiant::class, 'etudiant_id');
     }
 }

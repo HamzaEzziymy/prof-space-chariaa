@@ -11,7 +11,6 @@ class NoteExam extends Model
 
     protected $fillable = [
         'etud_mod_id',
-        'Groupe',
         'Nexam',
         'note_normale',
         'note_rattrapage',

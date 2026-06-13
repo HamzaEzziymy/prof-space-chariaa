@@ -1219,232 +1219,77 @@ function ModuleCard({ module, onEdit, onDelete, t, locale }) {
     );
 }
 
-// ─── Table row (expandable with groupes) ─────────────────────────────────────
-function ModuleRow({ module, onEdit, onDelete, t, locale, profs }) {
+// ─── Table row ────────────────────────────────────────────────────────────────
+function ModuleRow({ module, onEdit, onDelete, t, locale }) {
     const name = locale === 'ar' ? (module.nom_ar || module.nom_fr || '—') : (module.nom_fr || '—');
     const nameAlt = locale === 'ar' ? module.nom_fr : module.nom_ar;
-    const [expanded, setExpanded] = useState(false);
-    const groupes = module.groupes || [];
 
-    // Groupe form
-    const [showForm, setShowForm] = useState(false);
-    const [editingGroupe, setEditingGroupe] = useState(null);
-    const { data, setData, post, put, delete: destroy, processing, errors, reset } = useForm({
-        code: '', nom_fr: '', nom_ar: '', prof_id: '', module_id: '',
-    });
-
-    const openAddForm = () => {
-        reset(); setEditingGroupe(null); setData('module_id', module.id); setShowForm(true);
-    };
-    const openEditForm = (g) => {
-        setEditingGroupe(g);
-        setData({ code: g.code, nom_fr: g.nom_fr || '', nom_ar: g.nom_ar || '', prof_id: g.prof_id ?? '', module_id: module.id });
-        setShowForm(true);
-    };
-    const closeForm = () => { setShowForm(false); setEditingGroupe(null); reset(); };
-    const submitGroupe = (e) => {
-        e.preventDefault();
-        const opts = { preserveScroll: true, onSuccess: () => closeForm() };
-        if (editingGroupe) {
-            put(route('modules.groupes.update', editingGroupe.id), opts);
-        } else {
-            post(route('modules.groupes.store', module.id), opts);
-        }
-    };
-    const deleteGroupe = (g) => {
-        if (confirm(locale === 'ar' ? 'تأكيد الحذف؟' : 'Confirmer la suppression ?')) {
-            destroy(route('modules.groupes.destroy', g.id), { preserveScroll: true });
-        }
-    };
-
-    const profName = (p) => {
-        if (!p?.user) return null;
-        const u = p.user;
-        return locale === 'ar'
-            ? `${u.prenom_ar ?? ''} ${u.nom_ar ?? ''}`.trim() || `${u.prenom_fr ?? ''} ${u.nom_fr ?? ''}`.trim()
-            : `${u.prenom_fr ?? ''} ${u.nom_fr ?? ''}`.trim();
-    };
+    const profName = module.prof?.user
+        ? (locale === 'ar'
+            ? `${module.prof.user.prenom_ar ?? ''} ${module.prof.user.nom_ar ?? ''}`.trim() || `${module.prof.user.prenom_fr ?? ''} ${module.prof.user.nom_fr ?? ''}`.trim()
+            : `${module.prof.user.prenom_fr ?? ''} ${module.prof.user.nom_fr ?? ''}`.trim())
+        : null;
 
     return (
-        <>
-            <tr className="group border-b border-slate-100 dark:border-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                <td className="px-2 py-3.5 w-10">
-                    <button onClick={() => setExpanded(!expanded)}
-                        className="rounded-lg p-1 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 transition">
-                        <Icon d={expanded ? ICONS.chevDown : ICONS.chevRight} className="h-4 w-4" />
-                    </button>
-                </td>
-                <td className="px-3 py-3.5">
-                    <div className="flex items-center gap-3">
-                        <div className={`h-8 w-1 rounded-full shrink-0 ${typeBar(module.type_module)}`} />
-                        <div className="min-w-0">
-                            <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{name}</p>
-                            {nameAlt && <p className="text-xs text-slate-400 truncate" dir={locale === 'ar' ? 'ltr' : 'rtl'}>{nameAlt}</p>}
-                        </div>
+        <tr className="group border-b border-slate-100 dark:border-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+            <td className="px-3 py-3.5">
+                <div className="flex items-center gap-3">
+                    <div className={`h-8 w-1 rounded-full shrink-0 ${typeBar(module.type_module)}`} />
+                    <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{name}</p>
+                        {nameAlt && <p className="text-xs text-slate-400 truncate" dir={locale === 'ar' ? 'ltr' : 'rtl'}>{nameAlt}</p>}
                     </div>
-                </td>
-                <td className="px-3 py-3.5">
-                    <code className="rounded-lg bg-slate-100 dark:bg-slate-700 px-2.5 py-1 font-mono text-xs font-bold text-slate-600 dark:text-slate-300">
-                        {module.code_module || '—'}
-                    </code>
-                </td>
-                <td className="px-3 py-3.5">
-                    {module.type_module
-                        ? <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${typePill(module.type_module)}`}>{module.type_module}</span>
-                        : <span className="text-xs italic text-slate-300 dark:text-slate-600">{t('noType')}</span>}
-                </td>
-                <td className="px-3 py-3.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                    {module.coefficient || <span className="text-slate-300 dark:text-slate-600">—</span>}
-                </td>
-                <td className="px-3 py-3.5">
-                    <span className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300">
-                        <Icon d={ICONS.students} className="h-3.5 w-3.5 text-slate-400" />
-                        {module.etudiants_count ?? 0}
+                </div>
+            </td>
+            <td className="px-3 py-3.5">
+                <code className="rounded-lg bg-slate-100 dark:bg-slate-700 px-2.5 py-1 font-mono text-xs font-bold text-slate-600 dark:text-slate-300">
+                    {module.code_module || '—'}
+                </code>
+            </td>
+            <td className="px-3 py-3.5">
+                {module.type_module
+                    ? <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${typePill(module.type_module)}`}>{module.type_module}</span>
+                    : <span className="text-xs italic text-slate-300 dark:text-slate-600">{t('noType')}</span>}
+            </td>
+            <td className="px-3 py-3.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                {module.coefficient || <span className="text-slate-300 dark:text-slate-600">—</span>}
+            </td>
+            <td className="px-3 py-3.5">
+                <span className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300">
+                    <Icon d={ICONS.students} className="h-3.5 w-3.5 text-slate-400" />
+                    {module.etudiants_count ?? 0}
+                </span>
+            </td>
+            <td className="px-3 py-3.5 text-xs">
+                {module.semestre
+                    ? <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 font-medium text-amber-700 dark:text-amber-400">
+                        {module.semestre.code}
+                        {module.semestre.niveau ? <span className="text-slate-400 dark:text-slate-500">· {module.semestre.niveau.code}</span> : ''}
+                      </span>
+                    : <span className="text-xs italic text-slate-300 dark:text-slate-600">—</span>}
+            </td>
+            <td className="px-3 py-3.5 text-xs">
+                {profName ? (
+                    <span className="inline-flex items-center gap-1 rounded-lg bg-violet-50 dark:bg-violet-900/20 px-2 py-0.5 font-medium text-violet-700 dark:text-violet-400">
+                        {profName}
                     </span>
-                </td>
-                <td className="px-3 py-3.5 text-xs">
-                    {module.semestre
-                        ? <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 font-medium text-amber-700 dark:text-amber-400">
-                            {module.semestre.code}
-                            {module.semestre.niveau ? <span className="text-slate-400 dark:text-slate-500">· {module.semestre.niveau.code}</span> : ''}
-                          </span>
-                        : <span className="text-xs italic text-slate-300 dark:text-slate-600">—</span>}
-                </td>
-                <td className="px-3 py-3.5">
-                    <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => onEdit(module)} title={t('edit')}
-                            className="rounded-lg p-1.5 text-slate-400 hover:bg-indigo-100 hover:text-indigo-600 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-400 transition">
-                            <Icon d={ICONS.edit} className="h-4 w-4" />
-                        </button>
-                        <button onClick={() => onDelete(module)} title={t('delete')}
-                            className="rounded-lg p-1.5 text-slate-400 hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/30 transition">
-                            <Icon d={ICONS.trash} className="h-4 w-4" />
-                        </button>
-                    </div>
-                </td>
-            </tr>
-            {expanded && (
-                <tr className="bg-slate-50/50 dark:bg-slate-800/30">
-                    <td colSpan={8} className="px-6 py-4">
-                        <div className="space-y-3">
-
-                            {/* Header */}
-                            <div className="flex items-center justify-between">
-                                <h4 className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                                    {locale === 'ar' ? 'المجموعات' : 'Groupes'} ({groupes.length})
-                                </h4>
-                                {!showForm && (
-                                    <button onClick={openAddForm}
-                                        className="flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition">
-                                        <Icon d={ICONS.plus} className="h-3.5 w-3.5" />
-                                        {locale === 'ar' ? 'إضافة مجموعة' : 'Ajouter un groupe'}
-                                    </button>
-                                )}
-                            </div>
-
-                            {/* Groupes table */}
-                            {groupes.length > 0 && (
-                                <div className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
-                                    <table className="w-full text-xs">
-                                        <thead>
-                                            <tr className="bg-slate-100 dark:bg-slate-800">
-                                                <th className="px-3 py-2 text-left font-semibold text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'الرمز' : 'Code'}</th>
-                                                <th className="px-3 py-2 text-left font-semibold text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'الاسم (فرنسي)' : 'Nom (FR)'}</th>
-                                                <th className="px-3 py-2 text-left font-semibold text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'الاسم (عربي)' : 'Nom (AR)'}</th>
-                                                <th className="px-3 py-2 text-left font-semibold text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'الأستاذ' : 'Professeur'}</th>
-                                                <th className="px-3 py-2 text-right font-semibold text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'إجراءات' : 'Actions'}</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {groupes.map(g => (
-                                                <tr key={g.id} className="border-t border-slate-100 dark:border-slate-700/60">
-                                                    <td className="px-3 py-2 font-mono font-bold text-slate-700 dark:text-slate-200">{g.code}</td>
-                                                    <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{g.nom_fr || '—'}</td>
-                                                    <td className="px-3 py-2 text-slate-600 dark:text-slate-300" dir="rtl">{g.nom_ar || '—'}</td>
-                                                    <td className="px-3 py-2 text-slate-600 dark:text-slate-300">
-                                                        {g.prof ? profName(g.prof) || '—' : <span className="text-slate-300 dark:text-slate-600">—</span>}
-                                                    </td>
-                                                    <td className="px-3 py-2 text-right">
-                                                        <div className="flex items-center justify-end gap-1">
-                                                            <button onClick={() => openEditForm(g)} title={t('edit')}
-                                                                className="rounded p-1 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
-                                                                <Icon d={ICONS.edit} className="h-3.5 w-3.5" />
-                                                            </button>
-                                                            <button onClick={() => deleteGroupe(g)} title={t('delete')}
-                                                                className="rounded p-1 text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition">
-                                                                <Icon d={ICONS.trash} className="h-3.5 w-3.5" />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-
-                            {groupes.length === 0 && !showForm && (
-                                <p className="text-xs text-slate-400 dark:text-slate-500 italic">
-                                    {locale === 'ar' ? 'لا توجد مجموعات بعد' : 'Aucun groupe pour ce module'}
-                                </p>
-                            )}
-
-                            {/* Add/Edit form */}
-                            {showForm && (
-                                <form onSubmit={submitGroupe} className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 space-y-3">
-                                    <h5 className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                                        {editingGroupe
-                                            ? (locale === 'ar' ? 'تعديل المجموعة' : 'Modifier le groupe')
-                                            : (locale === 'ar' ? 'إضافة مجموعة جديدة' : 'Nouveau groupe')}
-                                    </h5>
-                                    <div className="grid grid-cols-4 gap-3">
-                                        <div>
-                                            <label className="mb-1 block text-[10px] font-semibold text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'الرمز' : 'Code'} *</label>
-                                            <input type="text" value={data.code} onChange={e => setData('code', e.target.value)}
-                                                className={`w-full rounded-lg border ${errors.code ? 'border-red-300' : 'border-slate-300 dark:border-slate-600'} bg-white dark:bg-slate-700 px-2.5 py-1.5 text-xs text-slate-800 dark:text-white placeholder-slate-400`}
-                                                placeholder="G01" required />
-                                            {errors.code && <p className="mt-0.5 text-[10px] text-red-500">{errors.code}</p>}
-                                        </div>
-                                        <div>
-                                            <label className="mb-1 block text-[10px] font-semibold text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'الاسم (فرنسي)' : 'Nom (FR)'}</label>
-                                            <input type="text" value={data.nom_fr} onChange={e => setData('nom_fr', e.target.value)}
-                                                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-2.5 py-1.5 text-xs text-slate-800 dark:text-white placeholder-slate-400"
-                                                placeholder="Groupe A" />
-                                        </div>
-                                        <div>
-                                            <label className="mb-1 block text-[10px] font-semibold text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'الاسم (عربي)' : 'Nom (AR)'}</label>
-                                            <input type="text" value={data.nom_ar} onChange={e => setData('nom_ar', e.target.value)}
-                                                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-2.5 py-1.5 text-xs text-slate-800 dark:text-white placeholder-slate-400"
-                                                placeholder="المجموعة أ" dir="rtl" />
-                                        </div>
-                                        <div>
-                                            <label className="mb-1 block text-[10px] font-semibold text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'الأستاذ' : 'Professeur'}</label>
-                                            <select value={data.prof_id} onChange={e => setData('prof_id', e.target.value)}
-                                                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-2.5 py-1.5 text-xs text-slate-800 dark:text-white">
-                                                <option value="">{locale === 'ar' ? '— بدون —' : '— Aucun —'}</option>
-                                                {profs.map(p => (
-                                                    <option key={p.id} value={p.id}>{profName(p) || `#${p.id}`}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center justify-end gap-2">
-                                        <button type="button" onClick={closeForm}
-                                            className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
-                                            {locale === 'ar' ? 'إلغاء' : 'Annuler'}
-                                        </button>
-                                        <button type="submit" disabled={processing}
-                                            className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 transition disabled:opacity-60">
-                                            {processing ? '...' : (locale === 'ar' ? 'حفظ' : 'Enregistrer')}
-                                        </button>
-                                    </div>
-                                </form>
-                            )}
-                        </div>
-                    </td>
-                </tr>
-            )}
-        </>
+                ) : (
+                    <span className="text-xs italic text-slate-300 dark:text-slate-600">{t('noProfessorAssigned')}</span>
+                )}
+            </td>
+            <td className="px-3 py-3.5">
+                <div className="flex items-center justify-end gap-1">
+                    <button onClick={() => onEdit(module)} title={t('edit')}
+                        className="rounded-lg p-1.5 text-slate-400 hover:bg-indigo-100 hover:text-indigo-600 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-400 transition">
+                        <Icon d={ICONS.edit} className="h-4 w-4" />
+                    </button>
+                    <button onClick={() => onDelete(module)} title={t('delete')}
+                        className="rounded-lg p-1.5 text-slate-400 hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/30 transition">
+                        <Icon d={ICONS.trash} className="h-4 w-4" />
+                    </button>
+                </div>
+            </td>
+        </tr>
     );
 }
 
@@ -1577,7 +1422,7 @@ function ModulesContent({ modules, semestres, types, filters, stats, profs }) {
 
     const statCards = [
         { label: t('totalModulesStat'),  value: stats.total,        colorClass: 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400', iconPath: ICONS.module   },
-        { label: locale === 'ar' ? 'وحدات بمجموعات' : 'Modules avec groupes', value: stats.withGroupes, colorClass: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400', iconPath: ICONS.user },
+        { label: t('modulesWithProf'), value: stats.withProfs, colorClass: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400', iconPath: ICONS.user },
         { label: t('modulesWithStudents'), value: stats.withStudents, colorClass: 'bg-sky-100 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400', iconPath: ICONS.students            },
         { label: locale === 'ar' ? 'أنواع الوحدات' : 'Types distincts', value: stats.types, colorClass: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400', iconPath: ICONS.tag },
     ];
@@ -1804,7 +1649,6 @@ function ModulesContent({ modules, semestres, types, filters, stats, profs }) {
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
-                                        <th className="px-2 py-3 w-10"></th>
                                         <th onClick={() => handleSort(nameSortField)}
                                             className={`px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 ${isRTL ? 'text-right' : 'text-left'} cursor-pointer select-none hover:text-indigo-600 dark:hover:text-indigo-400 transition`}>
                                             {t('name')}<SortIcon field={nameSortField} />
@@ -1827,6 +1671,9 @@ function ModulesContent({ modules, semestres, types, filters, stats, profs }) {
                                         <th className={`px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 ${isRTL ? 'text-right' : 'text-left'}`}>
                                             {t('moduleSemestre')}
                                         </th>
+                                        <th className={`px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 ${isRTL ? 'text-right' : 'text-left'}`}>
+                                            {locale === 'ar' ? 'الأستاذ' : 'Professeur'}
+                                        </th>
                                         <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 text-end">
                                             {t('actions')}
                                         </th>
@@ -1834,7 +1681,7 @@ function ModulesContent({ modules, semestres, types, filters, stats, profs }) {
                                 </thead>
                                 <tbody>
                                     {items.map(m => (
-                                        <ModuleRow key={m.id} module={m} locale={locale} t={t} profs={profs}
+                                        <ModuleRow key={m.id} module={m} locale={locale} t={t}
                                             onEdit={mod => setModal({ type: 'edit', module: mod })}
                                             onDelete={mod => setModal({ type: 'delete', module: mod })}
                                         />

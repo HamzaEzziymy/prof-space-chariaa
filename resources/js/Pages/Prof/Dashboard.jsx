@@ -16,10 +16,9 @@ const I = {
 
 function DashboardContent({ prof, totalStudents }) {
     const { locale, isRTL } = useLanguage();
-    const { auth, profModules, profGroupes } = usePage().props;
+    const { auth, profModules } = usePage().props;
     const user = auth?.user;
     const modules = profModules ?? [];
-    const groupes = profGroupes ?? [];
 
     const today = new Date().toLocaleDateString(locale === 'ar' ? 'ar-MA' : 'fr-FR', {
         weekday: 'long', year: 'numeric', month: 'numeric', day: 'numeric',
@@ -67,13 +66,6 @@ function DashboardContent({ prof, totalStudents }) {
                                 desc: locale === 'ar' ? 'الوحدات المدرّسة' : 'Modules enseignés',
                             },
                             {
-                                label: locale === 'ar' ? 'المجموعات' : 'Groupes',
-                                value: groupes.length,
-                                icon: <Icon d={I.users} className="w-6 h-6" />,
-                                color: 'blue',
-                                desc: locale === 'ar' ? 'المجموعات المسندة' : 'Groupes assignés',
-                            },
-                            {
                                 label: locale === 'ar' ? 'الطلاب' : 'Étudiants',
                                 value: totalStudents,
                                 icon: <Icon d={I.student} className="w-6 h-6" />,
@@ -112,9 +104,7 @@ function DashboardContent({ prof, totalStudents }) {
                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                         {[
                             { label: locale === 'ar' ? 'الوحدات النشطة' : 'Modules actifs', value: modules.length, color: 'bg-indigo-500' },
-                            { label: locale === 'ar' ? 'المجموعات النشطة' : 'Groupes actifs', value: groupes.length, color: 'bg-emerald-500' },
                             { label: locale === 'ar' ? 'الطلاب المسجلون' : 'Étudiants inscrits', value: totalStudents, color: 'bg-amber-500' },
-                            { label: locale === 'ar' ? 'المجموعات المنجزة' : 'Groupes notés', value: 0, color: 'bg-rose-500' },
                         ].map((item, i) => (
                             <div key={i} className={`rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 shadow-sm ${isRTL ? 'text-right' : 'text-left'}`}>
                                 <div className={`flex items-center gap-2 mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -130,7 +120,7 @@ function DashboardContent({ prof, totalStudents }) {
                     <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm dark:border-slate-600 dark:bg-slate-800">
                         <span className="text-4xl opacity-30 select-none">📝</span>
                         <p className="mt-3 text-sm font-medium text-slate-400">
-                            {locale === 'ar' ? 'اختر مجموعة من القائمة الجانبية لإدخال النقاط' : 'Sélectionnez un groupe dans la barre latérale pour saisir les notes'}
+                            {locale === 'ar' ? 'اختر وحدة من القائمة الجانبية لإدخال النقاط' : 'Sélectionnez un module dans la barre latérale pour saisir les notes'}
                         </p>
                     </div>
                 </div>

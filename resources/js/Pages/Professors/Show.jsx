@@ -14,7 +14,7 @@ function Icon({ d, className = 'w-5 h-5', fill = 'none' }) {
 
 const ICONS = {
     back:    'M10 19l-7-7m0 0l7-7m-7 7h18',
-    mail:    'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
+    mail:    'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
     phone:   'M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z',
     id:      'M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2',
     star:    'M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z',
@@ -38,15 +38,6 @@ const GP = (grade) => {
         'PA':  'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
     };
     return m[grade] ?? 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300';
-};
-
-const TP = (t) => {
-    const m = {
-        'Cours': 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
-        'TD':    'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
-        'TP':    'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
-    };
-    return m[t] ?? 'bg-slate-100 text-slate-600';
 };
 
 function Toast({ flash, t }) {
@@ -109,17 +100,17 @@ function SectionCard({ title, icon, children }) {
 
 function ShowPage() {
     const { t, locale, isRTL } = useLanguage();
-    const { prof, assignableGroupes } = usePage().props;
+    const { prof, assignableModules } = usePage().props;
     const user = prof?.user;
     const isActive = user?.is_active !== false;
-    const groupes = prof?.groupes ?? [];
+    const modules = prof?.modules ?? [];
     const [showAssign, setShowAssign] = useState(false);
-    const [searchGroupes, setSearchGroupes] = useState('');
-    const [removingGroupeId, setRemovingGroupeId] = useState(null);
+    const [searchModules, setSearchModules] = useState('');
+    const [removingModuleId, setRemovingModuleId] = useState(null);
     const [unassigning, setUnassigning] = useState(false);
-    const [showAllGroupes, setShowAllGroupes] = useState(false);
+    const [showAllModules, setShowAllModules] = useState(false);
     const PAGE_SIZE = 5;
-    const displayedGroupes = showAllGroupes ? groupes : groupes.slice(0, PAGE_SIZE);
+    const displayedModules = showAllModules ? modules : modules.slice(0, PAGE_SIZE);
 
     const displayName = isRTL
         ? `${user?.prenom_ar ?? user?.prenom_fr ?? ''} ${user?.nom_ar ?? user?.nom_fr ?? ''}`.trim() || user?.email
@@ -135,23 +126,23 @@ function ShowPage() {
 
     const { flash } = usePage().props;
 
-    const availableGroupes = (assignableGroupes ?? []).filter(g =>
-        !searchGroupes || g.code.toLowerCase().includes(searchGroupes.toLowerCase()) ||
-        (g.nom_fr || '').toLowerCase().includes(searchGroupes.toLowerCase()) ||
-        (g.nom_ar || '').includes(searchGroupes)
+    const availableModules = (assignableModules ?? []).filter(m =>
+        !searchModules || m.code_module.toLowerCase().includes(searchModules.toLowerCase()) ||
+        (m.nom_fr || '').toLowerCase().includes(searchModules.toLowerCase()) ||
+        (m.nom_ar || '').includes(searchModules)
     );
 
-    const handleAssign = (groupe) => {
-        router.post(route('professors.assign-groupe', [prof.id, groupe.id]), {}, {
+    const handleAssign = (module) => {
+        router.post(route('modules.assign-prof', { module: module.id }), { prof_id: prof.id }, {
             preserveScroll: true,
             onSuccess: () => setShowAssign(false),
         });
     };
 
-    const confirmRemove = (groupe) => {
-        setRemovingGroupeId(null);
+    const confirmRemove = (module) => {
+        setRemovingModuleId(null);
         setUnassigning(true);
-        router.delete(route('professors.unassign-groupe', [prof.id, groupe.id]), {
+        router.post(route('modules.assign-prof', { module: module.id }), { prof_id: null }, {
             preserveScroll: true,
             onFinish: () => setUnassigning(false),
         });
@@ -170,7 +161,7 @@ function ShowPage() {
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                         </svg>
                         <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                            {locale === 'ar' ? 'جاري إزالة المجموعة...' : 'Désassignation en cours...'}
+                            {locale === 'ar' ? 'جاري إزالة الوحدة...' : 'Désassignation en cours...'}
                         </span>
                     </div>
                 </div>
@@ -217,9 +208,9 @@ function ShowPage() {
                                 </span>
                             )}
                             <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold
-                                ${groupes.length > 0 ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' : 'bg-slate-100 text-slate-500 dark:bg-slate-700/50 dark:text-slate-400'}`}>
-                                <Icon d={ICONS.groups} className="h-3 w-3" />
-                                {prof.groupes_count ?? groupes.length} {locale === 'ar' ? 'مجموعة' : 'groupe(s)'}
+                                ${modules.length > 0 ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' : 'bg-slate-100 text-slate-500 dark:bg-slate-700/50 dark:text-slate-400'}`}>
+                                <Icon d={ICONS.modules} className="h-3 w-3" />
+                                {prof.modules_count ?? modules.length} {locale === 'ar' ? 'وحدة' : 'module(s)'}
                             </span>
                         </div>
                     </div>
@@ -252,57 +243,48 @@ function ShowPage() {
                     <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm overflow-hidden h-full flex flex-col">
                         <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/60 px-5 py-4 bg-slate-50/70 dark:bg-slate-700/30 flex-shrink-0">
                             <div className="flex items-center gap-2.5">
-                                <Icon d={ICONS.groups} className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
+                                <Icon d={ICONS.modules} className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
                                 <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                                    {locale === 'ar' ? 'المجموعات' : 'Groupes'}
+                                    {locale === 'ar' ? 'الوحدات' : 'Modules'}
                                 </h3>
                                 <span className={`rounded-full px-2 py-0.5 text-xs font-semibold
-                                    ${groupes.length > 0 ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' : 'bg-slate-100 text-slate-500 dark:bg-slate-700/50 dark:text-slate-400'}`}>
-                                    {groupes.length}
+                                    ${modules.length > 0 ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' : 'bg-slate-100 text-slate-500 dark:bg-slate-700/50 dark:text-slate-400'}`}>
+                                    {modules.length}
                                 </span>
                             </div>
                             <button onClick={() => setShowAssign(true)}
                                 className="flex items-center gap-1 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition">
                                 <Icon d={ICONS.plus} className="h-3.5 w-3.5" />
-                                {locale === 'ar' ? 'إضافة مجموعة' : 'Assigner'}
+                                {locale === 'ar' ? 'إضافة وحدة' : 'Assigner'}
                             </button>
                         </div>
 
-                        {groupes.length === 0 ? (
+                        {modules.length === 0 ? (
                             <div className="flex flex-1 flex-col items-center justify-center py-16 px-6 text-center">
                                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-700/50 mb-3">
                                     <Icon d={ICONS.empty} className="h-7 w-7 text-slate-300 dark:text-slate-500" />
                                 </div>
                                 <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                                    {locale === 'ar' ? 'لا توجد مجموعات' : 'Aucun groupe assigné'}
+                                    {locale === 'ar' ? 'لا توجد وحدات' : 'Aucun module assigné'}
                                 </p>
                             </div>
                         ) : (
                             <div className="divide-y divide-slate-100 dark:divide-slate-700/60 overflow-y-auto">
-                                {displayedGroupes.map(g => {
-                                    const mod = g.module;
-                                    const sem = mod?.semestre;
+                                {displayedModules.map(m => {
+                                    const sem = m.semestre;
                                     const niv = sem?.niveau;
                                     const fil = niv?.filiere;
-                                    const modName = mod ? (locale === 'ar' ? (mod.nom_ar || mod.nom_fr) : (mod.nom_fr || mod.nom_ar)) : '—';
-                                    const gName = locale === 'ar' ? (g.nom_ar || g.code) : (g.nom_fr || g.code);
+                                    const mName = locale === 'ar' ? (m.nom_ar || m.nom_fr) : (m.nom_fr || m.nom_ar);
                                     const nivName = niv ? (locale === 'ar' ? (niv.nom_ar || niv.nom_fr) : (niv.nom_fr || niv.nom_ar)) : '';
                                     const semName = sem ? (locale === 'ar' ? (sem.nom_ar || sem.nom_fr) : (sem.nom_fr || sem.nom_ar)) : '';
                                     return (
-                                    <div key={g.id} className="flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/60 dark:hover:bg-slate-700/20 transition-colors group">
+                                    <div key={m.id} className="flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/60 dark:hover:bg-slate-700/20 transition-colors group">
                                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-teal-100 to-cyan-100 dark:from-teal-900/30 dark:to-cyan-900/30">
-                                                <Icon d={ICONS.users} className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                                                <Icon d={ICONS.modules} className="h-4 w-4 text-teal-600 dark:text-teal-400" />
                                             </div>
                                             <div className="min-w-0 flex-1 flex items-center gap-1.5 text-[13px] text-slate-700 dark:text-slate-200 truncate">
-                                                <span className="font-bold truncate">{gName}</span>
-                                                <code className="shrink-0 rounded bg-slate-100 dark:bg-slate-700 px-1 py-px text-[11px] font-bold text-slate-500 dark:text-slate-400 font-mono">{g.code}</code>
-                                                {mod && (
-                                                    <>
-                                                        <span className="shrink-0 text-slate-300 dark:text-slate-600">·</span>
-                                                        <span className="font-medium truncate">{modName}</span>
-                                                        <code className="shrink-0 text-[11px] text-slate-400 font-mono">{mod.code_module}</code>
-                                                    </>
-                                                )}
+                                                <span className="font-bold truncate">{mName}</span>
+                                                <code className="shrink-0 rounded bg-slate-100 dark:bg-slate-700 px-1 py-px text-[11px] font-bold text-slate-500 dark:text-slate-400 font-mono">{m.code_module}</code>
                                                 {sem && (
                                                     <>
                                                         <span className="shrink-0 text-slate-300 dark:text-slate-600">·</span>
@@ -332,22 +314,22 @@ function ShowPage() {
                                                 )}
                                             </div>
                                             <div className="flex items-center gap-1 shrink-0">
-                                                {removingGroupeId === g.id ? (
+                                                {removingModuleId === m.id ? (
                                                     <div className="flex items-center gap-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-2 py-1">
                                                         <span className="text-[10px] font-medium text-red-600 dark:text-red-400 whitespace-nowrap">
                                                             {locale === 'ar' ? 'تأكيد الإزالة؟' : 'Confirmer ?'}
                                                         </span>
-                                                        <button onClick={() => confirmRemove(g)}
+                                                        <button onClick={() => confirmRemove(m)}
                                                             className="rounded px-1.5 py-0.5 text-[10px] font-bold text-white bg-red-500 hover:bg-red-600 transition">
                                                             {locale === 'ar' ? 'نعم' : 'Oui'}
                                                         </button>
-                                                        <button onClick={() => setRemovingGroupeId(null)}
+                                                        <button onClick={() => setRemovingModuleId(null)}
                                                             className="rounded px-1.5 py-0.5 text-[10px] font-medium text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 transition">
                                                             {locale === 'ar' ? 'إلغاء' : 'Non'}
                                                         </button>
                                                     </div>
                                                 ) : (
-                                                    <button onClick={() => setRemovingGroupeId(g.id)}
+                                                    <button onClick={() => setRemovingModuleId(m.id)}
                                                         title={locale === 'ar' ? 'إزالة' : 'Retirer'}
                                                         className="rounded-lg p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition">
                                                         <Icon d={ICONS.close} className="h-4 w-4" />
@@ -360,16 +342,16 @@ function ShowPage() {
                             </div>
                         )}
 
-                        {groupes.length > PAGE_SIZE && (
+                        {modules.length > PAGE_SIZE && (
                             <div className="border-t border-slate-100 dark:border-slate-700/60 px-5 py-3">
-                                <button onClick={() => setShowAllGroupes(!showAllGroupes)}
+                                <button onClick={() => setShowAllModules(!showAllModules)}
                                     className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:border-indigo-200 dark:hover:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
-                                    <Icon d={showAllGroupes ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'} className="h-3.5 w-3.5" />
-                                    {showAllGroupes
+                                    <Icon d={showAllModules ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'} className="h-3.5 w-3.5" />
+                                    {showAllModules
                                         ? (locale === 'ar' ? 'عرض أقل' : 'Voir moins')
                                         : (locale === 'ar'
-                                            ? `عرض ${groupes.length - PAGE_SIZE} أخرى`
-                                            : `Voir ${groupes.length - PAGE_SIZE} autres`)}
+                                            ? `عرض ${modules.length - PAGE_SIZE} أخرى`
+                                            : `Voir ${modules.length - PAGE_SIZE} autres`)}
                                 </button>
                             </div>
                         )}
@@ -377,25 +359,25 @@ function ShowPage() {
                         {/* ── Assign modal overlay ── */}
                         {showAssign && (
                             <>
-                                <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={() => { setShowAssign(false); setSearchGroupes(''); }} />
+                                <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={() => { setShowAssign(false); setSearchModules(''); }} />
                                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                                     <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl dark:bg-slate-900 flex flex-col max-h-[80vh] overflow-hidden">
                                         {/* Header */}
                                         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-5 py-4 shrink-0">
                                             <div className="flex items-center gap-3">
                                                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-900/40">
-                                                    <Icon d={ICONS.groups} className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                                                    <Icon d={ICONS.modules} className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                                                 </div>
                                                 <div>
                                                     <h2 className="text-sm font-bold text-slate-800 dark:text-white">
-                                                        {locale === 'ar' ? 'إضافة مجموعة' : 'Assigner un groupe'}
+                                                        {locale === 'ar' ? 'إضافة وحدة' : 'Assigner un module'}
                                                     </h2>
                                                     <p className="text-[11px] text-slate-400">
-                                                        {locale === 'ar' ? 'اختر مجموعة من القائمة' : 'Sélectionnez un groupe dans la liste'}
+                                                        {locale === 'ar' ? 'اختر وحدة من القائمة' : 'Sélectionnez un module dans la liste'}
                                                     </p>
                                                 </div>
                                             </div>
-                                            <button onClick={() => { setShowAssign(false); setSearchGroupes(''); }}
+                                            <button onClick={() => { setShowAssign(false); setSearchModules(''); }}
                                                 className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
                                                 <Icon d={ICONS.close} className="h-5 w-5" />
                                             </button>
@@ -407,7 +389,7 @@ function ShowPage() {
                                                 <span className="absolute inset-y-0 start-3 flex items-center text-slate-400">
                                                     <Icon d={ICONS.search} className="h-4 w-4" />
                                                 </span>
-                                                <input type="text" value={searchGroupes} onChange={e => setSearchGroupes(e.target.value)}
+                                                <input type="text" value={searchModules} onChange={e => setSearchModules(e.target.value)}
                                                     placeholder={locale === 'ar' ? 'بحث بالرمز أو الاسم...' : 'Rechercher par code ou nom...'}
                                                     className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-2.5 ps-10 pe-4 text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:border-indigo-500 dark:focus:ring-indigo-900/30 transition"
                                                     autoFocus />
@@ -416,36 +398,33 @@ function ShowPage() {
 
                                         {/* List */}
                                         <div className="flex-1 overflow-y-auto px-5 pb-4 space-y-1 min-h-[200px]">
-                                            {availableGroupes.length === 0 ? (
+                                            {availableModules.length === 0 ? (
                                                 <div className="flex flex-col items-center justify-center py-12 text-center">
                                                     <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800 mb-3">
                                                         <Icon d={ICONS.empty} className="h-6 w-6 text-slate-300 dark:text-slate-600" />
                                                     </div>
                                                     <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                                                        {searchGroupes
+                                                        {searchModules
                                                             ? (locale === 'ar' ? 'لا توجد نتائج' : 'Aucun résultat')
-                                                            : (locale === 'ar' ? 'لا توجد مجموعات متاحة' : 'Aucun groupe disponible')}
+                                                            : (locale === 'ar' ? 'لا توجد وحدات متاحة' : 'Aucun module disponible')}
                                                     </p>
                                                     <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                                                        {locale === 'ar' ? 'جميع المجموعات مشغلة بالفعل' : 'Tous les groupes sont déjà assignés'}
+                                                        {locale === 'ar' ? 'جميع الوحدات مشغلة بالفعل' : 'Tous les modules sont déjà assignés'}
                                                     </p>
                                                 </div>
-                                            ) : availableGroupes.map(g => {
-                                                const mod = g.module;
-                                                const gName = locale === 'ar' ? (g.nom_ar || g.code) : (g.nom_fr || g.code);
-                                                const modName = mod ? (locale === 'ar' ? (mod.nom_ar || mod.nom_fr) : (mod.nom_fr || mod.nom_ar)) : '';
+                                            ) : availableModules.map(m => {
+                                                const mName = locale === 'ar' ? (m.nom_ar || m.nom_fr) : (m.nom_fr || m.nom_ar);
                                                 return (
-                                                    <button key={g.id} onClick={() => handleAssign(g)}
+                                                    <button key={m.id} onClick={() => handleAssign(m)}
                                                         className="flex w-full items-center gap-3 rounded-xl border border-transparent hover:border-indigo-200 dark:hover:border-indigo-800 px-4 py-3 text-left transition-all hover:bg-indigo-50 dark:hover:bg-indigo-900/10 group">
                                                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-100 dark:bg-violet-900/30 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/30">
-                                                            <Icon d={ICONS.groups} className="h-4 w-4 text-violet-600 dark:text-violet-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400" />
+                                                            <Icon d={ICONS.modules} className="h-4 w-4 text-violet-600 dark:text-violet-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400" />
                                                         </div>
                                                         <div className="min-w-0 flex-1">
-                                                            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{gName}</p>
+                                                            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{mName}</p>
                                                             <p className="text-xs text-slate-400 dark:text-slate-500 truncate">
-                                                                {modName && <>{modName}</>}
-                                                                {mod?.code_module && <><span className="mx-1">·</span><code className="font-mono">{mod.code_module}</code></>}
-                                                                {mod?.semestre?.niveau?.filiere && <><span className="mx-1">·</span><span className="font-medium">{mod.semestre.niveau.filiere.code}</span></>}
+                                                                {m.code_module && <><code className="font-mono">{m.code_module}</code></>}
+                                                                {m.semestre?.niveau?.filiere && <><span className="mx-1">·</span><span className="font-medium">{m.semestre.niveau.filiere.code}</span></>}
                                                             </p>
                                                         </div>
                                                         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-900/40 opacity-0 group-hover:opacity-100 transition">

@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Module;
 use App\Models\Prof;
 use App\Models\Semestre;
+use App\Models\Etudiant;
+use App\Models\EtudiantModule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,7 +29,7 @@ class ModuleController extends Controller
 
         $query = Module::query()
             ->with('semestre.niveau')
-            ->with('groupes.prof.user')
+            ->with('prof.user')
             ->withCount('etudiants')
             ->orderBy($sortField, $sortDir);
 
@@ -60,7 +62,7 @@ class ModuleController extends Controller
             'total'        => Module::count(),
             'withStudents' => Module::has('etudiants')->count(),
             'types'        => Module::distinct()->whereNotNull('type_module')->count('type_module'),
-            'withGroupes'  => Module::has('groupes')->count(),
+            'withProfs'    => Module::whereNotNull('prof_id')->count(),
         ];
 
         $profs = \App\Models\Prof::with('user')
@@ -89,6 +91,7 @@ class ModuleController extends Controller
             'coefficient' => 'nullable|integer|min:1|max:10',
             'type_module' => 'nullable|string|max:255',
             'semestre_id' => 'nullable|exists:semestres,id',
+            'prof_id'     => 'nullable|exists:prof,id',
         ]);
 
         Module::create($validated);
@@ -109,6 +112,7 @@ class ModuleController extends Controller
             'coefficient' => 'nullable|integer|min:1|max:10',
             'type_module' => 'nullable|string|max:255',
             'semestre_id' => 'nullable|exists:semestres,id',
+            'prof_id'     => 'nullable|exists:prof,id',
         ]);
 
         $module->update($validated);
@@ -297,6 +301,150 @@ class ModuleController extends Controller
             'imported' => $imported,
             'skipped'  => $skipped,
             'rows'     => $rows_report,
+        ]);
+    }
+
+    /**
+     * Import student inscriptions in horizontal matrix format.
+     * First row: CNE, code_module1, code_module2, ...
+     * Data rows: CNE, 1/0 for each module (1=inscrire, 0=désinscrire)
+     */
+    /**
+     * Assign a professor to a module.
+     */
+    public function assignProf(Request $request, Module $module): RedirectResponse
+    {
+        $validated = $request->validate([
+            'prof_id' => 'nullable|exists:prof,id',
+        ]);
+
+        $module->update(['prof_id' => $validated['prof_id'] ?? null]);
+
+        $message = $validated['prof_id']
+            ? 'Professeur assigné au module avec succès.'
+            : 'Professeur retiré du module avec succès.';
+
+        return back()->with('success', $message);
+    }
+
+    public function importInscriptions(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => 'required|file|max:5120',
+        ]);
+
+        $file      = $request->file('file');
+        $extension = strtolower($file->getClientOriginalExtension());
+        $mime      = $file->getMimeType() ?? '';
+
+        $isXlsx = in_array($extension, ['xlsx', 'ods'])
+            || str_contains($mime, 'spreadsheetml')
+            || str_contains($mime, 'opendocument');
+
+        $isXls = $extension === 'xls'
+            || str_contains($mime, 'ms-excel')
+            || str_contains($mime, 'msexcel');
+
+        try {
+            if ($isXlsx) {
+                $rows = $this->parseXlsx($file->getRealPath());
+            } elseif ($isXls) {
+                $rows = $this->parseXls($file->getRealPath());
+            } else {
+                $rows = $this->parseCsv($file->getRealPath());
+            }
+        } catch (\Throwable $e) {
+            return response()->json(['error' => 'parse_error', 'message' => $e->getMessage()], 422);
+        }
+
+        if (count($rows) < 2) {
+            return response()->json(['error' => 'empty_file'], 422);
+        }
+
+        $header      = $rows[0];
+        $cneHeader   = trim((string) ($header[0] ?? ''));
+        if (mb_strtoupper($cneHeader) !== 'CNE') {
+            return response()->json(['error' => 'invalid_format', 'message' => 'La première colonne doit être CNE'], 422);
+        }
+
+        $moduleCodes = [];
+        for ($i = 1, $n = count($header); $i < $n; $i++) {
+            $code = trim((string) ($header[$i] ?? ''));
+            if ($code !== '') {
+                $moduleCodes[] = $code;
+            }
+        }
+
+        if (empty($moduleCodes)) {
+            return response()->json(['error' => 'invalid_format', 'message' => 'Aucun code module trouvé dans l\'en-tête'], 422);
+        }
+
+        // Resolve modules by code
+        $modulesByCode = Module::whereIn('code_module', $moduleCodes)->get()->keyBy('code_module');
+        $modulesFound  = $modulesByCode->count();
+        $notFoundCodes = array_diff($moduleCodes, $modulesByCode->keys()->toArray());
+
+        // Resolve students by CNE
+        $cnes = [];
+        for ($i = 1, $n = count($rows); $i < $n; $i++) {
+            $cne = trim((string) ($rows[$i][0] ?? ''));
+            if ($cne !== '') {
+                $cnes[$cne] = true;
+            }
+        }
+
+        $studentsByCne  = Etudiant::whereIn('CNE', array_keys($cnes))->get()->keyBy('CNE');
+        $studentsFound  = $studentsByCne->count();
+        $notFoundCnes   = array_diff(array_keys($cnes), $studentsByCne->keys()->toArray());
+
+        $inscriptionsProcessed = 0;
+
+        // Process each row
+        for ($i = 1, $n = count($rows); $i < $n; $i++) {
+            $row = $rows[$i];
+            $cne = trim((string) ($row[0] ?? ''));
+            if ($cne === '' || !isset($studentsByCne[$cne])) continue;
+
+            $etudiant = $studentsByCne[$cne];
+
+            foreach ($moduleCodes as $colIdx => $code) {
+                if (!isset($modulesByCode[$code])) continue;
+
+                $cellValue = trim((string) ($row[$colIdx + 1] ?? ''));
+                $module    = $modulesByCode[$code];
+
+                if ($cellValue === '1') {
+                    // Create inscription if not exists
+                    $exists = EtudiantModule::where('etudiant_id', $etudiant->id)
+                        ->where('module_id', $module->id)
+                        ->exists();
+
+                    if (!$exists) {
+                        EtudiantModule::create([
+                            'etudiant_id' => $etudiant->id,
+                            'module_id'   => $module->id,
+                        ]);
+                        $inscriptionsProcessed++;
+                    }
+                } elseif ($cellValue === '0') {
+                    // Remove inscription if exists
+                    $deleted = EtudiantModule::where('etudiant_id', $etudiant->id)
+                        ->where('module_id', $module->id)
+                        ->delete();
+
+                    if ($deleted > 0) {
+                        $inscriptionsProcessed++;
+                    }
+                }
+            }
+        }
+
+        return response()->json([
+            'students_found'       => $studentsFound,
+            'modules_found'        => $modulesFound,
+            'inscriptions_processed' => $inscriptionsProcessed,
+            'students_not_found'      => array_values($notFoundCnes),
+            'modules_not_found'       => array_values($notFoundCodes),
         ]);
     }
 }

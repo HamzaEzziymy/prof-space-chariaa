@@ -46,14 +46,14 @@ function Toast({ flash, t }) {
     );
 }
 
-function NotesContent({ filieres, niveaux, semestres, modules, salles, rows, groups, filters, t, locale, isRTL }) {
+function NotesContent({ filieres, niveaux, semestres, modules, salles, rows, filters, t, locale, isRTL }) {
     const { flash } = usePage().props;
     const [filiereId, setFiliereId]   = useState(filters?.filiere_id ?? '');
     const [niveauId, setNiveauId]     = useState(filters?.niveau_id ?? '');
     const [semestreId, setSemestreId] = useState(filters?.semestre_id ?? '');
     const [moduleId, setModuleId]     = useState(filters?.module_id ?? '');
     const [nexam, setNexam]           = useState(filters?.Nexam ?? 1);
-    const [groupe, setGroupe]         = useState(filters?.Groupe ?? '');
+
     const [saving, setSaving]         = useState(false);
     const [localRows, setLocalRows]   = useState(rows ?? []);
     const [dirty, setDirty]           = useState(false);
@@ -63,13 +63,13 @@ function NotesContent({ filieres, niveaux, semestres, modules, salles, rows, gro
 
     const applyFilters = (overrides = {}) => {
         const params = {};
-        const f = { filiereId, niveauId, semestreId, moduleId, nexam, groupe, ...overrides };
+        const f = { filiereId, niveauId, semestreId, moduleId, nexam, ...overrides };
         if (f.filiereId)  params.filiere_id  = f.filiereId;
         if (f.niveauId)   params.niveau_id   = f.niveauId;
         if (f.semestreId) params.semestre_id = f.semestreId;
         if (f.moduleId)   params.module_id   = f.moduleId;
         params.Nexam = f.nexam;
-        if (f.groupe) params.Groupe = f.groupe;
+
         router.get(route('notes.index'), params, { preserveState: true, replace: true });
     };
 
@@ -78,7 +78,6 @@ function NotesContent({ filieres, niveaux, semestres, modules, salles, rows, gro
     const handleSemestre = (v) => { setSemestreId(v); setModuleId(''); applyFilters({ semestreId: v, moduleId: '' }); };
     const handleModule   = (v) => { setModuleId(v); applyFilters({ moduleId: v }); };
     const handleNexam    = (v) => { setNexam(v); applyFilters({ nexam: v }); };
-    const handleGroupe   = (v) => { setGroupe(v); applyFilters({ groupe: v }); };
 
     const updateNote = (etudModId, field, value) => {
         setLocalRows(prev => prev.map(r => {
@@ -99,7 +98,6 @@ function NotesContent({ filieres, niveaux, semestres, modules, salles, rows, gro
                 note_normale:    r.note?.note_normale ?? null,
                 note_rattrapage: r.note?.note_rattrapage ?? null,
                 note_finale:     r.note?.note_finale ?? null,
-                Groupe:          r.note?.Groupe ?? (groupe || null),
                 id_salle:        r.note?.id_salle ?? null,
             }));
         router.post(route('notes.bulk-update'), { notes }, {
@@ -153,10 +151,6 @@ function NotesContent({ filieres, niveaux, semestres, modules, salles, rows, gro
                     <SelectFilter label={t('selectNexam')} value={nexam} onChange={handleNexam}
                         options={[1,2,3,4,5,6].map(n => ({ value: n, label: `${t('nexamLabel')} ${n}` }))} />
 
-                    {groups.length > 0 && (
-                        <SelectFilter label={t('selectGroupe')} value={groupe} onChange={handleGroupe}
-                            options={[{ value: '', label: t('allGroups') }, ...groups.map(g => ({ value: g, label: g }))]} />
-                    )}
                 </div>
 
                 {/* Bulk Save bar */}
@@ -303,14 +297,14 @@ function SelectFilter({ label, value, onChange, options, placeholder }) {
     );
 }
 
-export default function NotesIndex({ filieres, niveaux, semestres, modules, salles, rows, groups, filters }) {
+export default function NotesIndex({ filieres, niveaux, semestres, modules, salles, rows, filters }) {
     const { locale, isRTL } = useLanguage();
     const { t } = useLanguage();
     return (
         <LanguageProvider>
             <AdminLayout>
                 <Head title={t('notesManagement')} />
-                <NotesContent {...{ filieres, niveaux, semestres, modules, salles, rows, groups, filters, t, locale, isRTL }} />
+                <NotesContent {...{ filieres, niveaux, semestres, modules, salles, rows, filters, t, locale, isRTL }} />
             </AdminLayout>
         </LanguageProvider>
     );

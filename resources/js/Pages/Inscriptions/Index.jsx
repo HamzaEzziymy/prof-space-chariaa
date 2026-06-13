@@ -788,6 +788,7 @@ function PageContent() {
     const [loadingChild, setLoadingChild] = useState(null);
     const [showAdd, setShowAdd] = useState(false);
     const [showExcel, setShowExcel] = useState(false);
+    const [showHorizontal, setShowHorizontal] = useState(false);
     const [preselectedModuleId, setPreselectedModuleId] = useState(null);
     const [preselectedStudentId, setPreselectedStudentId] = useState(null);
     const [toast, setToast] = useState(null);
@@ -888,6 +889,14 @@ function PageContent() {
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <button onClick={() => setShowHorizontal(true)}
+                        title={locale === 'ar' ? 'استيراد تسجيلات أفقية' : 'Import inscriptions horizontal'}
+                        className="flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-400 dark:hover:bg-indigo-900/30 active:scale-95 transition">
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                        </svg>
+                        <span className="hidden sm:inline">{locale === 'ar' ? 'تسجيلات أفقية' : 'Inscriptions horizontales'}</span>
+                    </button>
                     <button onClick={() => setShowExcel(true)}
                         title={locale === 'ar' ? 'استيراد Excel' : 'Import Excel'}
                         className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30 active:scale-95 transition">
@@ -1216,6 +1225,410 @@ function PageContent() {
             {/* Modals */}
             {showAdd && <AddModal allModules={allModules} preselectedModuleId={preselectedModuleId} preselectedStudentId={preselectedStudentId} onClose={() => { setShowAdd(false); setPreselectedModuleId(null); setPreselectedStudentId(null); }} t={t} locale={locale} />}
             {showExcel && <ExcelModal onClose={() => { setShowExcel(false); router.reload({ only: ['items', 'stats'] }); }} t={t} locale={locale} />}
+            {showHorizontal && <HorizontalInscriptionModal onClose={() => { setShowHorizontal(false); router.reload({ only: ['items', 'stats'] }); }} t={t} locale={locale} />}
+        </>
+    );
+}
+
+// ─── Horizontal inscription import modal ──────────────────────────────────────
+function HorizontalInscriptionModal({ onClose, t, locale }) {
+    const [file, setFile]         = useState(null);
+    const [dragging, setDragging] = useState(false);
+    const [status, setStatus]     = useState('idle');
+    const [preview, setPreview]   = useState(null);
+    const [report, setReport]     = useState(null);
+    const fileInput               = useRef(null);
+
+    const parseFile = (f) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data     = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array', codepage: 1256 });
+                const sheet    = workbook.Sheets[workbook.SheetNames[0]];
+                const rows     = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+                resolve(rows);
+            } catch (err) { reject(err); }
+        };
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(f);
+    });
+
+    const handleFile = async (f) => {
+        if (!f) return;
+        const ok = ['csv', 'xlsx', 'xls', 'ods', 'tsv', 'txt'].some(ext => f.name.toLowerCase().endsWith('.' + ext));
+        if (!ok || f.size > 5 * 1024 * 1024) return;
+        setFile(f); setReport(null); setPreview(null);
+
+        try {
+            const rows = await parseFile(f);
+            if (rows.length < 2) { setPreview({ error: locale === 'ar' ? 'الملف فارغ' : 'Fichier vide' }); setStatus('previewing'); return; }
+
+            const header = rows[0].map(h => String(h).trim());
+            const cneCol = header[0];
+            if (!cneCol || cneCol.toUpperCase() !== 'CNE') {
+                setPreview({ error: locale === 'ar' ? 'العمود الأول يجب أن يكون CNE' : 'La première colonne doit être CNE' });
+                setStatus('previewing'); return;
+            }
+
+            const moduleCodes = header.slice(1).filter(Boolean);
+            if (moduleCodes.length === 0) {
+                setPreview({ error: locale === 'ar' ? 'لا توجد أكواد وحدات في الرأس' : 'Aucun code module dans l\'en-tête' });
+                setStatus('previewing'); return;
+            }
+
+            const dataRows = [];
+            rows.slice(1).forEach((row, i) => {
+                const cne = String(row[0] ?? '').trim();
+                if (!cne) return;
+                const values = {};
+                moduleCodes.forEach((code, j) => {
+                    const v = String(row[j + 1] ?? '').trim();
+                    values[code] = v === '1' ? 1 : (v === '0' ? 0 : null);
+                });
+                dataRows.push({ lineNum: i + 2, cne, values });
+            });
+
+            if (dataRows.length === 0) {
+                setPreview({ error: locale === 'ar' ? 'لا توجد بيانات طلاب صالحة' : 'Aucune donnée étudiante valide' });
+                setStatus('previewing'); return;
+            }
+
+            setPreview({ moduleCodes, dataRows });
+            setStatus('previewing');
+        } catch {
+            setPreview({ error: locale === 'ar' ? 'تعذر قراءة الملف' : 'Impossible de lire le fichier' });
+            setStatus('previewing');
+        }
+    };
+
+    const handleDrop = (e) => { e.preventDefault(); setDragging(false); handleFile(e.dataTransfer.files[0]); };
+    const reset = () => { setFile(null); setPreview(null); setReport(null); setStatus('idle'); };
+
+    const submit = async () => {
+        if (!file) return;
+        setStatus('loading');
+        const fd = new FormData();
+        fd.append('file', file);
+        try {
+            const res = await window.axios.post(route('modules.import.inscriptions'), fd, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            setReport(res.data);
+            setStatus('done');
+            if ((res.data.students_found ?? 0) > 0) {
+                router.reload({ only: ['items', 'stats'] });
+            }
+        } catch (err) {
+            const data = err.response?.data;
+            setReport({ error: data?.error ?? 'unknown', message: data?.message });
+            setStatus('error');
+        }
+    };
+
+    const ext      = file?.name?.split('.').pop()?.toLowerCase();
+    const isXlsx   = ['xlsx', 'xls', 'ods'].includes(ext);
+    const fileIcon = isXlsx ? '📊' : '📄';
+    const hasPreview = preview && !preview.error && preview.dataRows;
+
+    return (
+        <>
+            <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div className="w-full max-w-4xl rounded-2xl bg-white shadow-2xl dark:bg-slate-900 overflow-hidden flex flex-col max-h-[92vh]">
+
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-indigo-50 dark:bg-indigo-900/20 shrink-0">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-900/50">
+                                <svg className="h-5 w-5 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                                </svg>
+                            </div>
+                            <div>
+                                <p className="font-bold text-slate-800 dark:text-white text-sm">
+                                    {locale === 'ar' ? 'استيراد تسجيلات أفقية' : 'Import inscriptions horizontal'}
+                                </p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                    {locale === 'ar' ? 'استورد تسجيلات الطلاب في وحدات متعددة دفعة واحدة' : 'Importez les inscriptions des étudiants dans plusieurs modules à la fois'}
+                                </p>
+                            </div>
+                        </div>
+                        <button onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800 transition">
+                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    {/* Body */}
+                    <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+
+                        {/* Format explanation */}
+                        {!file && (
+                            <div className="rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-900/10 p-4">
+                                <div className="flex items-start gap-3">
+                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-900/40">
+                                        <svg className="h-4 w-4 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <div className="space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
+                                        <p className="font-semibold text-sm text-slate-700 dark:text-slate-200">{locale === 'ar' ? 'تنسيق الملف' : 'Format du fichier'}</p>
+                                        <p>{locale === 'ar' ? 'العمود الأول: CNE للطالب. الأعمدة التالية: أكواد الوحدات.' : 'Colonne 1 : CNE. Colonnes suivantes : codes des modules.'}</p>
+                                        <p>{locale === 'ar' ? 'في كل خلية: 1 = مسجل، 0 = غير مسجل (أو فارغ).' : 'Dans chaque cellule : 1 = inscrit, 0 = non-inscrit (ou vide).'}</p>
+                                        <div className="pt-1">
+                                            <p className="font-medium text-indigo-600 dark:text-indigo-400 mb-1">{locale === 'ar' ? 'مثال:' : 'Exemple :'}</p>
+                                            <div className="overflow-x-auto rounded-lg border border-indigo-200 dark:border-indigo-700 bg-white dark:bg-slate-800">
+                                                <table className="w-full text-[11px] font-mono">
+                                                    <thead>
+                                                        <tr className="border-b border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30">
+                                                            <th className="px-3 py-1.5 text-left font-semibold text-indigo-700 dark:text-indigo-300">CNE</th>
+                                                            <th className="px-3 py-1.5 text-left font-semibold text-indigo-700 dark:text-indigo-300">MATH101</th>
+                                                            <th className="px-3 py-1.5 text-left font-semibold text-indigo-700 dark:text-indigo-300">PHY202</th>
+                                                            <th className="px-3 py-1.5 text-left font-semibold text-indigo-700 dark:text-indigo-300">...</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr className="border-b border-indigo-100 dark:border-indigo-800/50">
+                                                            <td className="px-3 py-1.5 text-slate-800 dark:text-slate-200">X123456</td>
+                                                            <td className="px-3 py-1.5"><span className="rounded bg-emerald-100 dark:bg-emerald-900/40 px-1.5 text-emerald-700 dark:text-emerald-400 font-bold">1</span></td>
+                                                            <td className="px-3 py-1.5"><span className="rounded bg-red-100 dark:bg-red-900/40 px-1.5 text-red-600 dark:text-red-400 font-bold">0</span></td>
+                                                            <td className="px-3 py-1.5 text-slate-400">...</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td className="px-3 py-1.5 text-slate-800 dark:text-slate-200">Y789012</td>
+                                                            <td className="px-3 py-1.5"><span className="rounded bg-emerald-100 dark:bg-emerald-900/40 px-1.5 text-emerald-700 dark:text-emerald-400 font-bold">1</span></td>
+                                                            <td className="px-3 py-1.5"><span className="rounded bg-emerald-100 dark:bg-emerald-900/40 px-1.5 text-emerald-700 dark:text-emerald-400 font-bold">1</span></td>
+                                                            <td className="px-3 py-1.5 text-slate-400">...</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Drop zone */}
+                        {!file && (
+                            <div onDragOver={e => { e.preventDefault(); setDragging(true); }}
+                                onDragLeave={() => setDragging(false)} onDrop={handleDrop}
+                                onClick={() => fileInput.current?.click()}
+                                className={`group relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-10 cursor-pointer transition-all ${dragging ? 'border-indigo-400 bg-indigo-50 dark:border-indigo-500 dark:bg-indigo-900/20' : 'border-slate-300 bg-slate-50 hover:border-indigo-400 hover:bg-indigo-50/50 dark:border-slate-600 dark:bg-slate-800/50 dark:hover:border-indigo-500'}`}>
+                                <input ref={fileInput} type="file" accept=".csv,.xlsx,.xls,.ods,.tsv,.txt" className="hidden" onChange={e => handleFile(e.target.files[0])} />
+                                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-slate-200 dark:bg-slate-700 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/30 transition">
+                                    <svg className="h-7 w-7 text-slate-400 group-hover:text-indigo-500 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+                                    </svg>
+                                </div>
+                                <p className="mt-3 text-sm font-medium text-slate-600 dark:text-slate-300">{locale === 'ar' ? 'قم بإفلات الملف هنا' : 'Déposez le fichier ici'}</p>
+                                <p className="text-xs text-slate-400">{locale === 'ar' ? 'أو' : 'ou'}</p>
+                                <span className="mt-1 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">{locale === 'ar' ? 'تصفح الملفات' : 'Parcourir'}</span>
+                                <p className="mt-2 text-[11px] text-slate-400">CSV, XLSX, XLS, ODS</p>
+                            </div>
+                        )}
+
+                        {/* File bar */}
+                        {file && status !== 'done' && (
+                            <div className="flex items-center gap-3 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/10 px-4 py-3">
+                                <span className="text-2xl">{fileIcon}</span>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{file.name}</p>
+                                    <p className="text-xs text-slate-400">{(file.size / 1024).toFixed(1)} Ko</p>
+                                </div>
+                                <button onClick={reset} className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-red-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 transition">
+                                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                    {locale === 'ar' ? 'تغيير' : 'Changer'}
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Preview */}
+                        {hasPreview && status !== 'done' && (
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div className="rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-3 text-center">
+                                        <p className="text-lg font-bold text-slate-800 dark:text-white">{preview.dataRows.length}</p>
+                                        <p className="text-[11px] text-slate-400">{locale === 'ar' ? 'طلاب' : 'Étudiants'}</p>
+                                    </div>
+                                    <div className="rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 px-4 py-3 text-center">
+                                        <p className="text-lg font-bold text-indigo-700 dark:text-indigo-400">{preview.moduleCodes.length}</p>
+                                        <p className="text-[11px] text-indigo-600 dark:text-indigo-500">{locale === 'ar' ? 'وحدات' : 'Modules'}</p>
+                                    </div>
+                                    <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-4 py-3 text-center">
+                                        <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">{preview.dataRows.reduce((sum, r) => sum + Object.values(r.values).filter(v => v === 1).length, 0)}</p>
+                                        <p className="text-[11px] text-emerald-600 dark:text-emerald-500">{locale === 'ar' ? 'تسجيلات' : 'Inscriptions'}</p>
+                                    </div>
+                                </div>
+                                <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                                    <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-4 py-2.5 border-b border-slate-200 dark:border-slate-700">
+                                        <span className="h-2 w-2 rounded-full bg-indigo-500" />
+                                        <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">{locale === 'ar' ? 'معاينة البيانات' : 'Aperçu des données'}</span>
+                                    </div>
+                                    <div className="overflow-x-auto max-h-64">
+                                        <table className="w-full text-xs">
+                                            <thead>
+                                                <tr className="border-b border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800">
+                                                    <th className="px-3 py-2 text-left font-semibold text-slate-500 sticky top-0 bg-white dark:bg-slate-800">CNE</th>
+                                                    {preview.moduleCodes.map(code => (
+                                                        <th key={code} className="px-2 py-2 text-center font-semibold text-slate-500 sticky top-0 bg-white dark:bg-slate-800 min-w-[80px]">
+                                                            <code className="rounded bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-300">{code}</code>
+                                                        </th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {preview.dataRows.map(row => (
+                                                    <tr key={row.lineNum} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10">
+                                                        <td className="px-3 py-2 font-mono font-bold text-slate-700 dark:text-slate-200">{row.cne}</td>
+                                                        {preview.moduleCodes.map(code => {
+                                                            const v = row.values[code];
+                                                            return (
+                                                                <td key={code} className="px-2 py-2 text-center">
+                                                                    {v === 1 ? (
+                                                                        <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 font-bold text-xs">1</span>
+                                                                    ) : v === 0 ? (
+                                                                        <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-red-100 dark:bg-red-900/40 text-red-500 dark:text-red-400 font-bold text-xs">0</span>
+                                                                    ) : (
+                                                                        <span className="text-slate-300 dark:text-slate-600">—</span>
+                                                                    )}
+                                                                </td>
+                                                            );
+                                                        })}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Error */}
+                        {preview?.error && status !== 'done' && (
+                            <div className="flex items-start gap-3 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
+                                <svg className="h-5 w-5 text-red-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                <p className="text-sm font-medium text-red-700 dark:text-red-400">{preview.error}</p>
+                            </div>
+                        )}
+
+                        {/* Report */}
+                        {status === 'done' && report && (
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-4 py-3 text-center">
+                                        <p className="text-xl font-bold text-emerald-700 dark:text-emerald-400">{report.students_found ?? 0}</p>
+                                        <p className="text-[11px] text-emerald-600 dark:text-emerald-500">{locale === 'ar' ? 'طلاب وُجدوا' : 'Étudiants trouvés'}</p>
+                                    </div>
+                                    <div className="rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 px-4 py-3 text-center">
+                                        <p className="text-xl font-bold text-indigo-700 dark:text-indigo-400">{report.modules_found ?? 0}</p>
+                                        <p className="text-[11px] text-indigo-600 dark:text-indigo-500">{locale === 'ar' ? 'وحدات وُجدت' : 'Modules trouvés'}</p>
+                                    </div>
+                                    <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-4 py-3 text-center">
+                                        <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{report.inscriptions_processed ?? 0}</p>
+                                        <p className="text-[11px] text-amber-500 dark:text-amber-500">{locale === 'ar' ? 'تسجيلات تمت معالجتها' : 'Inscriptions traitées'}</p>
+                                    </div>
+                                </div>
+                                {report.students_not_found?.length > 0 && (
+                                    <div className="rounded-xl border border-amber-200 dark:border-amber-800 overflow-hidden">
+                                        <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 px-4 py-2.5 border-b border-amber-200 dark:border-amber-800">
+                                            <svg className="h-4 w-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                            </svg>
+                                            <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">{locale === 'ar' ? 'طلاب غير معروفين' : 'Étudiants inconnus'} ({report.students_not_found.length})</span>
+                                        </div>
+                                        <div className="flex flex-wrap gap-1.5 px-4 py-3">
+                                            {report.students_not_found.map(cne => (
+                                                <span key={cne} className="rounded-full bg-amber-100 dark:bg-amber-900/30 px-2.5 py-0.5 text-xs font-mono text-amber-700 dark:text-amber-400">{cne}</span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                {report.modules_not_found?.length > 0 && (
+                                    <div className="rounded-xl border border-amber-200 dark:border-amber-800 overflow-hidden">
+                                        <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 px-4 py-2.5 border-b border-amber-200 dark:border-amber-800">
+                                            <svg className="h-4 w-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                            </svg>
+                                            <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">{locale === 'ar' ? 'وحدات غير معروفة' : 'Modules inconnus'} ({report.modules_not_found.length})</span>
+                                        </div>
+                                        <div className="flex flex-wrap gap-1.5 px-4 py-3">
+                                            {report.modules_not_found.map(code => (
+                                                <span key={code} className="rounded-full bg-amber-100 dark:bg-amber-900/30 px-2.5 py-0.5 text-xs font-mono text-amber-700 dark:text-amber-400">{code}</span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                {(!report.students_not_found || report.students_not_found.length === 0) && (!report.modules_not_found || report.modules_not_found.length === 0) && (
+                                    <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20 px-4 py-3">
+                                        <svg className="h-5 w-5 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">{locale === 'ar' ? 'تمت معالجة جميع التسجيلات بنجاح' : 'Toutes les inscriptions ont été traitées avec succès'}</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Fatal error */}
+                        {status === 'error' && report && (
+                            <div className="flex items-start gap-3 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
+                                <svg className="h-5 w-5 text-red-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                <p className="text-sm font-semibold text-red-700 dark:text-red-400">{report.message || (locale === 'ar' ? 'خطأ في المعالجة' : 'Erreur de traitement')}</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="flex items-center justify-between gap-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 px-6 py-4 shrink-0">
+                        <button type="button" onClick={() => {
+                            const ws = XLSX.utils.aoa_to_sheet([
+                                ['CNE', 'MATH101', 'PHY202', 'INFO303'],
+                                ['X123456', 1, 0, 1],
+                                ['Y789012', 1, 1, 0],
+                            ]);
+                            ws['!cols'] = [{ wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 12 }];
+                            const wb = XLSX.utils.book_new();
+                            XLSX.utils.book_append_sheet(wb, ws, 'Inscriptions');
+                            XLSX.writeFile(wb, 'inscriptions_template.xlsx');
+                        }}
+                            className="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+                            <svg className="h-4 w-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2v-7a2 2 0 012-2h.172M15 3h4a2 2 0 012 2v4M11 3H7a2 2 0 00-2 2v.172" />
+                            </svg>
+                            {locale === 'ar' ? 'نموذج' : 'Template'}
+                        </button>
+                        <div className="flex items-center gap-2">
+                            {status === 'done' ? (
+                                <button type="button" onClick={onClose} className="rounded-xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition">
+                                    {locale === 'ar' ? 'إغلاق' : 'Fermer'}
+                                </button>
+                            ) : (
+                                <>
+                                    <button type="button" onClick={onClose} className="rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                                        {locale === 'ar' ? 'إلغاء' : 'Annuler'}
+                                    </button>
+                                    <button type="button" onClick={submit}
+                                        disabled={!hasPreview || status === 'loading'}
+                                        className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition">
+                                        {status === 'loading' ? (
+                                            <><svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>{locale === 'ar' ? 'جاري المعالجة...' : 'Traitement...'}</>
+                                        ) : (
+                                            <><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>{locale === 'ar' ? 'استيراد' : 'Importer'}</>
+                                        )}
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
         </>
     );
 }

@@ -17,29 +17,13 @@ class Prof extends Model
         'grade',
     ];
 
-    /**
-     * Get the user associated with this prof.
-     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    /**
-     * Get the groupes assigned to this prof.
-     */
-    public function groupes(): HasMany
+    public function modules(): HasMany
     {
-        return $this->hasMany(Groupe::class, 'prof_id');
-    }
-
-    /**
-     * Get the modules taught by this prof (through groupes).
-     */
-    public function modules()
-    {
-        return Module::whereHas('groupes', function ($q) {
-            $q->where('prof_id', $this->id);
-        });
+        return $this->hasMany(Module::class, 'prof_id');
     }
 }

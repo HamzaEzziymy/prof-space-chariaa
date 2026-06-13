@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\EtudiantController;
 use App\Http\Controllers\ModuleController;
-use App\Http\Controllers\GroupeController;
 use App\Http\Controllers\NoteExamController;
 use App\Http\Controllers\RepartitionController;
 use App\Http\Controllers\ProfileController;
@@ -68,9 +67,6 @@ Route::middleware(['auth', 'admin'])->prefix('professors')->name('professors.')-
     Route::get('/{prof}',                  [ProfessorController::class, 'show'])->name('show');
     Route::put('/{prof}',                  [ProfessorController::class, 'update'])->name('update');
     Route::delete('/{prof}',               [ProfessorController::class, 'destroy'])->name('destroy');
-    Route::post('/{prof}/groupes/{groupe}', [ProfessorController::class, 'assignGroupe'])->name('assign-groupe');
-    Route::delete('/{prof}/groupes/{groupe}', [ProfessorController::class, 'unassignGroupe'])->name('unassign-groupe');
-
 });
 
 // ── Modules (admin + super_admin) ────────────────────────────────────────────
@@ -81,11 +77,9 @@ Route::middleware(['auth', 'admin'])->prefix('modules')->name('modules.')->group
     Route::delete('/{module}',  [ModuleController::class, 'destroy'])->name('destroy');
     Route::post('/import',      [ModuleController::class, 'import'])->name('import');
     Route::post('/import-rows', [ModuleController::class, 'importRows'])->name('importRows');
+    Route::post('/import-inscriptions', [ModuleController::class, 'importInscriptions'])->name('import.inscriptions');
     Route::post('/export',      [ModuleController::class, 'export'])->name('export');
-    // Groupes
-    Route::post('/{module}/groupes',        [GroupeController::class, 'store'])->name('groupes.store');
-    Route::put('/groupes/{groupe}',         [GroupeController::class, 'update'])->name('groupes.update');
-    Route::delete('/groupes/{groupe}',      [GroupeController::class, 'destroy'])->name('groupes.destroy');
+    Route::post('/{module}/assign-prof', [ModuleController::class, 'assignProf'])->name('assign-prof');
 });
 
 // ── Salles d'examen (admin + super_admin) ─────────────────────────────────────
@@ -141,8 +135,11 @@ Route::middleware(['auth', 'admin'])->prefix('semestres')->group(function () {
 Route::middleware(['auth', 'admin'])->prefix('inscription-examen')->name('inscription-examen.')->group(function () {
     Route::get('/',             [\App\Http\Controllers\InscriptionExamenController::class, 'index'])->name('index');
     Route::post('/',            [\App\Http\Controllers\InscriptionExamenController::class, 'store'])->name('store');
+    Route::put('/batch-statut/{module}', [\App\Http\Controllers\InscriptionExamenController::class, 'batchStatut'])->name('batch-statut');
+    Route::put('/{inscriptionExamen}/statut', [\App\Http\Controllers\InscriptionExamenController::class, 'updateStatut'])->name('update-statut');
     Route::delete('/{inscriptionExamen}', [\App\Http\Controllers\InscriptionExamenController::class, 'destroy'])->name('destroy');
     Route::post('/import',      [\App\Http\Controllers\InscriptionExamenController::class, 'import'])->name('import');
+    Route::get('/enrolled/{module}', [\App\Http\Controllers\InscriptionExamenController::class, 'getEnrolledStudents'])->name('enrolled');
 });
 
 // ── Inscription pédagogique (admin + super_admin) ────────────────────────────

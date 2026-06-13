@@ -24,7 +24,6 @@ class NoteExamController extends Controller
         $semestreId = $request->get('semestre_id');
         $moduleId   = $request->get('module_id');
         $nexam      = $request->get('Nexam', 1);
-        $groupe     = $request->get('Groupe');
 
         $niveaux   = collect();
         $semestres = collect();
@@ -54,16 +53,13 @@ class NoteExamController extends Controller
                 ->with([
                     'etudiant:id,nom_fr,prenom_fr,nom_ar,prenom_ar,CNE,sexe,niveau_id',
                 ])
-                ->with(['noteExams' => function ($q) use ($nexam, $groupe) {
+                ->with(['noteExams' => function ($q) use ($nexam) {
                     $q->where('Nexam', $nexam);
-                    if ($groupe) {
-                        $q->where('Groupe', $groupe);
-                    }
                 }]);
 
             $enrollments = $query->get();
 
-            $rows = $enrollments->map(function ($enrollment) use ($nexam, $groupe) {
+            $rows = $enrollments->map(function ($enrollment) use ($nexam) {
                 $note = $enrollment->noteExams->first();
                 return [
                     'etud_mod_id'    => $enrollment->id,
@@ -73,22 +69,10 @@ class NoteExamController extends Controller
                         'note_normale'    => $note->note_normale,
                         'note_rattrapage' => $note->note_rattrapage,
                         'note_finale'     => $note->note_finale,
-                        'Groupe'          => $note->Groupe,
                         'id_salle'        => $note->id_salle,
                     ] : null,
                 ];
             });
-
-            $groups = \App\Models\EtudiantModule::where('module_id', $moduleId)
-                ->join('note_exam', 'etudiant_module.id', '=', 'note_exam.etud_mod_id')
-                ->where('note_exam.Nexam', $nexam)
-                ->whereNotNull('note_exam.Groupe')
-                ->distinct()
-                ->pluck('note_exam.Groupe')
-                ->sort()
-                ->values();
-        } else {
-            $groups = collect();
         }
 
         return Inertia::render('Notes/Index', [
@@ -98,14 +82,12 @@ class NoteExamController extends Controller
             'modules'        => $modules,
             'salles'         => $salles,
             'rows'           => $rows,
-            'groups'         => $groups,
             'filters'        => [
                 'filiere_id'  => $filiereId,
                 'niveau_id'   => $niveauId,
                 'semestre_id' => $semestreId,
                 'module_id'   => $moduleId,
                 'Nexam'       => $nexam,
-                'Groupe'      => $groupe,
             ],
         ]);
     }
@@ -119,7 +101,6 @@ class NoteExamController extends Controller
             'notes.*.note_normale'    => 'nullable|numeric|min:0|max:20',
             'notes.*.note_rattrapage' => 'nullable|numeric|min:0|max:20',
             'notes.*.note_finale'     => 'nullable|numeric|min:0|max:20',
-            'notes.*.Groupe'          => 'nullable|string|max:255',
             'notes.*.id_salle'        => 'nullable|exists:salle,id',
         ]);
 
@@ -134,7 +115,6 @@ class NoteExamController extends Controller
                     'note_normale'    => $item['note_normale'] ?? null,
                     'note_rattrapage' => $item['note_rattrapage'] ?? null,
                     'note_finale'     => $item['note_finale'] ?? null,
-                    'Groupe'          => $item['Groupe'] ?? null,
                     'id_salle'        => $item['id_salle'] ?? null,
                 ]
             );

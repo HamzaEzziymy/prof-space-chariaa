@@ -4,8 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Etudiant;
 use App\Models\Module;
-use App\Models\Groupe;
-use App\Models\Salle;
 use App\Models\EtudiantModule;
 use App\Models\InscriptionExamen;
 use Illuminate\Http\Request;
@@ -19,169 +17,181 @@ class InscriptionExamenController extends Controller
 
     public function index(Request $request)
     {
-        $groupBy = $request->get('group_by', 'module');
         $perPage = 15;
-
-        $allEtudiants = Etudiant::with('modules:id')
-            ->select('id', 'nom_fr', 'prenom_fr', 'nom_ar', 'prenom_ar', 'CNE')
-            ->orderBy('nom_fr')
-            ->get()
-            ->map(fn ($e) => [
-                'id'         => $e->id,
-                'nom_fr'     => $e->nom_fr,
-                'prenom_fr'  => $e->prenom_fr,
-                'nom_ar'     => $e->nom_ar,
-                'prenom_ar'  => $e->prenom_ar,
-                'CNE'        => $e->CNE,
-                'module_ids' => $e->modules->pluck('id'),
-            ]);
 
         $allModules = Module::select('id', 'nom_fr', 'nom_ar', 'code_module')
             ->orderBy('nom_fr')->get();
 
-        $allGroupes = Groupe::with('module:id,nom_fr,nom_ar,code_module')
-            ->select('id', 'code', 'nom_fr', 'nom_ar', 'module_id')
-            ->orderBy('code')->get()
-            ->map(fn ($g) => [
-                'id'     => $g->id,
-                'code'   => $g->code,
-                'nom_fr' => $g->nom_fr,
-                'nom_ar' => $g->nom_ar,
-                'module' => $g->module ? ['id' => $g->module->id, 'nom_fr' => $g->module->nom_fr, 'nom_ar' => $g->module->nom_ar, 'code_module' => $g->module->code_module] : null,
-            ]);
-
-        $allSalles = Salle::select('id', 'code_salle', 'nomSalle_fr', 'nomSalle_ar', 'capacite')
-            ->orderBy('code_salle')->get();
-
         $stats = [
             'total'   => InscriptionExamen::count(),
-            'assigned_rooms' => InscriptionExamen::whereNotNull('id_salle')->count(),
             'with_grades'    => InscriptionExamen::whereNotNull('note_normale')->count(),
         ];
 
-        if ($groupBy === 'groupe') {
-            $items = Groupe::with([
-                'inscriptionsExamen' => fn ($q) => $q->with([
-                    'etudiantModule.etudiant:id,nom_fr,prenom_fr,nom_ar,prenom_ar,CNE',
-                    'salle:id,code_salle,nomSalle_fr,nomSalle_ar',
-                ]),
-                'module:id,nom_fr,nom_ar,code_module',
-            ])
-            ->has('inscriptionsExamen')
-            ->orderBy('code')
-            ->paginate($perPage)
-            ->withQueryString()
-            ->through(fn ($g) => [
-                'id'          => $g->id,
-                'code'        => $g->code,
-                'nom_fr'      => $g->nom_fr,
-                'nom_ar'      => $g->nom_ar,
-                'module'      => $g->module ? ['id' => $g->module->id, 'nom_fr' => $g->module->nom_fr, 'nom_ar' => $g->module->nom_ar, 'code_module' => $g->module->code_module] : null,
-                'inscriptions_count' => $g->inscriptionsExamen->count(),
-                'inscriptions' => $g->inscriptionsExamen->map(fn ($ie) => [
-                    'id'         => $ie->id,
-                    'Nexam'      => $ie->Nexam,
-                    'note_normale' => $ie->note_normale,
-                    'note_rattrapage' => $ie->note_rattrapage,
-                    'decision_finale_ar' => $ie->decision_finale_ar,
-                    'decision_finale_fr' => $ie->decision_finale_fr,
-                    'etudiant'   => $ie->etudiantModule?->etudiant ? [
-                        'id'       => $ie->etudiantModule->etudiant->id,
-                        'nom_fr'   => $ie->etudiantModule->etudiant->nom_fr,
-                        'prenom_fr'=> $ie->etudiantModule->etudiant->prenom_fr,
-                        'nom_ar'   => $ie->etudiantModule->etudiant->nom_ar,
-                        'prenom_ar'=> $ie->etudiantModule->etudiant->prenom_ar,
-                        'CNE'      => $ie->etudiantModule->etudiant->CNE,
+        $items = Module::with([
+            'inscriptionsExamen' => fn ($q) => $q->with('etudiant:id,nom_fr,prenom_fr,nom_ar,prenom_ar,CNE')
+                ->orderBy(\DB::raw('(SELECT nom_fr FROM etudiant WHERE etudiant.id = inscription_examen.etudiant_id)')),
+        ])
+        ->has('inscriptionsExamen')
+        ->orderBy('nom_fr')
+        ->paginate($perPage)
+        ->withQueryString()
+        ->through(fn ($m) => [
+            'id'          => $m->id,
+            'nom_fr'      => $m->nom_fr,
+            'nom_ar'      => $m->nom_ar,
+            'code_module' => $m->code_module,
+            'coefficient' => $m->coefficient,
+            'semestre'    => $m->semestre ? [
+                'id'     => $m->semestre->id,
+                'nom_fr' => $m->semestre->nom_fr,
+                'nom_ar' => $m->semestre->nom_ar,
+                'niveau' => $m->semestre->niveau ? [
+                    'id'     => $m->semestre->niveau->id,
+                    'nom_fr' => $m->semestre->niveau->nom_fr,
+                    'nom_ar' => $m->semestre->niveau->nom_ar,
+                    'filiere' => $m->semestre->niveau->filiere ? [
+                        'id'     => $m->semestre->niveau->filiere->id,
+                        'nom_fr' => $m->semestre->niveau->filiere->nom_fr,
+                        'nom_ar' => $m->semestre->niveau->filiere->nom_ar,
                     ] : null,
-                    'salle'      => $ie->salle ? ['id' => $ie->salle->id, 'code_salle' => $ie->salle->code_salle, 'nomSalle_fr' => $ie->salle->nomSalle_fr, 'nomSalle_ar' => $ie->salle->nomSalle_ar] : null,
-                ]),
-            ]);
-        } else {
-            $items = Module::with([
-                'inscriptionsExamen' => fn ($q) => $q->with([
-                    'etudiantModule.etudiant:id,nom_fr,prenom_fr,nom_ar,prenom_ar,CNE',
-                    'groupe:id,code,nom_fr,nom_ar',
-                    'salle:id,code_salle,nomSalle_fr,nomSalle_ar',
-                ]),
-            ])
-            ->has('inscriptionsExamen')
-            ->orderBy('nom_fr')
-            ->paginate($perPage)
-            ->withQueryString()
-            ->through(fn ($m) => [
-                'id'          => $m->id,
-                'nom_fr'      => $m->nom_fr,
-                'nom_ar'      => $m->nom_ar,
-                'code_module' => $m->code_module,
-                'coefficient' => $m->coefficient,
-                'inscriptions_count' => $m->inscriptionsExamen->count(),
-                'inscriptions' => $m->inscriptionsExamen->map(fn ($ie) => [
-                    'id'         => $ie->id,
-                    'Nexam'      => $ie->Nexam,
-                    'note_normale' => $ie->note_normale,
-                    'note_rattrapage' => $ie->note_rattrapage,
-                    'decision_finale_ar' => $ie->decision_finale_ar,
-                    'decision_finale_fr' => $ie->decision_finale_fr,
-                    'etudiant'   => $ie->etudiantModule?->etudiant ? [
-                        'id'       => $ie->etudiantModule->etudiant->id,
-                        'nom_fr'   => $ie->etudiantModule->etudiant->nom_fr,
-                        'prenom_fr'=> $ie->etudiantModule->etudiant->prenom_fr,
-                        'nom_ar'   => $ie->etudiantModule->etudiant->nom_ar,
-                        'prenom_ar'=> $ie->etudiantModule->etudiant->prenom_ar,
-                        'CNE'      => $ie->etudiantModule->etudiant->CNE,
-                    ] : null,
-                    'groupe'     => $ie->groupe ? ['id' => $ie->groupe->id, 'code' => $ie->groupe->code, 'nom_fr' => $ie->groupe->nom_fr, 'nom_ar' => $ie->groupe->nom_ar] : null,
-                    'salle'      => $ie->salle ? ['id' => $ie->salle->id, 'code_salle' => $ie->salle->code_salle, 'nomSalle_fr' => $ie->salle->nomSalle_fr, 'nomSalle_ar' => $ie->salle->nomSalle_ar] : null,
-                ]),
-            ]);
-        }
+                ] : null,
+            ] : null,
+            'inscriptions_count' => $m->inscriptionsExamen->count(),
+            'inscriptions' => $m->inscriptionsExamen->map(fn ($ie) => [
+                'id'         => $ie->id,
+                'Nexam'      => $ie->Nexam,
+                'statut'     => $ie->statut,
+                'note_normale'    => $ie->note_normale,
+                'note_rattrapage' => $ie->note_rattrapage,
+                'note_finale'     => $ie->note_finale,
+                'note_normale_decision_ar' => $ie->note_normale_decision_ar,
+                'note_normale_decision_fr' => $ie->note_normale_decision_fr,
+                'note_ratt_decision_ar'    => $ie->note_ratt_decision_ar,
+                'note_ratt_decision_fr'    => $ie->note_ratt_decision_fr,
+                'decision_finale_ar' => $ie->decision_finale_ar,
+                'decision_finale_fr' => $ie->decision_finale_fr,
+                'etudiant'   => $ie->etudiant ? [
+                    'id'       => $ie->etudiant->id,
+                    'nom_fr'   => $ie->etudiant->nom_fr,
+                    'prenom_fr'=> $ie->etudiant->prenom_fr,
+                    'nom_ar'   => $ie->etudiant->nom_ar,
+                    'prenom_ar'=> $ie->etudiant->prenom_ar,
+                    'CNE'      => $ie->etudiant->CNE,
+                ] : null,
+            ]),
+        ]);
 
         return Inertia::render('InscriptionExamen/Index', [
-            'items'       => $items,
-            'groupBy'     => $groupBy,
-            'allEtudiants'=> $allEtudiants,
-            'allModules'  => $allModules,
-            'allGroupes'  => $allGroupes,
-            'allSalles'   => $allSalles,
-            'stats'       => $stats,
+            'items'      => $items,
+            'allModules' => $allModules,
+            'stats'      => $stats,
         ]);
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'etudiant_id' => 'required|exists:etudiant,id',
-            'module_id'   => 'required|exists:module,id',
-            'groupe_id'   => 'nullable|exists:groupes,id',
-            'id_salle'    => 'nullable|exists:salle,id',
-            'Nexam'       => 'nullable|integer|min:1',
-            'note_normale'    => 'nullable|numeric|min:0|max:20',
-            'note_rattrapage' => 'nullable|numeric|min:0|max:20',
-            'note_finale'     => 'nullable|numeric|min:0|max:20',
+            'module_id' => 'required|exists:module,id',
+            'students'  => 'required|array',
+            'students.*.etudiant_id' => 'required|exists:etudiant,id',
+            'students.*.Nexam'       => 'nullable|integer|min:1',
         ]);
 
-        $etudMod = EtudiantModule::firstOrCreate([
-            'etudiant_id' => $validated['etudiant_id'],
-            'module_id'   => $validated['module_id'],
+        $moduleId = $validated['module_id'];
+        $created = 0;
+        $skipped = 0;
+
+        foreach ($validated['students'] as $s) {
+            $record = InscriptionExamen::firstOrCreate(
+                ['module_id' => $moduleId, 'etudiant_id' => $s['etudiant_id']],
+                ['Nexam' => $s['Nexam'] ?? null, 'statut' => 'normale']
+            );
+            if ($record->wasRecentlyCreated) $created++;
+            else $skipped++;
+        }
+
+        $msg = $created > 0
+            ? "$created inscription(s) créée(s)" . ($skipped > 0 ? ", $skipped déjà existante(s)" : "")
+            : "Aucun nouvel étudiant inscrit";
+
+        return back()->with('success', $msg);
+    }
+
+    public function updateStatut(Request $request, InscriptionExamen $inscriptionExamen)
+    {
+        $validated = $request->validate([
+            'statut' => 'required|in:normale,rattrapage,finale',
         ]);
 
-        InscriptionExamen::create([
-            'etud_mod_id'     => $etudMod->id,
-            'groupe_id'       => $validated['groupe_id'] ?? null,
-            'id_salle'        => $validated['id_salle'] ?? null,
-            'Nexam'           => $validated['Nexam'] ?? null,
-            'note_normale'    => $validated['note_normale'] ?? null,
-            'note_rattrapage' => $validated['note_rattrapage'] ?? null,
-            'note_finale'     => $validated['note_finale'] ?? null,
+        $inscriptionExamen->update(['statut' => $validated['statut']]);
+
+        return back()->with('success', 'Statut mis à jour');
+    }
+
+    public function batchStatut(Request $request, $module)
+    {
+        $validated = $request->validate([
+            'statut' => 'required|in:normale,rattrapage,finale',
         ]);
 
-        return back()->with('success', 'inscription_examen_created');
+        $statut = $validated['statut'];
+
+        if ($statut === 'finale') {
+            // Auto-calculate note_finale = GREATEST(note_normale, note_rattrapage)
+            InscriptionExamen::where('module_id', $module)
+                ->update([
+                    'statut' => 'finale',
+                    'note_finale' => \DB::raw('GREATEST(COALESCE(note_normale,0), COALESCE(note_rattrapage,0))'),
+                ]);
+        } else {
+            InscriptionExamen::where('module_id', $module)
+                ->update(['statut' => $statut]);
+        }
+
+        $updated = InscriptionExamen::where('module_id', $module)->count();
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['message' => "Statut changé en $statut pour $updated inscription(s)"]);
+        }
+
+        return back()->with('success', "Statut mis à jour pour $updated inscription(s)");
     }
 
     public function destroy(InscriptionExamen $inscriptionExamen)
     {
         $inscriptionExamen->delete();
         return back()->with('success', 'inscription_examen_deleted');
+    }
+
+    public function getEnrolledStudents($module): JsonResponse
+    {
+        $etudiantIds = EtudiantModule::where('module_id', $module)
+            ->pluck('etudiant_id');
+
+        $students = Etudiant::whereIn('id', $etudiantIds)
+            ->select('id', 'nom_fr', 'prenom_fr', 'nom_ar', 'prenom_ar', 'CNE')
+            ->orderBy('nom_fr')
+            ->orderBy('prenom_fr')
+            ->get()
+            ->map(fn ($e) => [
+                'id'       => $e->id,
+                'nom_fr'   => $e->nom_fr,
+                'prenom_fr'=> $e->prenom_fr,
+                'nom_ar'   => $e->nom_ar,
+                'prenom_ar'=> $e->prenom_ar,
+                'CNE'      => $e->CNE,
+            ]);
+
+        // Check which already have an inscription for this module
+        $existing = InscriptionExamen::where('module_id', $module)
+            ->whereIn('etudiant_id', $students->pluck('id'))
+            ->pluck('etudiant_id')
+            ->toArray();
+
+        return response()->json([
+            'students' => $students,
+            'existing_ids' => $existing,
+        ]);
     }
 
     public function import(Request $request): JsonResponse
@@ -227,8 +237,6 @@ class InscriptionExamenController extends Controller
 
         $students = Etudiant::pluck('id', 'CNE');
         $modules  = Module::pluck('id', 'code_module');
-        $groupes  = Groupe::pluck('id', 'code');
-        $salles   = Salle::pluck('id', 'code_salle');
 
         foreach (array_slice($rows, 1) as $lineNum => $row) {
             if (count(array_filter($row, fn($v) => $v !== '' && $v !== null)) === 0) continue;
@@ -240,9 +248,8 @@ class InscriptionExamenController extends Controller
 
             $cne        = $data['cne'] ?? null;
             $codeModule = $data['code_module'] ?? null;
-            $codeGroupe = $data['code_groupe'] ?? null;
-            $codeSalle  = $data['code_salle'] ?? null;
             $nexam      = isset($data['nexam']) && $data['nexam'] !== '' ? (int) $data['nexam'] : null;
+            $statut     = isset($data['statut']) && in_array($data['statut'], ['normale', 'rattrapage', 'finale']) ? $data['statut'] : null;
             $noteN      = isset($data['note_normale']) && $data['note_normale'] !== '' ? (float) $data['note_normale'] : null;
             $noteR      = isset($data['note_rattrapage']) && $data['note_rattrapage'] !== '' ? (float) $data['note_rattrapage'] : null;
             $noteF      = isset($data['note_finale']) && $data['note_finale'] !== '' ? (float) $data['note_finale'] : null;
@@ -269,31 +276,11 @@ class InscriptionExamenController extends Controller
                 continue;
             }
 
-            $groupeId  = $codeGroupe ? ($groupes[$codeGroupe] ?? null) : null;
-            $salleId   = $codeSalle ? ($salles[$codeSalle] ?? null) : null;
-
-            if ($codeGroupe && !$groupeId) {
-                $report[] = ['line' => $line, 'cne' => $cne, 'code_module' => $codeModule, 'status' => 'rejected', 'reason' => "Groupe \"{$codeGroupe}\" introuvable"];
-                $skipped++;
-                continue;
-            }
-
-            if ($codeSalle && !$salleId) {
-                $report[] = ['line' => $line, 'cne' => $cne, 'code_module' => $codeModule, 'status' => 'rejected', 'reason' => "Salle \"{$codeSalle}\" introuvable"];
-                $skipped++;
-                continue;
-            }
-
-            $etudMod = EtudiantModule::firstOrCreate([
-                'etudiant_id' => $etudiantId,
-                'module_id'   => $moduleId,
-            ]);
-
             InscriptionExamen::create([
-                'etud_mod_id'     => $etudMod->id,
-                'groupe_id'       => $groupeId,
-                'id_salle'        => $salleId,
+                'module_id'       => $moduleId,
+                'etudiant_id'     => $etudiantId,
                 'Nexam'           => $nexam,
+                'statut'          => $statut ?? 'normale',
                 'note_normale'    => $noteN,
                 'note_rattrapage' => $noteR,
                 'note_finale'     => $noteF,

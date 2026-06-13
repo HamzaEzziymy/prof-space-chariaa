@@ -14,7 +14,7 @@ Route::middleware(['auth', 'prof'])
     ->name('prof.')
     ->group(function () {
         Route::get('dashboard',                          [DashboardController::class, 'index'])->name('dashboard');
-        Route::get('groupes/{groupe}',                   [DashboardController::class, 'groupeStudents'])->name('groupes.show');
-        Route::post('groupes/{groupe}/notes',            [DashboardController::class, 'saveNotes'])->name('groupes.notes');
+        Route::get('modules/{module}',                   [DashboardController::class, 'moduleStudents'])->name('modules.show');
+        Route::post('modules/{module}/notes',            [DashboardController::class, 'saveNotes'])->name('modules.notes');
         Route::post('logout',                            [AuthController::class, 'destroy'])->name('logout');
     });

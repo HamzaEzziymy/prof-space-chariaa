@@ -24,7 +24,6 @@ const I = {
     file:    'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z M14 2v6h6',
     users:   'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
     book:    'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
-    door:    'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
     chevronDown: 'M19 9l-7 7-7-7',
     chevronUp:   'M5 15l7-7 7 7',
 };
@@ -39,56 +38,6 @@ function StatCard({ icon, label, value, color }) {
                 <p className="text-xs font-medium text-slate-400 dark:text-slate-500">{label}</p>
                 <p className="text-lg font-bold text-slate-800 dark:text-white">{value}</p>
             </div>
-        </div>
-    );
-}
-
-function StudentCombo({ items, value, onChange, placeholder, disabled, locale }) {
-    const [open, setOpen] = useState(false);
-    const [query, setQuery] = useState('');
-    const ref = useRef();
-    useEffect(() => {
-        const handler = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
-        document.addEventListener('mousedown', handler);
-        return () => document.removeEventListener('mousedown', handler);
-    }, []);
-    const selected = items?.find(i => i.id === value);
-    const filtered = items?.filter(i => {
-        const q = query.toLowerCase();
-        return !q || (i.nom_fr + ' ' + i.prenom_fr + ' ' + (i.CNE || '') + ' ' + i.nom_ar + ' ' + i.prenom_ar).toLowerCase().includes(q);
-    }) || [];
-    if (disabled && selected) {
-        return (
-            <div className="relative">
-                <input type="text" value={locale === 'ar' ? (selected.nom_ar || selected.nom_fr) + ' ' + (selected.prenom_ar || selected.prenom_fr) : selected.nom_fr + ' ' + selected.prenom_fr + (selected.CNE ? ' (' + selected.CNE + ')' : '')} readOnly
-                    className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/60 px-4 py-2.5 text-sm text-slate-600 dark:text-slate-400 cursor-not-allowed" />
-            </div>
-        );
-    }
-    return (
-        <div ref={ref} className="relative">
-            <input type="text" value={open ? query : (selected ? (locale === 'ar' ? (selected.nom_ar || selected.nom_fr) + ' ' + (selected.prenom_ar || selected.prenom_fr) : selected.nom_fr + ' ' + selected.prenom_fr + (selected.CNE ? ' (' + selected.CNE + ')' : '')) : '')}
-                onChange={e => { setQuery(e.target.value); setOpen(true); if (!e.target.value) onChange(null); }}
-                onFocus={() => { setOpen(true); setQuery(''); }}
-                placeholder={placeholder || ''}
-                className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600 transition" />
-            {open && (
-                <div className="absolute z-20 mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg max-h-60 overflow-y-auto">
-                    {filtered.length > 0 ? filtered.map(i => (
-                        <button key={i.id} type="button" onClick={() => { onChange(i.id); setOpen(false); setQuery(''); }}
-                            className={`w-full text-start px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700/50 transition flex items-center gap-3
-                                ${value === i.id ? 'bg-indigo-50 dark:bg-indigo-900/20 font-medium' : ''}`}>
-                            <div className="h-7 w-7 shrink-0 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-500">
-                                {(locale === 'ar' ? (i.prenom_ar?.[0] || i.prenom_fr?.[0] || i.nom_ar?.[0] || i.nom_fr?.[0] || '?') : (i.prenom_fr?.[0] || i.nom_fr?.[0] || '?')).toUpperCase()}
-                            </div>
-                            <span>{locale === 'ar' ? ((i.nom_ar || i.nom_fr) + ' ' + (i.prenom_ar || i.prenom_fr)) : (i.nom_fr + ' ' + i.prenom_fr)}</span>
-                            {i.CNE && <code className="ml-auto text-[10px] text-slate-400 font-mono">{i.CNE}</code>}
-                        </button>
-                    )) : (
-                        <p className="px-4 py-3 text-xs text-slate-400">Aucun résultat</p>
-                    )}
-                </div>
-            )}
         </div>
     );
 }
@@ -140,36 +89,57 @@ function ModuleCombo({ items, value, onChange, placeholder, disabled }) {
     );
 }
 
-function AddModal({ onClose, t, locale, isRTL, allEtudiants, allModules, allGroupes, allSalles }) {
+function AddModal({ onClose, t, locale, isRTL, allModules }) {
     const { data, setData, post, processing, errors, reset } = useForm({
-        etudiant_id: null,
         module_id: null,
-        groupe_id: null,
-        id_salle: null,
-        Nexam: null,
-        note_normale: '',
-        note_rattrapage: '',
-        note_finale: '',
+        students: [],
     });
+    const [loadingStudents, setLoadingStudents] = useState(false);
+    const [enrolled, setEnrolled] = useState([]);
+    const [existingIds, setExistingIds] = useState([]);
 
-    const selectedStudent = allEtudiants?.find(e => e.id === data.etudiant_id);
-    const enrolledIds = selectedStudent?.module_ids || [];
-    const availableModules = allModules?.filter(m => !enrolledIds.includes(m.id)) || [];
+    useEffect(() => {
+        if (!data.module_id) { setEnrolled([]); setExistingIds([]); return; }
+        setLoadingStudents(true);
+        window.axios.get(route('inscription-examen.enrolled', data.module_id))
+            .then(res => {
+                setEnrolled(res.data.students);
+                setExistingIds(res.data.existing_ids);
+                setData('students', res.data.students.map((s, i) => ({
+                    etudiant_id: s.id,
+                    Nexam: i + 1,
+                })));
+            })
+            .catch(() => {})
+            .finally(() => setLoadingStudents(false));
+    }, [data.module_id]);
+
+    const setStudentNexam = (idx, val) => {
+        setData('students', data.students.map((s, i) =>
+            i === idx ? { ...s, Nexam: val ? parseInt(val) : null } : s
+        ));
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        const filtered = data.students.filter(s => !existingIds.includes(s.etudiant_id));
+        if (filtered.length === 0) return;
         post(route('inscription-examen.store'), {
+            data: { module_id: data.module_id, students: filtered },
             preserveScroll: true,
             onSuccess: () => { reset(); onClose(); },
         });
     };
 
+    const studentName = (s, locale) =>
+        locale === 'ar' ? ((s.nom_ar || s.nom_fr) + ' ' + (s.prenom_ar || s.prenom_fr)) : (s.nom_fr + ' ' + s.prenom_fr);
+
     return (
         <>
             <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={onClose} />
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl dark:bg-slate-900 overflow-hidden">
-                    <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-6 py-4">
+                <div className="relative w-full max-w-xl rounded-2xl bg-white shadow-2xl dark:bg-slate-900 overflow-hidden flex flex-col max-h-[90vh]">
+                    <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-6 py-4 shrink-0">
                         <h2 className="text-sm font-bold text-slate-800 dark:text-white">
                             {locale === 'ar' ? 'تسجيل امتحان جديد' : 'Nouvelle inscription examen'}
                         </h2>
@@ -177,66 +147,69 @@ function AddModal({ onClose, t, locale, isRTL, allEtudiants, allModules, allGrou
                             <Icon d={I.close} className="h-5 w-5" />
                         </button>
                     </div>
-                    <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                        <div className="space-y-1.5">
-                            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{locale === 'ar' ? 'الطالب' : 'Étudiant'}</label>
-                            <StudentCombo items={allEtudiants} value={data.etudiant_id}
-                                onChange={v => setData('etudiant_id', v)}
-                                placeholder={locale === 'ar' ? 'ابحث عن طالب...' : 'Rechercher un étudiant...'} locale={locale} />
-                            {errors.etudiant_id && <p className="text-xs text-red-500">{errors.etudiant_id}</p>}
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{locale === 'ar' ? 'الوحدة' : 'Module'}</label>
-                            <ModuleCombo items={availableModules} value={data.module_id}
-                                onChange={v => setData('module_id', v)}
-                                placeholder={locale === 'ar' ? 'ابحث عن وحدة...' : 'Rechercher un module...'} />
-                            {errors.module_id && <p className="text-xs text-red-500">{errors.module_id}</p>}
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
+                    <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+                        <div className="p-6 space-y-4 shrink-0">
                             <div className="space-y-1.5">
-                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{locale === 'ar' ? 'المجموعة' : 'Groupe'}</label>
-                                <select value={data.groupe_id ?? ''} onChange={e => setData('groupe_id', e.target.value || null)}
-                                    className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600">
-                                    <option value="">{locale === 'ar' ? '— اختر —' : '— Sélectionner —'}</option>
-                                    {allGroupes?.map(g => (
-                                        <option key={g.id} value={g.id}>{g.code} — {g.module?.nom_fr}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{locale === 'ar' ? 'القاعة' : 'Salle'}</label>
-                                <select value={data.id_salle ?? ''} onChange={e => setData('id_salle', e.target.value || null)}
-                                    className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600">
-                                    <option value="">{locale === 'ar' ? '— اختر —' : '— Sélectionner —'}</option>
-                                    {allSalles?.map(s => (
-                                        <option key={s.id} value={s.id}>{s.code_salle} — {locale === 'ar' ? (s.nomSalle_ar || s.nomSalle_fr) : (s.nomSalle_fr || s.nomSalle_ar)}</option>
-                                    ))}
-                                </select>
+                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{locale === 'ar' ? 'الوحدة' : 'Module'}</label>
+                                <ModuleCombo items={allModules} value={data.module_id}
+                                    onChange={v => setData('module_id', v)}
+                                    placeholder={locale === 'ar' ? 'ابحث عن وحدة...' : 'Rechercher un module...'} />
+                                {errors.module_id && <p className="text-xs text-red-500">{errors.module_id}</p>}
                             </div>
                         </div>
-                        <div className="grid grid-cols-3 gap-4">
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{locale === 'ar' ? 'الامتحان رقم' : 'N° examen'}</label>
-                                <input type="number" min="1" value={data.Nexam ?? ''} onChange={e => setData('Nexam', e.target.value ? parseInt(e.target.value) : null)}
-                                    className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600" />
+                        {loadingStudents && (
+                            <div className="flex items-center justify-center py-8 text-sm text-slate-400">
+                                <svg className="h-5 w-5 animate-spin mr-2" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                                {locale === 'ar' ? 'جارٍ تحميل الطلاب...' : 'Chargement des étudiants...'}
                             </div>
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{locale === 'ar' ? 'العلامة العادية' : 'Note normale'}</label>
-                                <input type="number" step="0.01" min="0" max="20" value={data.note_normale} onChange={e => setData('note_normale', e.target.value)}
-                                    className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600" />
+                        )}
+                        {!loadingStudents && data.module_id && enrolled.length === 0 && (
+                            <div className="px-6 py-8 text-center text-sm text-slate-400">
+                                {locale === 'ar' ? 'لا يوجد طلاب مسجلون في هذه الوحدة' : 'Aucun étudiant inscrit dans ce module'}
                             </div>
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{locale === 'ar' ? 'الاستدراكية' : 'Rattrapage'}</label>
-                                <input type="number" step="0.01" min="0" max="20" value={data.note_rattrapage} onChange={e => setData('note_rattrapage', e.target.value)}
-                                    className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600" />
+                        )}
+                        {!loadingStudents && enrolled.length > 0 && (
+                            <div className="overflow-y-auto flex-1 px-6 pb-4">
+                                <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                                    <div className="bg-slate-50 dark:bg-slate-800 px-4 py-2 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                                        <span className="text-xs font-semibold text-slate-500">{locale === 'ar' ? 'الطلاب المسجلون' : 'Étudiants inscrits'}</span>
+                                        <span className="text-xs text-slate-400">{enrolled.length} {locale === 'ar' ? 'طالبًا' : 'étudiant(s)'}</span>
+                                    </div>
+                                    <div className="divide-y divide-slate-100 dark:divide-slate-700/40">
+                                        {enrolled.map((s, i) => {
+                                            const alreadyExists = existingIds.includes(s.id);
+                                            return (
+                                                <div key={s.id} className={`flex items-center gap-3 px-4 py-2.5 ${alreadyExists ? 'opacity-50' : ''}`}>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{studentName(s, locale)}</p>
+                                                        <p className="text-xs text-slate-400">{s.CNE}</p>
+                                                    </div>
+                                                    {alreadyExists ? (
+                                                        <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium shrink-0">
+                                                            {locale === 'ar' ? 'مسجل مسبقًا' : 'Déjà inscrit'}
+                                                        </span>
+                                                    ) : (
+                                                        <div className="flex items-center gap-2 shrink-0">
+                                                            <label className="text-[11px] text-slate-400">{locale === 'ar' ? 'رقم الامتحان' : 'N° examen'}</label>
+                                                            <input type="number" min="1"
+                                                                value={data.students[i]?.Nexam ?? ''}
+                                                                onChange={e => setStudentNexam(i, e.target.value)}
+                                                                className="w-20 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-sm text-slate-800 dark:text-white text-center focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div className="flex items-center justify-end gap-3 pt-2">
+                        )}
+                        <div className="flex items-center justify-end gap-3 border-t border-slate-100 dark:border-slate-800 px-6 py-4 shrink-0">
                             <button type="button" onClick={onClose}
                                 className="rounded-xl border border-slate-200 dark:border-slate-700 px-5 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
                                 {t('cancel')}
                             </button>
-                            <button type="submit" disabled={processing || !data.etudiant_id || !data.module_id}
+                            <button type="submit" disabled={processing || !data.module_id || enrolled.length === 0 || data.students.every((s, i) => existingIds.includes(enrolled[i]?.id))}
                                 className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition disabled:opacity-50">
                                 {processing && <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>}
                                 <Icon d={I.check} className="h-4 w-4" />
@@ -260,7 +233,7 @@ function ExcelModal({ onClose, t, locale, isRTL }) {
 
     const COLS = [
         { name: 'CNE', req: true }, { name: 'code_module', req: true },
-        { name: 'code_groupe', req: false }, { name: 'code_salle', req: false },
+        { name: 'statut', req: false },
         { name: 'Nexam', req: false }, { name: 'note_normale', req: false },
         { name: 'note_rattrapage', req: false }, { name: 'note_finale', req: false },
     ];
@@ -334,7 +307,7 @@ function ExcelModal({ onClose, t, locale, isRTL }) {
 
     const downloadTemplate = () => {
         const header = COLS.map(c => c.name).join(',');
-        const example = 'CNE123456,MATH101,GP1,SAL01,1,12.5,10.0,11.0';
+        const example = 'CNE123456,MATH101,normale,1,12.5,10.0,11.0';
         const blob = new Blob([header + '\n' + example], { type: 'text/csv;charset=utf-8;' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob); a.download = 'inscription_examen_template.csv'; a.click();
@@ -506,21 +479,117 @@ function ExcelModal({ onClose, t, locale, isRTL }) {
     );
 }
 
+function StatutModal({ moduleId, onClose, t, locale, isRTL, setToast }) {
+    const [selected, setSelected] = useState(null);
+    const [confirmFinale, setConfirmFinale] = useState(false);
+    const [loading, setLoading] = useState(false);
+
+    const run = (statut) => {
+        setLoading(true);
+        window.axios.put(route('inscription-examen.batch-statut', moduleId), { statut })
+            .then(res => {
+                const msg = res.data?.message || `Statut changé en ${statut}`;
+                setToast({ text: msg, isErr: false });
+                onClose();
+            })
+            .catch(() => { setLoading(false); });
+    };
+
+    const handleConfirm = () => {
+        if (!selected) return;
+        if (selected === 'finale' && !confirmFinale) {
+            setConfirmFinale(true);
+            return;
+        }
+        run(selected);
+    };
+
+    const getDesc = (s) => {
+        if (s === 'normale') return locale === 'ar' ? 'يمكن للأستاذ إدخال النقطة العادية' : 'Le professeur peut saisir la note normale';
+        if (s === 'rattrapage') return locale === 'ar' ? 'يمكن للأستاذ إدخال نقطة الاستدراك للطلاب الذين لديهم نقطة عادية > 0' : 'Le professeur peut saisir la note de rattrapage pour les étudiants avec note normale > 0';
+        return locale === 'ar' ? 'سيتم احتساب النقطة النهائية = أكبر نقطة (عادية، استدراك)' : 'La note finale sera calculée = max(note normale, note rattrapage)';
+    };
+
+    return (
+        <>
+            <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl dark:bg-slate-900 overflow-hidden">
+                    <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-6 py-4">
+                        <h2 className="text-sm font-bold text-slate-800 dark:text-white">
+                            {locale === 'ar' ? 'تغيير الحالة' : 'Changer le statut'}
+                        </h2>
+                        <button onClick={onClose} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                            <Icon d={I.close} className="h-5 w-5" />
+                        </button>
+                    </div>
+                    <div className="p-6 space-y-3">
+                        {['normale', 'rattrapage', 'finale'].map(s => (
+                            <button key={s} onClick={() => { setSelected(s); setConfirmFinale(false); }}
+                                className={`w-full text-start rounded-xl border-2 p-4 transition ${
+                                    selected === s
+                                        ? s === 'normale' ? 'border-blue-400 bg-blue-50 dark:border-blue-600 dark:bg-blue-900/20'
+                                          : s === 'rattrapage' ? 'border-amber-400 bg-amber-50 dark:border-amber-600 dark:bg-amber-900/20'
+                                          : 'border-violet-400 bg-violet-50 dark:border-violet-600 dark:bg-violet-900/20'
+                                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                                }`}>
+                                <div className="flex items-center gap-3">
+                                    <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                                        s === 'normale' ? 'bg-blue-100 dark:bg-blue-900/30' : s === 'rattrapage' ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-violet-100 dark:bg-violet-900/30'
+                                    }`}>
+                                        <span className={`text-xs font-bold ${
+                                            s === 'normale' ? 'text-blue-700 dark:text-blue-400' : s === 'rattrapage' ? 'text-amber-700 dark:text-amber-400' : 'text-violet-700 dark:text-violet-400'
+                                        }`}>{s === 'normale' ? 'N' : s === 'rattrapage' ? 'R' : 'F'}</span>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-800 dark:text-white">
+                                            {s === 'normale' ? (locale === 'ar' ? 'عادي' : 'Normale')
+                                             : s === 'rattrapage' ? (locale === 'ar' ? 'استدراك' : 'Rattrapage')
+                                             : (locale === 'ar' ? 'نهائي' : 'Finale')}
+                                        </p>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{getDesc(s)}</p>
+                                    </div>
+                                </div>
+                                {s === 'finale' && confirmFinale && selected === 'finale' && (
+                                    <div className="mt-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-4 py-3">
+                                        <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                                            {locale === 'ar' ? 'سيتم تعيين النقطة النهائية = أكبر نقطة (عادية أو استدراك) لجميع الطلاب. هل أنت متأكد؟' : 'La note finale sera définie = max(note normale, rattrapage) pour tous les étudiants. Confirmez-vous ?'}
+                                        </p>
+                                    </div>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="flex items-center justify-end gap-3 border-t border-slate-100 dark:border-slate-800 px-6 py-4">
+                        <button onClick={onClose} className="rounded-xl border border-slate-200 dark:border-slate-700 px-5 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                            {t('cancel')}
+                        </button>
+                        <button onClick={handleConfirm} disabled={!selected || loading}
+                            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition disabled:opacity-50">
+                            {loading && <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>}
+                            {confirmFinale && selected === 'finale'
+                                ? (locale === 'ar' ? 'تأكيد' : 'Confirmer')
+                                : (locale === 'ar' ? 'تطبيق' : 'Appliquer')}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </>
+    );
+}
+
 function PageContent() {
     const { t, locale, isRTL } = useLanguage();
-    const { items, groupBy, allEtudiants, allModules, allGroupes, allSalles, stats, flash } = usePage().props;
+    const { items, groupBy, allModules, stats, flash } = usePage().props;
     const [showAdd, setShowAdd] = useState(false);
     const [showExcel, setShowExcel] = useState(false);
     const [expanded, setExpanded] = useState(new Set());
     const [toast, setToast] = useState(null);
+    const [statutModal, setStatutModal] = useState(null); // moduleId or null
 
     useEffect(() => {
         if (flash?.success || flash?.error) {
-            const map = {
-                inscription_examen_created: locale === 'ar' ? 'تم تسجيل الامتحان بنجاح' : 'Inscription examen enregistrée',
-                inscription_examen_deleted: locale === 'ar' ? 'تم حذف تسجيل الامتحان' : 'Inscription examen supprimée',
-            };
-            setToast({ text: map[flash.success || flash.error] || flash.success || flash.error, isErr: !!flash.error });
+            setToast({ text: flash.success || flash.error, isErr: !!flash.error });
             const id = setTimeout(() => setToast(null), 3500);
             return () => clearTimeout(id);
         }
@@ -563,9 +632,8 @@ function PageContent() {
                     </button>
                 </div>
             </div>
-            <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-2 gap-4 mb-6">
                 <StatCard icon={I.users} label={locale === 'ar' ? 'إجمالي التسجيلات' : 'Total inscriptions'} value={stats?.total ?? 0} color="bg-indigo-500" />
-                <StatCard icon={I.door} label={locale === 'ar' ? 'بقاعات معينة' : 'Avec salle'} value={stats?.assigned_rooms ?? 0} color="bg-emerald-500" />
                 <StatCard icon={I.book} label={locale === 'ar' ? 'بعلامات' : 'Avec notes'} value={stats?.with_grades ?? 0} color="bg-amber-500" />
             </div>
 
@@ -576,11 +644,7 @@ function PageContent() {
                     <Icon d={I.book} className="h-3.5 w-3.5" />
                     {locale === 'ar' ? 'حسب الوحدة' : 'Par module'}
                 </button>
-                <button onClick={() => toggleGroup('groupe')}
-                    className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition ${groupBy === 'groupe' ? 'bg-indigo-600 text-white shadow-sm' : 'border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
-                    <Icon d={I.users} className="h-3.5 w-3.5" />
-                    {locale === 'ar' ? 'حسب المجموعة' : 'Par groupe'}
-                </button>
+
             </div>
 
             {/* Grouped list */}
@@ -591,82 +655,108 @@ function PageContent() {
                         ? (locale === 'ar' ? (item.nom_ar || item.nom_fr) : (item.nom_fr || item.nom_ar))
                         : item.code + ' — ' + (locale === 'ar' ? (item.nom_ar || item.nom_fr) : (item.nom_fr || item.nom_ar));
                     const subtitle = isMod ? item.code_module : (item.module ? (locale === 'ar' ? (item.module.nom_ar || item.module.nom_fr) : (item.module.nom_fr || item.module.nom_ar)) : '');
+                    const sem = item.semestre;
+                    const filiere = sem?.niveau?.filiere;
+                    const semInfo = sem ? (locale === 'ar' ? sem.nom_ar : sem.nom_fr) : '';
+                    const nivInfo = sem?.niveau ? (locale === 'ar' ? sem.niveau.nom_ar : sem.niveau.nom_fr) : '';
+                    const filInfo = filiere ? (locale === 'ar' ? filiere.nom_ar : filiere.nom_fr) : '';
                     const count = item.inscriptions_count ?? item.inscriptions?.length ?? 0;
                     const iId = isMod ? item.id : item.id;
                     const isExpanded = expanded.has(iId);
                     const inscrits = item.inscriptions ?? [];
                     return (
                         <div key={iId} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm overflow-hidden">
-                            <button onClick={() => toggleExpand(iId)}
-                                className={`flex w-full items-center gap-3 px-5 py-4 transition ${isExpanded ? 'border-b border-slate-100 dark:border-slate-700/60' : ''}`}>
-                                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition ${isMod ? 'bg-indigo-100 dark:bg-indigo-900/30' : 'bg-amber-100 dark:bg-amber-900/30'}`}>
-                                    <Icon d={isMod ? I.book : I.users} className={`h-4 w-4 ${isMod ? 'text-indigo-600 dark:text-indigo-400' : 'text-amber-600 dark:text-amber-400'}`} />
-                                </div>
-                                <div className="flex-1 min-w-0 text-start">
-                                    <p className="text-sm font-bold text-slate-800 dark:text-white truncate">{title}</p>
-                                    {subtitle && <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{subtitle}</p>}
-                                </div>
+                            <div className={`flex items-center gap-3 px-5 py-4 ${isExpanded ? 'border-b border-slate-100 dark:border-slate-700/60' : ''}`}>
+                                <button onClick={() => toggleExpand(iId)} className="flex items-center gap-3 flex-1 min-w-0 text-start">
+                                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition ${isMod ? 'bg-indigo-100 dark:bg-indigo-900/30' : 'bg-amber-100 dark:bg-amber-900/30'}`}>
+                                        <Icon d={isMod ? I.book : I.users} className={`h-4 w-4 ${isMod ? 'text-indigo-600 dark:text-indigo-400' : 'text-amber-600 dark:text-amber-400'}`} />
+                                    </div>
+                                    <div className="flex-1 min-w-0 text-start">
+                                        <p className="text-sm font-bold text-slate-800 dark:text-white truncate">{title}</p>
+                                        <p className="text-xs text-slate-400 dark:text-slate-500 truncate">
+                                            {[subtitle, semInfo, nivInfo, filInfo].filter(Boolean).join(' · ')}
+                                        </p>
+                                    </div>
+                                </button>
+                                <button onClick={() => setStatutModal(iId)}
+                                    className="shrink-0 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition">
+                                    <Icon d={I.template} className="h-3.5 w-3.5 inline-block mr-1" />
+                                    {locale === 'ar' ? 'الحالة' : 'Statut'}
+                                </button>
                                 <span className="shrink-0 rounded-full bg-slate-100 dark:bg-slate-700 px-2.5 py-0.5 text-xs font-semibold text-slate-500 dark:text-slate-300">{count}</span>
-                                <Icon d={isExpanded ? I.chevronUp : I.chevronDown} className="h-4 w-4 text-slate-400 shrink-0" />
-                            </button>
+                                <button onClick={() => toggleExpand(iId)}>
+                                    <Icon d={isExpanded ? I.chevronUp : I.chevronDown} className="h-4 w-4 text-slate-400 shrink-0" />
+                                </button>
+                            </div>
                             {isExpanded && (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-sm">
-                                        <thead>
-                                            <tr className="border-b border-slate-100 dark:border-slate-700 bg-slate-100/80 dark:bg-slate-700/60">
-                                                <th className="px-4 py-2.5 text-start text-xs font-semibold text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'الطالب' : 'Étudiant'}</th>
-                                                {isMod && <th className="px-4 py-2.5 text-start text-xs font-semibold text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'المجموعة' : 'Groupe'}</th>}
-                                                <th className="px-4 py-2.5 text-start text-xs font-semibold text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'القاعة' : 'Salle'}</th>
-                                                <th className="px-4 py-2.5 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">N°</th>
-                                                <th className="px-4 py-2.5 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'العلامة' : 'Note'}</th>
-                                                <th className="px-4 py-2.5 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'الاستدراك' : 'Ratt.'}</th>
-                                                <th className="px-4 py-2.5 text-start text-xs font-semibold text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'القرار' : 'Décision'}</th>
-                                                <th className="px-4 py-2.5 text-end text-xs font-semibold text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'إجراء' : 'Actions'}</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-50 dark:divide-slate-700/40">
-                                            {inscrits.map(ie => {
-                                                const etud = ie.etudiant;
-                                                const grp = ie.groupe;
-                                                const sal = ie.salle;
-                                                const etudName = etud ? (locale === 'ar' ? (etud.nom_ar || etud.nom_fr) + ' ' + (etud.prenom_ar || etud.prenom_fr) : etud.nom_fr + ' ' + etud.prenom_fr) : '—';
-                                                const grpName = grp ? (locale === 'ar' ? (grp.nom_ar || grp.code) : (grp.nom_fr || grp.code)) : '—';
-                                                const salName = sal ? (locale === 'ar' ? (sal.nomSalle_ar || sal.nomSalle_fr) : (sal.nomSalle_fr || sal.nomSalle_ar)) : '—';
-                                                const decision = locale === 'ar' ? ie.decision_finale_ar : ie.decision_finale_fr;
-                                                const isValid = decision === 'Validé' || decision === 'مستوفي';
-                                                return (
-                                                    <tr key={ie.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-700/10 transition-colors">
-                                                        <td className="px-4 py-2.5">
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="h-6 w-6 shrink-0 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[9px] font-bold text-slate-500">
-                                                                    {(etud?.prenom_fr?.[0] || etud?.nom_fr?.[0] || '?').toUpperCase()}
+                                <div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm">
+                                            <thead>
+                                                <tr className="border-b border-slate-100 dark:border-slate-700 bg-slate-100/80 dark:bg-slate-700/60">
+                                                    <th className="px-3 py-2.5 text-start text-xs font-semibold text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'الطالب' : 'Étudiant'}</th>
+                                                    <th className="px-3 py-2.5 text-start text-xs font-semibold text-slate-500 dark:text-slate-400">CNE</th>
+                                                    <th className="px-3 py-2.5 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'الحالة' : 'Statut'}</th>
+                                                    <th className="px-3 py-2.5 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">N°</th>
+                                                    <th className="px-3 py-2.5 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'العلامة' : 'Note'}</th>
+                                                    <th className="px-3 py-2.5 text-start text-xs font-semibold text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'القرار' : 'Décision'}</th>
+                                                    <th className="px-3 py-2.5 text-end text-xs font-semibold text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'إجراء' : 'Actions'}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-50 dark:divide-slate-700/40">
+                                                {inscrits.map(ie => {
+                                                    const etud = ie.etudiant;
+                                                    const etudName = etud ? (locale === 'ar' ? (etud.nom_ar || etud.nom_fr) + ' ' + (etud.prenom_ar || etud.prenom_fr) : etud.nom_fr + ' ' + etud.prenom_fr) : '—';
+                                                    const curStatut = ie.statut;
+                                                    const noteVal = curStatut === 'normale' ? ie.note_normale : curStatut === 'rattrapage' ? ie.note_rattrapage : ie.note_finale;
+                                                    const decision = curStatut === 'normale' ? (locale === 'ar' ? ie.note_normale_decision_ar : ie.note_normale_decision_fr)
+                                                        : curStatut === 'rattrapage' ? (locale === 'ar' ? ie.note_ratt_decision_ar : ie.note_ratt_decision_fr)
+                                                        : (locale === 'ar' ? ie.decision_finale_ar : ie.decision_finale_fr);
+                                                    const isValid = decision === 'Validé' || decision === 'مستوفي';
+                                                    return (
+                                                        <tr key={ie.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-700/10 transition-colors">
+                                                            <td className="px-3 py-2.5">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="h-6 w-6 shrink-0 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[9px] font-bold text-slate-500">
+                                                                        {(etud?.prenom_fr?.[0] || etud?.nom_fr?.[0] || '?').toUpperCase()}
+                                                                    </div>
+                                                                    <span className="text-sm text-slate-700 dark:text-slate-200 truncate max-w-[140px]">{etudName}</span>
                                                                 </div>
-                                                                <span className="text-sm text-slate-700 dark:text-slate-200 truncate max-w-[160px]">{etudName}</span>
-                                                                {etud?.CNE && <code className="text-[10px] text-slate-400 font-mono">{etud.CNE}</code>}
-                                                            </div>
-                                                        </td>
-                                                        {isMod && <td className="px-4 py-2.5"><code className="rounded bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 text-[11px] font-bold text-slate-500 dark:text-slate-400 font-mono">{grpName}</code></td>}
-                                                        <td className="px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200">{salName}</td>
-                                                        <td className="px-4 py-2.5 text-center text-sm font-mono text-slate-600 dark:text-slate-300">{ie.Nexam ?? '—'}</td>
-                                                        <td className="px-4 py-2.5 text-center text-sm font-mono text-slate-700 dark:text-slate-200">{ie.note_normale !== null ? Number(ie.note_normale).toFixed(2) : '—'}</td>
-                                                        <td className="px-4 py-2.5 text-center text-sm font-mono text-slate-700 dark:text-slate-200">{ie.note_rattrapage !== null ? Number(ie.note_rattrapage).toFixed(2) : '—'}</td>
-                                                        <td className="px-4 py-2.5">
-                                                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${isValid ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
-                                                                {decision}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-4 py-2.5 text-end">
-                                                            <button onClick={() => router.delete(route('inscription-examen.destroy', ie.id), { preserveScroll: true })}
-                                                                className="rounded-lg p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition"
-                                                                title={locale === 'ar' ? 'حذف' : 'Supprimer'}>
-                                                                <Icon d={I.trash} className="h-3.5 w-3.5" />
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
+                                                            </td>
+                                                            <td className="px-3 py-2.5">
+                                                                <code className="text-[10px] text-slate-400 font-mono">{etud?.CNE || '—'}</code>
+                                                            </td>
+                                                            <td className="px-3 py-2.5 text-center">
+                                                                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+                                                                    curStatut === 'normale' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                                                                    curStatut === 'rattrapage' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                                                    'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400'
+                                                                }`}>
+                                                                    {curStatut === 'normale' ? (locale === 'ar' ? 'عادي' : 'Normale') :
+                                                                     curStatut === 'rattrapage' ? (locale === 'ar' ? 'استدراك' : 'Rattrapage') :
+                                                                     (locale === 'ar' ? 'نهائي' : 'Finale')}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-3 py-2.5 text-center text-sm font-mono text-slate-600 dark:text-slate-300">{ie.Nexam ?? '—'}</td>
+                                                            <td className="px-3 py-2.5 text-center text-sm font-mono text-slate-700 dark:text-slate-200">{noteVal !== null && noteVal !== undefined ? Number(noteVal).toFixed(2) : '—'}</td>
+                                                            <td className="px-3 py-2.5">
+                                                                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${isValid ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                                                                    {decision}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-3 py-2.5 text-end">
+                                                                <button onClick={() => router.delete(route('inscription-examen.destroy', ie.id), { preserveScroll: true })}
+                                                                    className="rounded-lg p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition"
+                                                                    title={locale === 'ar' ? 'حذف' : 'Supprimer'}>
+                                                                    <Icon d={I.trash} className="h-3.5 w-3.5" />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -695,8 +785,9 @@ function PageContent() {
                     </div>
                 </div>
             )}
+            {statutModal && <StatutModal moduleId={statutModal} onClose={() => { setStatutModal(null); router.reload({ only: ['items', 'stats'] }); }} t={t} locale={locale} isRTL={isRTL} setToast={setToast} />}
             {showAdd && <AddModal onClose={() => setShowAdd(false)} t={t} locale={locale} isRTL={isRTL}
-                allEtudiants={allEtudiants} allModules={allModules} allGroupes={allGroupes} allSalles={allSalles} />}
+                allModules={allModules} />}
             {showExcel && <ExcelModal onClose={() => setShowExcel(false)} t={t} locale={locale} isRTL={isRTL} />}
         </>
     );
