@@ -48,7 +48,7 @@ class DashboardController extends Controller
             ->with('etudiant')
             ->get()
             ->map(function ($em) use ($module, $statuts) {
-                $nexams = NoteExam::where('etud_mod_id', $em->id)->pluck('Nexam')->unique()->values();
+                $notes = NoteExam::where('etud_mod_id', $em->id)->get()->keyBy('Nexam');
 
                 return [
                     'etud_mod_id'     => $em->id,
@@ -59,7 +59,10 @@ class DashboardController extends Controller
                     'prenom_ar'       => $em->etudiant->prenom_ar,
                     'CNE'             => $em->etudiant->CNE,
                     'sexe'            => $em->etudiant->sexe,
-                    'nexams'          => $nexams,
+                    'nexam'           => $notes->keys()->first() ?? 1,
+                    'note_normale'    => $notes->first()?->note_normale,
+                    'note_rattrapage' => $notes->first()?->note_rattrapage,
+                    'note_finale'     => $notes->first()?->note_finale,
                     'statut'          => $statuts[$em->etudiant->id] ?? 'normale',
                 ];
             })->sortBy(fn ($s) => ($s['nom_fr'] ?? '').' '.($s['prenom_fr'] ?? ''))

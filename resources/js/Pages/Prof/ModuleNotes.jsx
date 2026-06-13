@@ -48,60 +48,61 @@ function ModuleNotesContent({ module, students }) {
     const { locale, isRTL } = useLanguage();
     const { auth } = usePage().props;
 
-    const [activeNexam, setActiveNexam] = useState(1);
     const [notesData, setNotesData] = useState({});
     const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState(null);
 
-    const nexams = Array.from({ length: 5 }, (_, i) => i + 1);
-
-    const getNoteKey = (etudModId, nexam) => `${module.id}_${etudModId}_${nexam}`;
     const getNoteField = (statut) => statut === 'rattrapage' ? 'note_rattrapage' : statut === 'finale' ? 'note_finale' : 'note_normale';
 
     useEffect(() => {
         const notes = {};
         students.forEach(s => {
-            nexams.forEach(n => {
-                const field = getNoteField(s.statut);
-                notes[getNoteKey(s.etud_mod_id, n)] = {
-                    note_normale: (s.note_normale && s.Nexam === n) ? s.note_normale ?? '' : '',
-                    note_rattrapage: (s.note_rattrapage && s.Nexam === n) ? s.note_rattrapage ?? '' : '',
-                };
-                notes[getNoteKey(s.etud_mod_id, n)][field] = s[field]?.[0]?.[field] ?? '';
-            });
+            const field = getNoteField(s.statut);
+            notes[s.etud_mod_id] = {
+                [field]: s[field] ?? '',
+                _original: s[field] ?? '',
+            };
         });
         setNotesData({ ...notes });
     }, [students]);
 
     const handleNoteChange = (etudModId, field, value) => {
-        const key = getNoteKey(etudModId, activeNexam);
         setNotesData(prev => ({
             ...prev,
-            [key]: { ...prev[key], [field]: value },
+            [etudModId]: { ...prev[etudModId], [field]: value },
         }));
     };
 
     const handleSave = async () => {
         setSaving(true);
         try {
-            const notes = students.map(s => {
-                const key = getNoteKey(s.etud_mod_id, activeNexam);
-                const d = notesData[key] || {};
+            const notes = [];
+            students.forEach(s => {
+                const d = notesData[s.etud_mod_id];
+                if (!d) return;
                 const field = getNoteField(s.statut);
-                return {
+                const val = d[field];
+                if (val === '' || val === null || val === undefined) return;
+                notes.push({
                     etud_mod_id: s.etud_mod_id,
-                    Nexam: activeNexam,
-                    [field]: d[field] !== '' ? parseFloat(d[field]) : null,
-                };
+                    Nexam: s.nexam ?? 1,
+                    [field]: parseFloat(val),
+                });
             });
 
-            const res = await fetch(`/prof/modules/${module.id}/notes`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') },
-                body: JSON.stringify({ notes }),
-            });
+            if (notes.length === 0) { setSaving(false); return; }
 
-            if (!res.ok) throw new Error('Save failed');
+            await window.axios.post(`/prof/modules/${module.id}/notes`, { notes });
+
+            // Update originals
+            const updated = { ...notesData };
+            students.forEach(s => {
+                const d = updated[s.etud_mod_id];
+                if (!d) return;
+                const field = getNoteField(s.statut);
+                d._original = d[field];
+            });
+            setNotesData(updated);
 
             setToast({ message: locale === 'ar' ? 'تم حفظ النقاط بنجاح' : 'Notes enregistrées avec succès', type: 'success' });
         } catch {
@@ -112,8 +113,7 @@ function ModuleNotesContent({ module, students }) {
     };
 
     const getNoteVal = (etudModId, field) => {
-        const key = getNoteKey(etudModId, activeNexam);
-        return notesData[key]?.[field] ?? '';
+        return notesData[etudModId]?.[field] ?? '';
     };
 
     const getDecision = (etudModId, statut) => {
@@ -127,11 +127,10 @@ function ModuleNotesContent({ module, students }) {
 
     const isDirty = () => {
         return students.some(s => {
-            const key = getNoteKey(s.etud_mod_id, activeNexam);
-            const d = notesData[key];
+            const d = notesData[s.etud_mod_id];
             if (!d) return false;
             const field = getNoteField(s.statut);
-            return String(s[field]?.[0]?.[field] ?? '') !== String(d[field] ?? '');
+            return String(d._original ?? '') !== String(d[field] ?? '');
         });
     };
 
@@ -165,29 +164,6 @@ function ModuleNotesContent({ module, students }) {
                         </div>
                         <div className="pointer-events-none absolute -top-8 -right-8 h-32 w-32 rounded-full bg-white/10" />
                         <div className="pointer-events-none absolute -bottom-10 -right-4 h-40 w-40 rounded-full bg-white/5" />
-                    </div>
-
-                    {/* Nexam selector */}
-                    <div className="flex items-center gap-2">
-                        <Icon d={I.nexam} className="w-4 h-4 text-slate-400" />
-                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                            {locale === 'ar' ? 'الامتحان رقم' : 'Examen n°'}:
-                        </span>
-                        <div className="flex gap-1">
-                            {nexams.map(n => (
-                                <button
-                                    key={n}
-                                    onClick={() => setActiveNexam(n)}
-                                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                                        activeNexam === n
-                                            ? 'bg-primary text-white shadow-sm'
-                                            : 'border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
-                                    }`}
-                                >
-                                    {n}
-                                </button>
-                            ))}
-                        </div>
                     </div>
 
                     {students.length === 0 ? (
@@ -289,7 +265,7 @@ function ModuleNotesContent({ module, students }) {
                                 )}
                                 <button
                                     onClick={handleSave}
-                                    disabled={saving || !isDirty()}
+                                    disabled={saving}
                                     className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-primary to-primary/90 px-4 py-2 text-xs font-medium text-white shadow-sm transition-all hover:shadow-md hover:from-primary/90 hover:to-primary disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-none"
                                 >
                                     {saving ? (

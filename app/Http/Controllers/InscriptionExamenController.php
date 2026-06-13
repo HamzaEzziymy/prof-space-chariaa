@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Etudiant;
 use App\Models\Module;
+use App\Models\NoteExam;
 use App\Models\EtudiantModule;
 use App\Models\InscriptionExamen;
 use Illuminate\Http\Request;
@@ -35,7 +36,25 @@ class InscriptionExamenController extends Controller
         ->orderBy('nom_fr')
         ->paginate($perPage)
         ->withQueryString()
-        ->through(fn ($m) => [
+        ->through(function ($m) use ($request) {
+            // Load note_exam records for all inscriptions in this module
+            $moduleId = $m->id;
+            $etudiantIds = $m->inscriptionsExamen->pluck('etudiant_id');
+            $etudMods = EtudiantModule::where('module_id', $moduleId)
+                ->whereIn('etudiant_id', $etudiantIds)
+                ->get(['id', 'etudiant_id']);
+            $etudModIds = $etudMods->pluck('id');
+            $noteExams = NoteExam::whereIn('etud_mod_id', $etudModIds)
+                ->where('Nexam', $request->query('nexam', 1))
+                ->get()
+                ->keyBy('etud_mod_id');
+            // Map etud_mod_id to etudiant_id
+            $noteByEtudiant = collect();
+            foreach ($etudMods as $em) {
+                $noteByEtudiant[$em->etudiant_id] = $noteExams->get($em->id);
+            }
+
+            return [
             'id'          => $m->id,
             'nom_fr'      => $m->nom_fr,
             'nom_ar'      => $m->nom_ar,
@@ -61,15 +80,15 @@ class InscriptionExamenController extends Controller
                 'id'         => $ie->id,
                 'Nexam'      => $ie->Nexam,
                 'statut'     => $ie->statut,
-                'note_normale'    => $ie->note_normale,
-                'note_rattrapage' => $ie->note_rattrapage,
-                'note_finale'     => $ie->note_finale,
-                'note_normale_decision_ar' => $ie->note_normale_decision_ar,
-                'note_normale_decision_fr' => $ie->note_normale_decision_fr,
-                'note_ratt_decision_ar'    => $ie->note_ratt_decision_ar,
-                'note_ratt_decision_fr'    => $ie->note_ratt_decision_fr,
-                'decision_finale_ar' => $ie->decision_finale_ar,
-                'decision_finale_fr' => $ie->decision_finale_fr,
+                'note_normale'    => $noteByEtudiant[$ie->etudiant_id]?->note_normale ?? $ie->note_normale,
+                'note_rattrapage' => $noteByEtudiant[$ie->etudiant_id]?->note_rattrapage ?? $ie->note_rattrapage,
+                'note_finale'     => $noteByEtudiant[$ie->etudiant_id]?->note_finale ?? $ie->note_finale,
+                'note_normale_decision_ar' => $noteByEtudiant[$ie->etudiant_id]?->note_normale_decision_ar ?? $ie->note_normale_decision_ar,
+                'note_normale_decision_fr' => $noteByEtudiant[$ie->etudiant_id]?->note_normale_decision_fr ?? $ie->note_normale_decision_fr,
+                'note_ratt_decision_ar'    => $noteByEtudiant[$ie->etudiant_id]?->note_ratt_decision_ar ?? $ie->note_ratt_decision_ar,
+                'note_ratt_decision_fr'    => $noteByEtudiant[$ie->etudiant_id]?->note_ratt_decision_fr ?? $ie->note_ratt_decision_fr,
+                'decision_finale_ar' => $noteByEtudiant[$ie->etudiant_id]?->decision_finale_ar ?? $ie->decision_finale_ar,
+                'decision_finale_fr' => $noteByEtudiant[$ie->etudiant_id]?->decision_finale_fr ?? $ie->decision_finale_fr,
                 'etudiant'   => $ie->etudiant ? [
                     'id'       => $ie->etudiant->id,
                     'nom_fr'   => $ie->etudiant->nom_fr,
@@ -79,7 +98,8 @@ class InscriptionExamenController extends Controller
                     'CNE'      => $ie->etudiant->CNE,
                 ] : null,
             ]),
-        ]);
+            ];
+        });
 
         return Inertia::render('InscriptionExamen/Index', [
             'items'      => $items,
