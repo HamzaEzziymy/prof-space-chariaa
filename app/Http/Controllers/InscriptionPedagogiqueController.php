@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Etudiant;
 use App\Models\Module;
+use App\Models\Niveau;
 use App\Models\EtudiantModule;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -15,17 +16,20 @@ class InscriptionPedagogiqueController extends Controller
     use HasExcelParser;
     public function index(Request $request)
     {
-        $groupBy = $request->get('group_by', 'module');
-        $search  = $request->get('search', '');
-        $perPage = 15;
+        $groupBy  = $request->get('group_by', 'module');
+        $search   = $request->get('search', '');
+        $niveauId = $request->get('niveau_id');
+        $perPage  = 15;
 
         if ($groupBy === 'module') {
             $query = Module::query()
-                ->with(['etudiants' => function ($q) {
-                    $q->select('etudiant.id', 'etudiant.nom_fr', 'etudiant.prenom_fr', 'etudiant.nom_ar', 'etudiant.prenom_ar', 'etudiant.CNE', 'etudiant.photo_url');
-                }, 'prof.user:id,nom_fr,prenom_fr'])
+                ->with('semestre.niveau.filiere')
                 ->withCount('etudiants as inscriptions_count')
                 ->orderBy('nom_fr');
+
+            if ($niveauId) {
+                $query->whereHas('semestre.niveau', fn ($q) => $q->where('niveaux.id', $niveauId));
+            }
 
             if ($search) {
                 $query->where(function ($q) use ($search) {
@@ -44,27 +48,20 @@ class InscriptionPedagogiqueController extends Controller
                 'code_module'    => $m->code_module,
                 'coefficient'    => $m->coefficient,
                 'inscriptions_count' => $m->inscriptions_count,
-                'prof'           => $m->prof?->user
-                    ? trim($m->prof->user->nom_fr . ' ' . $m->prof->user->prenom_fr)
-                    : '—',
-                'etudiants'      => $m->etudiants->map(fn ($e) => [
-                    'id'        => $e->id,
-                    'pivot_id'  => $e->pivot->id,
-                    'nom_fr'    => $e->nom_fr,
-                    'prenom_fr' => $e->prenom_fr,
-                    'nom_ar'    => $e->nom_ar,
-                    'prenom_ar' => $e->prenom_ar,
-                    'CNE'       => $e->CNE,
-                    'photo_url' => $e->photo_url,
-                ]),
+                'semestre'       => $m->semestre ? ['id' => $m->semestre->id, 'code' => $m->semestre->code, 'nom_fr' => $m->semestre->nom_fr, 'nom_ar' => $m->semestre->nom_ar] : null,
+                'niveau'         => $m->semestre?->niveau ? ['id' => $m->semestre->niveau->id, 'code' => $m->semestre->niveau->code, 'nom_fr' => $m->semestre->niveau->nom_fr, 'nom_ar' => $m->semestre->niveau->nom_ar] : null,
+                'filiere'        => $m->semestre?->niveau?->filiere ? ['id' => $m->semestre->niveau->filiere->id, 'code' => $m->semestre->niveau->filiere->code, 'nom_fr' => $m->semestre->niveau->filiere->nom_fr, 'nom_ar' => $m->semestre->niveau->filiere->nom_ar] : null,
             ]);
         } else {
             $query = Etudiant::query()
-                ->with(['modules' => function ($q) {
-                    $q->select('module.id', 'module.nom_fr', 'module.nom_ar', 'module.code_module', 'module.coefficient');
-                }])
+                ->with('niveau.filiere')
                 ->withCount('modules as inscriptions_count')
-                ->orderBy('nom_fr');
+                ->orderBy('nom_fr')
+                ->orderBy('prenom_fr');
+
+            if ($niveauId) {
+                $query->where('niveau_id', $niveauId);
+            }
 
             if ($search) {
                 $query->where(function ($q) use ($search) {
@@ -89,20 +86,164 @@ class InscriptionPedagogiqueController extends Controller
                 'photo_url' => $e->photo_url,
                 'filier'    => $e->filier,
                 'inscriptions_count' => $e->inscriptions_count,
-                'modules'   => $e->modules->map(fn ($m) => [
-                    'id'          => $m->id,
-                    'pivot_id'    => $m->pivot->id,
-                    'nom_fr'      => $m->nom_fr,
-                    'nom_ar'      => $m->nom_ar,
-                    'code_module' => $m->code_module,
-                    'coefficient' => $m->coefficient,
-                ]),
+                'niveau'    => $e->niveau ? ['id' => $e->niveau->id, 'code' => $e->niveau->code, 'nom_fr' => $e->niveau->nom_fr, 'nom_ar' => $e->niveau->nom_ar] : null,
+                'filiere'   => $e->niveau?->filiere ? ['id' => $e->niveau->filiere->id, 'code' => $e->niveau->filiere->code, 'nom_fr' => $e->niveau->filiere->nom_fr, 'nom_ar' => $e->niveau->filiere->nom_ar] : null,
             ]);
         }
 
-        $allEtudiants = Etudiant::with('modules:id')
-            ->select('id', 'nom_fr', 'prenom_fr', 'nom_ar', 'prenom_ar', 'CNE')
+        $allModules = Module::with('semestre.niveau.filiere')
+            ->select('id', 'nom_fr', 'nom_ar', 'code_module', 'coefficient', 'semestre_id')
+            ->orderBy('nom_fr')->get()
+            ->map(fn ($m) => [
+                'id'          => $m->id,
+                'nom_fr'      => $m->nom_fr,
+                'nom_ar'      => $m->nom_ar,
+                'code_module' => $m->code_module,
+                'coefficient' => $m->coefficient,
+                'semestre'    => $m->semestre ? [
+                    'id'     => $m->semestre->id,
+                    'code'   => $m->semestre->code,
+                    'nom_fr' => $m->semestre->nom_fr,
+                    'nom_ar' => $m->semestre->nom_ar,
+                ] : null,
+                'niveau'      => $m->semestre?->niveau ? [
+                    'id'     => $m->semestre->niveau->id,
+                    'code'   => $m->semestre->niveau->code,
+                    'nom_fr' => $m->semestre->niveau->nom_fr,
+                    'nom_ar' => $m->semestre->niveau->nom_ar,
+                ] : null,
+                'filiere'     => $m->semestre?->niveau?->filiere ? [
+                    'id'     => $m->semestre->niveau->filiere->id,
+                    'code'   => $m->semestre->niveau->filiere->code,
+                    'nom_fr' => $m->semestre->niveau->filiere->nom_fr,
+                    'nom_ar' => $m->semestre->niveau->filiere->nom_ar,
+                ] : null,
+            ]);
+
+        $niveaux = Niveau::with('filiere')->orderBy('ordre')->get(['id', 'code', 'nom_fr', 'nom_ar', 'filiere_id']);
+
+        $stats = EtudiantModule::selectRaw('COUNT(*) as total, COUNT(DISTINCT etudiant_id) as students, COUNT(DISTINCT module_id) as modules')->first();
+
+        return Inertia::render('Inscriptions/Index', [
+            'items'        => $items,
+            'groupBy'      => $groupBy,
+            'filters'      => $request->only(['search', 'group_by', 'niveau_id']),
+            'allModules'   => $allModules,
+            'niveaux'      => $niveaux,
+            'stats'        => $stats,
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'etudiant_id' => 'required|exists:etudiant,id',
+            'module_ids'  => 'required|array|min:1',
+            'module_ids.*' => 'exists:module,id',
+        ]);
+
+        $created = 0;
+        $skipped = 0;
+
+        foreach ($validated['module_ids'] as $moduleId) {
+            $exists = EtudiantModule::where('etudiant_id', $validated['etudiant_id'])
+                ->where('module_id', $moduleId)
+                ->exists();
+
+            if ($exists) {
+                $skipped++;
+                continue;
+            }
+
+            EtudiantModule::create([
+                'etudiant_id' => $validated['etudiant_id'],
+                'module_id'   => $moduleId,
+            ]);
+            $created++;
+        }
+
+        if ($created > 0) {
+            return back()->with('success', $created . '_module(s)_inscrit(s)');
+        }
+
+        return back()->with('error', 'inscription_already_exists');
+    }
+
+    public function destroy(EtudiantModule $inscription)
+    {
+        $inscription->delete();
+        return back()->with('success', 'inscription_deleted');
+    }
+
+    /**
+     * JSON: get students for a module (lazy expand).
+     */
+    public function getModuleStudents(Module $module): JsonResponse
+    {
+        $students = $module->etudiants()
+            ->select('etudiant.id', 'etudiant.nom_fr', 'etudiant.prenom_fr', 'etudiant.nom_ar', 'etudiant.prenom_ar', 'etudiant.CNE', 'etudiant.photo_url', 'etudiant.niveau_id')
+            ->orderBy('etudiant.nom_fr')
+            ->get()
+            ->load('niveau.filiere')
+            ->map(fn ($e) => [
+                'id'        => $e->id,
+                'pivot_id'  => $e->pivot->id,
+                'nom_fr'    => $e->nom_fr,
+                'prenom_fr' => $e->prenom_fr,
+                'nom_ar'    => $e->nom_ar,
+                'prenom_ar' => $e->prenom_ar,
+                'CNE'       => $e->CNE,
+                'photo_url' => $e->photo_url,
+                'niveau'    => $e->niveau ? ['id' => $e->niveau->id, 'code' => $e->niveau->code, 'nom_fr' => $e->niveau->nom_fr, 'nom_ar' => $e->niveau->nom_ar] : null,
+                'filiere'   => $e->niveau?->filiere ? ['id' => $e->niveau->filiere->id, 'code' => $e->niveau->filiere->code, 'nom_fr' => $e->niveau->filiere->nom_fr, 'nom_ar' => $e->niveau->filiere->nom_ar] : null,
+            ]);
+
+        return response()->json($students);
+    }
+
+    /**
+     * JSON: get modules for a student (lazy expand).
+     */
+    public function getStudentModules(Etudiant $etudiant): JsonResponse
+    {
+        $modules = $etudiant->modules()
+            ->select('module.id', 'module.nom_fr', 'module.nom_ar', 'module.code_module', 'module.coefficient', 'module.semestre_id')
+            ->orderBy('module.nom_fr')
+            ->get()
+            ->load('semestre.niveau.filiere')
+            ->map(fn ($m) => [
+                'id'          => $m->id,
+                'pivot_id'    => $m->pivot->id,
+                'nom_fr'      => $m->nom_fr,
+                'nom_ar'      => $m->nom_ar,
+                'code_module' => $m->code_module,
+                'coefficient' => $m->coefficient,
+                'semestre'    => $m->semestre ? ['id' => $m->semestre->id, 'code' => $m->semestre->code, 'nom_fr' => $m->semestre->nom_fr, 'nom_ar' => $m->semestre->nom_ar] : null,
+                'niveau'      => $m->semestre?->niveau ? ['id' => $m->semestre->niveau->id, 'code' => $m->semestre->niveau->code, 'nom_fr' => $m->semestre->niveau->nom_fr, 'nom_ar' => $m->semestre->niveau->nom_ar] : null,
+                'filiere'     => $m->semestre?->niveau?->filiere ? ['id' => $m->semestre->niveau->filiere->id, 'code' => $m->semestre->niveau->filiere->code, 'nom_fr' => $m->semestre->niveau->filiere->nom_fr, 'nom_ar' => $m->semestre->niveau->filiere->nom_ar] : null,
+            ]);
+
+        return response()->json($modules);
+    }
+
+    /**
+     * JSON search endpoint for the student combo.
+     */
+    public function searchStudents(Request $request): JsonResponse
+    {
+        $query = $request->get('q', '');
+
+        $students = Etudiant::with(['modules:id', 'niveau.filiere'])
+            ->select('id', 'nom_fr', 'prenom_fr', 'nom_ar', 'prenom_ar', 'CNE', 'niveau_id')
+            ->when($query, fn ($q) => $q->where(function ($q) use ($query) {
+                $q->where('nom_fr',   'like', "%{$query}%")
+                  ->orWhere('prenom_fr', 'like', "%{$query}%")
+                  ->orWhere('nom_ar',   'like', "%{$query}%")
+                  ->orWhere('prenom_ar', 'like', "%{$query}%")
+                  ->orWhere('CNE',        'like', "%{$query}%");
+            }))
             ->orderBy('nom_fr')
+            ->limit(50)
             ->get()
             ->map(fn ($e) => [
                 'id'         => $e->id,
@@ -112,51 +253,21 @@ class InscriptionPedagogiqueController extends Controller
                 'prenom_ar'  => $e->prenom_ar,
                 'CNE'        => $e->CNE,
                 'module_ids' => $e->modules->pluck('id'),
+                'niveau'     => $e->niveau ? [
+                    'id'     => $e->niveau->id,
+                    'code'   => $e->niveau->code,
+                    'nom_fr' => $e->niveau->nom_fr,
+                    'nom_ar' => $e->niveau->nom_ar,
+                ] : null,
+                'filiere'    => $e->niveau?->filiere ? [
+                    'id'     => $e->niveau->filiere->id,
+                    'code'   => $e->niveau->filiere->code,
+                    'nom_fr' => $e->niveau->filiere->nom_fr,
+                    'nom_ar' => $e->niveau->filiere->nom_ar,
+                ] : null,
             ]);
 
-        $allModules = Module::select('id', 'nom_fr', 'nom_ar', 'code_module')
-            ->orderBy('nom_fr')->get();
-
-        $stats = [
-            'total'        => EtudiantModule::count(),
-            'students'     => EtudiantModule::distinct('etudiant_id')->count('etudiant_id'),
-            'modules'      => EtudiantModule::distinct('module_id')->count('module_id'),
-        ];
-
-        return Inertia::render('Inscriptions/Index', [
-            'items'        => $items,
-            'groupBy'      => $groupBy,
-            'filters'      => $request->only(['search', 'group_by']),
-            'allEtudiants' => $allEtudiants,
-            'allModules'   => $allModules,
-            'stats'        => $stats,
-        ]);
-    }
-
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'etudiant_id' => 'required|exists:etudiant,id',
-            'module_id'   => 'required|exists:module,id',
-        ]);
-
-        $exists = EtudiantModule::where('etudiant_id', $validated['etudiant_id'])
-            ->where('module_id', $validated['module_id'])
-            ->exists();
-
-        if ($exists) {
-            return back()->with('error', 'inscription_already_exists');
-        }
-
-        EtudiantModule::create($validated);
-
-        return back()->with('success', 'inscription_created');
-    }
-
-    public function destroy(EtudiantModule $inscription)
-    {
-        $inscription->delete();
-        return back()->with('success', 'inscription_deleted');
+        return response()->json($students);
     }
 
     // ── Excel import ──────────────────────────────────────────────────────────

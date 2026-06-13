@@ -26,7 +26,8 @@ class ModuleController extends Controller
         $sortDir     = $request->get('sort_dir') === 'asc' ? 'asc' : 'desc';
 
         $query = Module::query()
-            ->with(['prof.user:id,nom_fr,prenom_fr,nom_ar,prenom_ar', 'semestre.niveau'])
+            ->with('semestre.niveau')
+            ->with('groupes.prof.user')
             ->withCount('etudiants')
             ->orderBy($sortField, $sortDir);
 
@@ -48,16 +49,6 @@ class ModuleController extends Controller
 
         $modules = $query->paginate(12)->withQueryString();
 
-        // Load all profs (with user names) for the create/edit select
-        $profs = Prof::with('user:id,nom_fr,prenom_fr,nom_ar,prenom_ar')
-            ->orderBy('id')
-            ->get()
-            ->map(fn ($p) => [
-                'id'     => $p->id,
-                'nom_fr' => trim(($p->user->prenom_fr ?? '') . ' ' . ($p->user->nom_fr ?? '')),
-                'nom_ar' => trim(($p->user->prenom_ar ?? '') . ' ' . ($p->user->nom_ar ?? '')),
-            ]);
-
         $types = Module::distinct()->pluck('type_module')->filter()->values();
 
         $semestres = Semestre::with('niveau.filiere')
@@ -67,18 +58,22 @@ class ModuleController extends Controller
 
         $stats = [
             'total'        => Module::count(),
-            'withProf'     => Module::whereNotNull('prof_id')->count(),
             'withStudents' => Module::has('etudiants')->count(),
             'types'        => Module::distinct()->whereNotNull('type_module')->count('type_module'),
+            'withGroupes'  => Module::has('groupes')->count(),
         ];
+
+        $profs = \App\Models\Prof::with('user')
+            ->orderBy('id')
+            ->get(['id', 'user_id']);
 
         return Inertia::render('Modules/Index', [
             'modules'  => $modules,
-            'profs'    => $profs,
             'semestres'=> $semestres,
             'types'    => $types,
             'filters'  => $request->only(['search', 'type', 'semestre_id', 'sort_field', 'sort_dir']),
             'stats'    => $stats,
+            'profs'    => $profs,
         ]);
     }
 
@@ -93,7 +88,6 @@ class ModuleController extends Controller
             'code_module' => 'required|string|max:255|unique:module,code_module',
             'coefficient' => 'nullable|integer|min:1|max:10',
             'type_module' => 'nullable|string|max:255',
-            'prof_id'     => 'nullable|exists:prof,id',
             'semestre_id' => 'nullable|exists:semestres,id',
         ]);
 
@@ -114,7 +108,6 @@ class ModuleController extends Controller
                              Rule::unique('module', 'code_module')->ignore($module->id)],
             'coefficient' => 'nullable|integer|min:1|max:10',
             'type_module' => 'nullable|string|max:255',
-            'prof_id'     => 'nullable|exists:prof,id',
             'semestre_id' => 'nullable|exists:semestres,id',
         ]);
 
@@ -140,7 +133,7 @@ class ModuleController extends Controller
     {
         $fields = $request->input('fields', []);
 
-        $query = Module::query()->with('semestre.niveau.filiere', 'prof.user:id,nom_fr,prenom_fr,nom_ar,prenom_ar')->withCount('etudiants');
+        $query = Module::query()->with('semestre.niveau.filiere')->withCount('etudiants');
 
         if ($search = $request->get('search')) {
             $query->where(function ($q) use ($search) {
@@ -165,11 +158,6 @@ class ModuleController extends Controller
             $row = [];
             foreach ($fields as $field) {
                 $row[$field] = match ($field) {
-                    'prof_nom' => $m->prof?->user
-                        ? ($locale === 'ar'
-                            ? trim(($m->prof->user->prenom_ar ?? '') . ' ' . ($m->prof->user->nom_ar ?? ''))
-                            : trim(($m->prof->user->prenom_fr ?? '') . ' ' . ($m->prof->user->nom_fr ?? '')))
-                        : '',
                     'semestre_code' => $m->semestre?->code ?? '',
                     'niveau' => $m->semestre?->niveau
                         ? ($locale === 'ar' ? ($m->semestre->niveau->nom_ar ?: $m->semestre->niveau->nom_fr) : ($m->semestre->niveau->nom_fr ?: $m->semestre->niveau->nom_ar))
@@ -291,8 +279,6 @@ class ModuleController extends Controller
                 'coefficient' => is_numeric($data['coefficient'] ?? null)
                                     ? (int) $data['coefficient'] : null,
                 'type_module' => $data['type_module']  ?? null,
-                'prof_id'     => is_numeric($data['prof_id'] ?? null)
-                                    ? (int) $data['prof_id'] : null,
                 'semestre_id' => $semestreId,
             ]);
 

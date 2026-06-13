@@ -579,19 +579,46 @@ function UsersContent({ users, filters, stats }) {
                                     ))}
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
-                                {users.data.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={6} className="px-5 py-16 text-center">
-                                            <div className="flex flex-col items-center gap-2 text-slate-400">
-                                                <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.2}>
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                </svg>
-                                                <p className="text-sm font-medium">{t('noUsers')}</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : users.data.map((u) => {
+
+                            {(() => {
+                                const grouped = ROLES
+                                    .map(r => ({ role: r, users: users.data.filter(u => u.role === r) }))
+                                    .filter(g => g.users.length > 0);
+
+                                if (grouped.length === 0) {
+                                    return (
+                                        <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
+                                            <tr>
+                                                <td colSpan={6} className="px-5 py-16 text-center">
+                                                    <div className="flex flex-col items-center gap-2 text-slate-400">
+                                                        <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.2}>
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                        </svg>
+                                                        <p className="text-sm font-medium">{t('noUsers')}</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    );
+                                }
+
+                                return grouped.map(group => (
+                                    <tbody key={group.role} className="divide-y divide-slate-50 dark:divide-slate-700/50">
+                                        {/* Section header */}
+                                        <tr className="bg-slate-50/80 dark:bg-slate-700/40">
+                                            <td colSpan={6} className={`px-5 py-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${roleColors[group.role] ?? ''}`}>
+                                                        {t(group.role)}
+                                                    </span>
+                                                    <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">
+                                                        {group.users.length} {locale === 'ar' ? 'مستخدم' : 'utilisateur(s)'}
+                                                    </span>
+                                                    <div className="flex-1 border-t border-slate-200 dark:border-slate-700/60" />
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {group.users.map((u) => {
                                     const displayName = (locale === 'ar' && (u.nom_ar || u.prenom_ar))
                                         ? `${u.prenom_ar ?? ''} ${u.nom_ar ?? ''}`.trim()
                                         : `${u.prenom_fr ?? ''} ${u.nom_fr ?? ''}`.trim();
@@ -668,7 +695,7 @@ function UsersContent({ users, filters, stats }) {
                                             </td>
                                             {/* Actions */}
                                             <td className={`px-5 py-3.5 ${isRTL ? 'text-left' : 'text-right'}`}>
-                                                <div className={`flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ${isRTL ? 'flex-row-reverse justify-end' : 'justify-end'}`}>
+                                                <div className={`flex items-center gap-1 ${isRTL ? 'flex-row-reverse justify-end' : 'justify-end'}`}>
 
                                                     {/* View prof details — only for prof role */}
                                                     {u.role === 'prof' && (
@@ -757,7 +784,9 @@ function UsersContent({ users, filters, stats }) {
                                         </tr>
                                     );
                                 })}
-                            </tbody>
+                                    </tbody>
+                                ));
+                            })()}
                         </table>
                     </div>
 

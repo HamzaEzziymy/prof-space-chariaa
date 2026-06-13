@@ -3,9 +3,9 @@ import { translations } from './translations';
 
 const LanguageContext = createContext(null);
 
-export function LanguageProvider({ children }) {
+export function LanguageProvider({ children, defaultLocale }) {
     const [locale, setLocale] = useState(() => {
-        return localStorage.getItem('locale') || 'fr';
+        return localStorage.getItem('locale') || defaultLocale || 'fr';
     });
 
     const isRTL = locale === 'ar';

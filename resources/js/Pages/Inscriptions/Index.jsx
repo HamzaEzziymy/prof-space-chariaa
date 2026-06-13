@@ -2,6 +2,7 @@ import AdminLayout from '@/Layouts/AdminLayout';
 import { LanguageProvider, useLanguage } from '@/i18n/LanguageContext';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useState, useEffect, useRef, Fragment } from 'react';
+import axios from 'axios';
 import * as XLSX from 'xlsx';
 
 /* ── Icons ───────────────────────────────────────────────────────────────────*/
@@ -49,11 +50,15 @@ function StatCard({ icon, label, value, color }) {
     );
 }
 
-/* ── Student search combobox ─────────────────────────────────────────────────*/
-function StudentCombo({ items, value, onChange, placeholder, disabled, locale }) {
+/* ── Async student search combobox ──────────────────────────────────────────*/
+function StudentCombo({ value, onChange, placeholder, disabled, locale }) {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
+    const [results, setResults] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [selected, setSelected] = useState(null);
     const ref = useRef();
+    const timer = useRef(null);
 
     useEffect(() => {
         const handler = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
@@ -61,11 +66,27 @@ function StudentCombo({ items, value, onChange, placeholder, disabled, locale })
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
-    const selected = items?.find(i => i.id === value);
-    const filtered = items?.filter(i => {
-        const q = query.toLowerCase();
-        return !q || (i.nom_fr + ' ' + i.prenom_fr + ' ' + (i.CNE || '') + ' ' + i.nom_ar + ' ' + i.prenom_ar).toLowerCase().includes(q);
-    }) || [];
+    useEffect(() => {
+        if (disabled && selected) return;
+        if (!query || query.length < 1) { setResults([]); return; }
+        if (timer.current) clearTimeout(timer.current);
+        timer.current = setTimeout(async () => {
+            setLoading(true);
+            try {
+                const res = await axios.get(route('inscriptions.searchStudents'), { params: { q: query } });
+                setResults(res.data ?? []);
+            } catch { setResults([]); }
+            setLoading(false);
+        }, 300);
+        return () => { if (timer.current) clearTimeout(timer.current); };
+    }, [query, disabled]);
+
+    const infoLine = (i) => {
+        const parts = [];
+        if (i.niveau) parts.push(locale === 'ar' ? i.niveau.nom_ar : i.niveau.nom_fr);
+        if (i.filiere) parts.push(locale === 'ar' ? i.filiere.nom_ar : i.filiere.nom_fr);
+        return parts.join(' · ');
+    };
 
     if (disabled && selected) {
         return (
@@ -78,24 +99,37 @@ function StudentCombo({ items, value, onChange, placeholder, disabled, locale })
     return (
         <div ref={ref} className="relative">
             <input type="text" value={open ? query : (selected ? (locale === 'ar' ? (selected.nom_ar || selected.nom_fr) + ' ' + (selected.prenom_ar || selected.prenom_fr) : selected.nom_fr + ' ' + selected.prenom_fr + (selected.CNE ? ' (' + selected.CNE + ')' : '')) : '')}
-                onChange={e => { setQuery(e.target.value); setOpen(true); if (!e.target.value) onChange(null); }}
-                onFocus={() => { setOpen(true); setQuery(''); }}
+                onChange={e => { setQuery(e.target.value); setOpen(true); if (!e.target.value) { onChange(null); setSelected(null); } }}
+                onFocus={() => { setOpen(true); }}
                 placeholder={placeholder || ''}
                 className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600 transition" />
             {open && (
-                <div className="absolute z-20 mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg max-h-60 overflow-y-auto">
-                    {filtered.length > 0 ? filtered.map(i => (
-                        <button key={i.id} type="button" onClick={() => { onChange(i.id); setOpen(false); setQuery(''); }}
-                            className={`w-full text-start px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700/50 transition flex items-center gap-3
+                <div className="absolute z-20 mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg max-h-72 overflow-y-auto">
+                    {loading ? (
+                        <p className="px-4 py-3 text-xs text-slate-400 animate-pulse">{locale === 'ar' ? 'جاري البحث...' : 'Recherche...'}</p>
+                    ) : results.length > 0 ? results.map(i => (
+                        <button key={i.id} type="button" onClick={() => { onChange(i.id, i); setSelected(i); setOpen(false); setQuery(''); }}
+                            className={`w-full text-start px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700/50 transition
                                 ${value === i.id ? 'bg-indigo-50 dark:bg-indigo-900/20 font-medium' : ''}`}>
-                            <div className="h-7 w-7 shrink-0 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-500">
-                                {(locale === 'ar' ? (i.prenom_ar?.[0] || i.prenom_fr?.[0] || i.nom_ar?.[0] || i.nom_fr?.[0] || '?') : (i.prenom_fr?.[0] || i.nom_fr?.[0] || '?')).toUpperCase()}
+                            <div className="flex items-center gap-3">
+                                <div className="h-7 w-7 shrink-0 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-500">
+                                    {(locale === 'ar' ? (i.prenom_ar?.[0] || i.prenom_fr?.[0] || i.nom_ar?.[0] || i.nom_fr?.[0] || '?') : (i.prenom_fr?.[0] || i.nom_fr?.[0] || '?')).toUpperCase()}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-medium text-slate-700 dark:text-slate-200 truncate">
+                                            {locale === 'ar' ? ((i.nom_ar || i.nom_fr) + ' ' + (i.prenom_ar || i.prenom_fr)) : (i.nom_fr + ' ' + i.prenom_fr)}
+                                        </span>
+                                        {i.CNE && <code className="shrink-0 text-[10px] text-slate-400 font-mono">{i.CNE}</code>}
+                                    </div>
+                                    <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">{infoLine(i)}</p>
+                                </div>
                             </div>
-                            <span>{locale === 'ar' ? ((i.nom_ar || i.nom_fr) + ' ' + (i.prenom_ar || i.prenom_fr)) : (i.nom_fr + ' ' + i.prenom_fr)}</span>
-                            {i.CNE && <code className="ml-auto text-[10px] text-slate-400 font-mono">{i.CNE}</code>}
                         </button>
-                    )) : (
-                        <p className="px-4 py-3 text-xs text-slate-400">Aucun résultat</p>
+                    )) : query ? (
+                        <p className="px-4 py-3 text-xs text-slate-400">{locale === 'ar' ? 'لا توجد نتائج' : 'Aucun résultat'}</p>
+                    ) : (
+                        <p className="px-4 py-3 text-xs text-slate-400">{locale === 'ar' ? 'ابدأ الكتابة للبحث...' : 'Tapez pour rechercher...'}</p>
                     )}
                 </div>
             )}
@@ -154,16 +188,49 @@ function ModuleCombo({ items, value, onChange, placeholder, disabled }) {
     );
 }
 
-/* ── Add single inscription modal ────────────────────────────────────────────*/
-function AddModal({ allEtudiants, allModules, preselectedModuleId, preselectedStudentId, onClose, t, locale }) {
+/* ── Add inscription modal (multi-module) ────────────────────────────────────*/
+function AddModal({ allModules, preselectedModuleId, preselectedStudentId, onClose, t, locale }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         etudiant_id: preselectedStudentId ?? null,
-        module_id: preselectedModuleId ?? null,
+        module_ids: preselectedModuleId ? [preselectedModuleId] : [],
     });
 
-    const selectedStudent = allEtudiants?.find(e => e.id === data.etudiant_id);
+    const [selectedStudent, setSelectedStudent] = useState(null);
+    const [query, setQuery] = useState('');
+    const [open, setOpen] = useState(false);
+    const ref = useRef();
+
+    useEffect(() => {
+        const handler = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    useEffect(() => {
+        if (preselectedStudentId && !selectedStudent) {
+            axios.get(route('inscriptions.searchStudents'), { params: { q: '' } })
+                .then(res => {
+                    const s = (res.data ?? []).find(x => x.id === preselectedStudentId);
+                    if (s) setSelectedStudent(s);
+                })
+                .catch(() => {});
+        }
+    }, [preselectedStudentId]);
+
     const enrolledIds = selectedStudent?.module_ids || [];
     const availableModules = allModules?.filter(m => !enrolledIds.includes(m.id)) || [];
+
+    const filtered = availableModules.filter(i => {
+        const q = query.toLowerCase();
+        return !q || (i.nom_fr + ' ' + i.nom_ar + ' ' + (i.code_module || '')).toLowerCase().includes(q);
+    });
+
+    const toggleModule = (id) => {
+        setData('module_ids', data.module_ids.includes(id)
+            ? data.module_ids.filter(x => x !== id)
+            : [...data.module_ids, id]
+        );
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -177,8 +244,8 @@ function AddModal({ allEtudiants, allModules, preselectedModuleId, preselectedSt
         <>
             <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={onClose} />
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl dark:bg-slate-900 overflow-hidden">
-                    <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-6 py-4">
+                <div className="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl dark:bg-slate-900 flex flex-col max-h-[95vh]">
+                    <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-6 py-4 shrink-0">
                         <h2 className="text-sm font-bold text-slate-800 dark:text-white">
                             {locale === 'ar' ? 'تسجيل جديد' : 'Nouvelle inscription'}
                         </h2>
@@ -186,37 +253,100 @@ function AddModal({ allEtudiants, allModules, preselectedModuleId, preselectedSt
                             <Icon d={I.close} className="h-5 w-5" />
                         </button>
                     </div>
-                    <form onSubmit={handleSubmit} className="p-6 space-y-5">
-                        <div className="space-y-1.5">
-                            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                                {locale === 'ar' ? 'الطالب' : 'Étudiant'}
-                            </label>
-                            <StudentCombo items={allEtudiants} value={data.etudiant_id}
-                                onChange={v => setData('etudiant_id', v)}
+                    <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
+                        <div className="p-6 space-y-5 overflow-y-auto min-h-[300px]">
+                            <div className="space-y-1.5">
+                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                    {locale === 'ar' ? 'الطالب' : 'Étudiant'}
+                                </label>
+                            <StudentCombo value={data.etudiant_id}
+                                onChange={(id, student) => { setData('etudiant_id', id); setSelectedStudent(student ?? null); setData('module_ids', []); }}
                                 placeholder={locale === 'ar' ? 'ابحث عن طالب...' : 'Rechercher un étudiant...'}
                                 disabled={!!preselectedStudentId} locale={locale} />
-                            {errors.etudiant_id && <p className="text-xs text-red-500">{errors.etudiant_id}</p>}
+                                {errors.etudiant_id && <p className="text-xs text-red-500">{errors.etudiant_id}</p>}
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                    {locale === 'ar' ? 'الوحدات' : 'Modules'}
+                                </label>
+                                <div ref={ref} className="relative">
+                                    <input type="text" value={open ? query : ''}
+                                        onChange={e => { setQuery(e.target.value); setOpen(true); }}
+                                        onFocus={() => { if (data.etudiant_id) setOpen(true); }}
+                                        placeholder={!data.etudiant_id
+                                            ? (locale === 'ar' ? 'اختر طالباً أولاً' : 'Sélectionnez d\'abord un étudiant')
+                                            : (locale === 'ar' ? 'ابحث عن وحدات...' : 'Rechercher des modules...')}
+                                        disabled={!data.etudiant_id}
+                                        className={`block w-full rounded-xl border bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-800 dark:text-white placeholder-slate-400 transition ${!data.etudiant_id ? 'border-slate-100 dark:border-slate-700/50 text-slate-300 dark:text-slate-600 cursor-not-allowed' : 'border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600'}`} />
+                                    {open && (
+                                        <div className="absolute z-20 mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg max-h-60 overflow-y-auto">
+                                            {filtered.length > 0 ? filtered.map(i => {
+                                                const sel = data.module_ids.includes(i.id);
+                                                const sub = [
+                                                    i.semestre ? (locale === 'ar' ? i.semestre.nom_ar : i.semestre.nom_fr) : '',
+                                                    i.niveau ? (locale === 'ar' ? i.niveau.nom_ar : i.niveau.nom_fr) : '',
+                                                    i.filiere ? (locale === 'ar' ? i.filiere.nom_ar : i.filiere.nom_fr) : '',
+                                                ].filter(Boolean).join(' · ');
+                                                return (
+                                                    <button key={i.id} type="button" onClick={() => toggleModule(i.id)}
+                                                        className={`w-full text-start px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700/50 transition ${sel ? 'bg-indigo-50 dark:bg-indigo-900/20 font-medium' : ''}`}>
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`h-4 w-4 shrink-0 rounded border-2 flex items-center justify-center transition ${sel ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 dark:border-slate-600'}`}>
+                                                                {sel && <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                                            </div>
+                                                            <div className="min-w-0 flex-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-medium text-slate-700 dark:text-slate-200 truncate">{i.nom_fr}</span>
+                                                                    {i.code_module && <code className="shrink-0 text-[10px] text-slate-400 font-mono">{i.code_module}</code>}
+                                                                    {i.coefficient != null && <span className="shrink-0 text-[10px] text-slate-400">Coef: {i.coefficient}</span>}
+                                                                </div>
+                                                                {sub && <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">{sub}</p>}
+                                                            </div>
+                                                        </div>
+                                                    </button>
+                                                );
+                                            }) : (
+                                                <p className="px-4 py-3 text-xs text-slate-400">{locale === 'ar' ? 'لا توجد نتائج' : 'Aucun résultat'}</p>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                                {/* Selected module chips */}
+                                {data.module_ids.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 pt-1">
+                                        {data.module_ids.map(id => {
+                                            const m = allModules?.find(x => x.id === id);
+                                            if (!m) return null;
+                                            const sub = [
+                                                m.semestre ? (locale === 'ar' ? m.semestre.nom_ar : m.semestre.nom_fr) : '',
+                                                m.niveau ? (locale === 'ar' ? m.niveau.nom_ar : m.niveau.nom_fr) : '',
+                                                m.filiere ? (locale === 'ar' ? m.filiere.nom_ar : m.filiere.nom_fr) : '',
+                                            ].filter(Boolean).join(' · ');
+                                            return (
+                                                <span key={id} className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 px-2.5 py-1 text-xs text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                                                    <span className="font-medium">{m.nom_fr}</span>
+                                                    {sub && <span className="text-indigo-400 dark:text-indigo-400">— {sub}</span>}
+                                                    <button type="button" onClick={() => toggleModule(id)} className="ml-0.5 hover:text-indigo-900 dark:hover:text-indigo-100 transition">
+                                                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                                    </button>
+                                                </span>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                                {errors.module_ids && <p className="text-xs text-red-500">{errors.module_ids}</p>}
+                            </div>
                         </div>
-                        <div className="space-y-1.5">
-                            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                                {locale === 'ar' ? 'الوحدة' : 'Module'}
-                            </label>
-                            <ModuleCombo items={availableModules} value={data.module_id}
-                                onChange={v => setData('module_id', v)}
-                                placeholder={locale === 'ar' ? 'ابحث عن وحدة...' : 'Rechercher un module...'}
-                                disabled={!!preselectedModuleId} />
-                            {errors.module_id && <p className="text-xs text-red-500">{errors.module_id}</p>}
-                        </div>
-                        <div className="flex items-center justify-end gap-3 pt-2">
+                        <div className="flex items-center justify-end gap-3 border-t border-slate-100 dark:border-slate-800 px-6 py-4 shrink-0">
                             <button type="button" onClick={onClose}
                                 className="rounded-xl border border-slate-200 dark:border-slate-700 px-5 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
                                 {t('cancel')}
                             </button>
-                            <button type="submit" disabled={processing || !data.etudiant_id || !data.module_id}
+                            <button type="submit" disabled={processing || !data.etudiant_id || data.module_ids.length === 0}
                                 className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition disabled:opacity-50">
                                 {processing ? <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
                                     : <Icon d={I.check} className="h-4 w-4" />}
-                                {locale === 'ar' ? 'تسجيل' : 'Inscrire'}
+                                {locale === 'ar' ? `تسجيل (${data.module_ids.length})` : `Inscrire (${data.module_ids.length})`}
                             </button>
                         </div>
                     </form>
@@ -650,10 +780,12 @@ function ExcelModal({ onClose, t, isRTL, locale }) {
 /* ── Main page ───────────────────────────────────────────────────────────────*/
 function PageContent() {
     const { t, locale, isRTL } = useLanguage();
-    const { items, groupBy, filters, allEtudiants, allModules, stats, flash } = usePage().props;
+    const { items, groupBy, filters, allModules, niveaux, stats, flash } = usePage().props;
 
     const [search, setSearch] = useState(filters?.search || '');
     const [expanded, setExpanded] = useState(new Set());
+    const [childrenCache, setChildrenCache] = useState({});
+    const [loadingChild, setLoadingChild] = useState(null);
     const [showAdd, setShowAdd] = useState(false);
     const [showExcel, setShowExcel] = useState(false);
     const [preselectedModuleId, setPreselectedModuleId] = useState(null);
@@ -680,25 +812,59 @@ function PageContent() {
         setSearch(val);
         if (searchTimeout.current) clearTimeout(searchTimeout.current);
         searchTimeout.current = setTimeout(() => {
-            router.get(route('inscriptions.index'), { search: val, group_by: groupBy }, { preserveState: true, replace: true });
+            router.get(route('inscriptions.index'), { search: val, group_by: groupBy, niveau_id: filters?.niveau_id }, { preserveState: true, replace: true });
         }, 400);
+    };
+
+    /* Niveau filter */
+    const handleNiveauFilter = (val) => {
+        router.get(route('inscriptions.index'), { search, group_by: groupBy, niveau_id: val || '' }, { preserveState: true, replace: true });
     };
 
     /* Toggle grouping */
     const toggleGroup = (val) => {
-        router.get(route('inscriptions.index'), { search, group_by: val }, { preserveState: true, replace: true });
+        router.get(route('inscriptions.index'), { search, group_by: val, niveau_id: filters?.niveau_id }, { preserveState: true, replace: true });
+    };
+
+    const doDelete = (parentId, pivotId) => {
+        setConfirmDeleteId(null);
+        deleteForm.delete(route('inscriptions.destroy', pivotId), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setChildrenCache(prev => {
+                    const next = { ...prev };
+                    if (next[parentId]) next[parentId] = next[parentId].filter(c => c.pivot_id !== pivotId);
+                    return next;
+                });
+            },
+            onFinish: () => setConfirmDeleteId(null),
+        });
     };
 
     const toggleExpand = (id) => {
         setExpanded(prev => {
             const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
+            const willExpand = !next.has(id);
+            if (willExpand) {
+                if (!childrenCache[id]) {
+                    setLoadingChild(id);
+                    const routeName = isModuleView ? 'inscriptions.moduleStudents' : 'inscriptions.studentModules';
+                    axios.get(route(routeName, id))
+                        .then(res => {
+                            setChildrenCache(prev2 => ({ ...prev2, [id]: res.data ?? [] }));
+                            setLoadingChild(null);
+                        })
+                        .catch(() => setLoadingChild(null));
+                }
+            }
+            willExpand ? next.add(id) : next.delete(id);
             return next;
         });
     };
 
     const isModuleView = groupBy === 'module';
     const deleteForm = useForm();
+    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
     return (
         <>
@@ -775,6 +941,18 @@ function PageContent() {
                             : (locale === 'ar' ? 'ابحث عن طالب...' : 'Rechercher un étudiant...')}
                         className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 ps-9 pe-4 py-2 text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600 transition shadow-sm" />
                 </div>
+                {/* Niveau filter */}
+                <select value={filters?.niveau_id ?? ''}
+                    onChange={e => handleNiveauFilter(e.target.value)}
+                    className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600 transition shadow-sm">
+                    <option value="">{locale === 'ar' ? 'كل المستويات' : 'Tous les niveaux'}</option>
+                    {niveaux?.map(n => (
+                        <option key={n.id} value={n.id}>
+                            {locale === 'ar' ? (n.nom_ar || n.nom_fr) : n.nom_fr}
+                            {n.filiere ? ` (${locale === 'ar' ? n.filiere.nom_ar : n.filiere.nom_fr})` : ''}
+                        </option>
+                    ))}
+                </select>
             </div>
 
             {/* Tree view */}
@@ -782,8 +960,8 @@ function PageContent() {
                 <div className="space-y-3">
                     {items.data.map(item => {
                         const isOpen = expanded.has(item.id);
-                        const children = isModuleView ? item.etudiants : item.modules;
-                        const hasChildren = children?.length > 0;
+                        const children = childrenCache[item.id] ?? [];
+                        const hasChildren = item.inscriptions_count > 0;
                         return (
                             <div key={item.id} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm overflow-hidden">
                                 {/* Parent card */}
@@ -801,14 +979,17 @@ function PageContent() {
                                                     </span>
                                                     <code className="rounded-lg bg-slate-100 dark:bg-slate-700 px-2 py-0.5 font-mono text-[10px] font-bold text-slate-500 dark:text-slate-400">{item.code_module || ''}</code>
                                                 </div>
-                                                <div className="flex items-center gap-3 mt-0.5">
-                                                    <span className="text-xs text-slate-400">{item.prof || '—'}</span>
+                                                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                                    {item.semestre && <span className="text-xs text-slate-400">{locale === 'ar' ? item.semestre.nom_ar : item.semestre.nom_fr}</span>}
+                                                    {item.niveau && <span className="text-xs text-slate-400">{locale === 'ar' ? item.niveau.nom_ar : item.niveau.nom_fr}</span>}
+                                                    {item.filiere && <span className="text-xs text-slate-400">{locale === 'ar' ? item.filiere.nom_ar : item.filiere.nom_fr}</span>}
+                                                    <span className="text-xs text-slate-300">·</span>
                                                     <span className={`text-xs ${hasChildren ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>
                                                         {hasChildren
-                                                            ? (locale === 'ar' ? `${children.length} طالب` : `${children.length} étudiant${children.length > 1 ? 's' : ''}`)
+                                                            ? (locale === 'ar' ? `${item.inscriptions_count} طالب` : `${item.inscriptions_count} étudiant${item.inscriptions_count > 1 ? 's' : ''}`)
                                                             : (locale === 'ar' ? 'لا يوجد طلاب' : 'Aucun étudiant')}
                                                     </span>
-                                                    {item.coefficient && <span className="text-xs text-slate-400">{locale === 'ar' ? 'المعامل:' : 'Coeff:'} {item.coefficient}</span>}
+                                                    {item.coefficient && <><span className="text-xs text-slate-300">·</span><span className="text-xs text-slate-400">{locale === 'ar' ? 'المعامل:' : 'Coeff:'} {item.coefficient}</span></>}
                                                 </div>
                                             </div>
                                         </div>
@@ -824,16 +1005,18 @@ function PageContent() {
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-sm font-semibold text-slate-800 dark:text-white truncate">
                                                         {locale === 'ar'
-                                                            ? (item.prenom_ar || item.prenom_fr || '') + ' ' + (item.nom_ar || item.nom_fr || '')
-                                                            : (item.prenom_fr || '') + ' ' + (item.nom_fr || '')}
+                                                            ? (item.nom_ar || item.nom_fr || '') + ' ' + (item.prenom_ar || item.prenom_fr || '')
+                                                            : (item.nom_fr || '') + ' ' + (item.prenom_fr || '')}
                                                     </span>
                                                     {item.CNE && <code className="rounded-lg bg-slate-100 dark:bg-slate-700 px-2 py-0.5 font-mono text-[10px] font-bold text-slate-500 dark:text-slate-400">{item.CNE}</code>}
                                                 </div>
-                                                <div className="flex items-center gap-3 mt-0.5">
-                                                    <span className="text-xs text-slate-400">{item.filier || '—'}</span>
+                                                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                                    {item.niveau && <span className="text-xs text-slate-400">{locale === 'ar' ? item.niveau.nom_ar : item.niveau.nom_fr}</span>}
+                                                    {item.filiere && <span className="text-xs text-slate-400">{locale === 'ar' ? item.filiere.nom_ar : item.filiere.nom_fr}</span>}
+                                                    <span className="text-xs text-slate-300">·</span>
                                                     <span className={`text-xs ${hasChildren ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>
                                                         {hasChildren
-                                                            ? (locale === 'ar' ? `${children.length} وحدة` : `${children.length} module${children.length > 1 ? 's' : ''}`)
+                                                            ? (locale === 'ar' ? `${item.inscriptions_count} وحدة` : `${item.inscriptions_count} module${item.inscriptions_count > 1 ? 's' : ''}`)
                                                             : (locale === 'ar' ? 'لا توجد وحدات' : 'Aucun module')}
                                                     </span>
                                                 </div>
@@ -846,7 +1029,15 @@ function PageContent() {
                                 {/* Expanded children */}
                                 {isOpen && hasChildren && (
                                     <div className="border-t border-slate-100 dark:border-slate-700/60">
-                                        {children.map((child, cIdx) => (
+                                        {loadingChild === item.id ? (
+                                            <div className="px-5 py-6 text-center">
+                                                <div className="animate-spin h-5 w-5 border-2 border-indigo-500 border-t-transparent rounded-full mx-auto" />
+                                            </div>
+                                        ) : children.length === 0 ? (
+                                            <div className="px-5 py-4 text-center text-xs text-slate-400">
+                                                {locale === 'ar' ? 'لا يوجد بيانات' : 'Aucune donnée'}
+                                            </div>
+                                        ) : children.map((child, cIdx) => (
                                             <div key={`${item.id}-${child.id}`}
                                                 className={`flex items-center justify-between px-5 py-3 ${cIdx < children.length - 1 ? 'border-b border-slate-50 dark:border-slate-700/30' : ''} hover:bg-slate-50/70 dark:hover:bg-slate-700/20 transition`}>
                                                 {isModuleView ? (
@@ -865,19 +1056,38 @@ function PageContent() {
                                                                 <div className="flex items-center gap-2">
                                                                     <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
                                                                         {locale === 'ar'
-                                                                            ? (child.prenom_ar || child.prenom_fr || '') + ' ' + (child.nom_ar || child.nom_fr || '')
-                                                                            : (child.prenom_fr || '') + ' ' + (child.nom_fr || '')}
+                                                                            ? (child.nom_ar || child.nom_fr || '') + ' ' + (child.prenom_ar || child.prenom_fr || '')
+                                                                            : (child.nom_fr || '') + ' ' + (child.prenom_fr || '')}
                                                                     </span>
                                                                     {child.CNE && <code className="text-[10px] font-mono text-slate-400">{child.CNE}</code>}
                                                                 </div>
+                                                                {(child.niveau || child.filiere) && (
+                                                                    <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+                                                                        {[child.niveau ? (locale === 'ar' ? child.niveau.nom_ar : child.niveau.nom_fr) : '', child.filiere ? (locale === 'ar' ? child.filiere.nom_ar : child.filiere.nom_fr) : ''].filter(Boolean).join(' · ')}
+                                                                    </p>
+                                                                )}
                                                             </div>
                                                         </div>
-                                                        <button onClick={(e) => { e.stopPropagation(); deleteForm.delete(route('inscriptions.destroy', child.pivot_id), { preserveScroll: true }); }}
-                                                            disabled={deleteForm.processing}
-                                                            className="inline-flex items-center gap-1 rounded-lg border border-red-200 dark:border-red-800 px-2.5 py-1 text-[10px] font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition disabled:opacity-50 shrink-0">
-                                                            <Icon d={I.trash} className="h-3 w-3" />
-                                                            {locale === 'ar' ? 'إلغاء' : 'Retirer'}
-                                                        </button>
+                                                        {confirmDeleteId === child.pivot_id ? (
+                                                            <span className="inline-flex items-center gap-1 shrink-0">
+                                                                <span className="text-[10px] text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'تأكيد؟' : 'Confirmer ?'}</span>
+                                                                <button onClick={(e) => { e.stopPropagation(); doDelete(item.id, child.pivot_id); }}
+                                                                    disabled={deleteForm.processing}
+                                                                    className="rounded-lg bg-red-500 hover:bg-red-600 px-2 py-1 text-[10px] font-semibold text-white transition disabled:opacity-50">
+                                                                    {locale === 'ar' ? 'نعم' : 'Oui'}
+                                                                </button>
+                                                                <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
+                                                                    className="rounded-lg border border-slate-200 dark:border-slate-700 px-2 py-1 text-[10px] font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                                                                    {locale === 'ar' ? 'لا' : 'Non'}
+                                                                </button>
+                                                            </span>
+                                                        ) : (
+                                                            <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(child.pivot_id); }}
+                                                                className="inline-flex items-center gap-1 rounded-lg border border-red-200 dark:border-red-800 px-2.5 py-1 text-[10px] font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition shrink-0">
+                                                                <Icon d={I.trash} className="h-3 w-3" />
+                                                                {locale === 'ar' ? 'إلغاء' : 'Retirer'}
+                                                            </button>
+                                                        )}
                                                     </>
                                                 ) : (
                                                     <>
@@ -896,14 +1106,33 @@ function PageContent() {
                                                                     {child.code_module && <code className="text-[10px] font-mono text-slate-400">{child.code_module}</code>}
                                                                 </div>
                                                                 <span className="text-xs text-slate-400">{locale === 'ar' ? 'المعامل:' : 'Coeff:'} {child.coefficient ?? '—'}</span>
+                                                                {(child.semestre || child.niveau || child.filiere) && (
+                                                                    <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+                                                                        {[child.semestre ? (locale === 'ar' ? child.semestre.nom_ar : child.semestre.nom_fr) : '', child.niveau ? (locale === 'ar' ? child.niveau.nom_ar : child.niveau.nom_fr) : '', child.filiere ? (locale === 'ar' ? child.filiere.nom_ar : child.filiere.nom_fr) : ''].filter(Boolean).join(' · ')}
+                                                                    </p>
+                                                                )}
                                                             </div>
                                                         </div>
-                                                        <button onClick={(e) => { e.stopPropagation(); deleteForm.delete(route('inscriptions.destroy', child.pivot_id), { preserveScroll: true }); }}
-                                                            disabled={deleteForm.processing}
-                                                            className="inline-flex items-center gap-1 rounded-lg border border-red-200 dark:border-red-800 px-2.5 py-1 text-[10px] font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition disabled:opacity-50 shrink-0">
-                                                            <Icon d={I.trash} className="h-3 w-3" />
-                                                            {locale === 'ar' ? 'إلغاء' : 'Retirer'}
-                                                        </button>
+                                                        {confirmDeleteId === child.pivot_id ? (
+                                                            <span className="inline-flex items-center gap-1 shrink-0">
+                                                                <span className="text-[10px] text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'تأكيد؟' : 'Confirmer ?'}</span>
+                                                                <button onClick={(e) => { e.stopPropagation(); doDelete(item.id, child.pivot_id); }}
+                                                                    disabled={deleteForm.processing}
+                                                                    className="rounded-lg bg-red-500 hover:bg-red-600 px-2 py-1 text-[10px] font-semibold text-white transition disabled:opacity-50">
+                                                                    {locale === 'ar' ? 'نعم' : 'Oui'}
+                                                                </button>
+                                                                <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
+                                                                    className="rounded-lg border border-slate-200 dark:border-slate-700 px-2 py-1 text-[10px] font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                                                                    {locale === 'ar' ? 'لا' : 'Non'}
+                                                                </button>
+                                                            </span>
+                                                        ) : (
+                                                            <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(child.pivot_id); }}
+                                                                className="inline-flex items-center gap-1 rounded-lg border border-red-200 dark:border-red-800 px-2.5 py-1 text-[10px] font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition shrink-0">
+                                                                <Icon d={I.trash} className="h-3 w-3" />
+                                                                {locale === 'ar' ? 'إلغاء' : 'Retirer'}
+                                                            </button>
+                                                        )}
                                                     </>
                                                 )}
                                             </div>
@@ -985,7 +1214,7 @@ function PageContent() {
             )}
 
             {/* Modals */}
-            {showAdd && <AddModal allEtudiants={allEtudiants} allModules={allModules} preselectedModuleId={preselectedModuleId} preselectedStudentId={preselectedStudentId} onClose={() => { setShowAdd(false); setPreselectedModuleId(null); setPreselectedStudentId(null); }} t={t} locale={locale} />}
+            {showAdd && <AddModal allModules={allModules} preselectedModuleId={preselectedModuleId} preselectedStudentId={preselectedStudentId} onClose={() => { setShowAdd(false); setPreselectedModuleId(null); setPreselectedStudentId(null); }} t={t} locale={locale} />}
             {showExcel && <ExcelModal onClose={() => { setShowExcel(false); router.reload({ only: ['items', 'stats'] }); }} t={t} locale={locale} />}
         </>
     );

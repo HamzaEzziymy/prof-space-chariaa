@@ -6,13 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Module extends Model
 {
     protected $table = 'module';
 
     protected $fillable = [
-        'prof_id',
         'semestre_id',
         'nom_ar',
         'nom_fr',
@@ -20,14 +20,6 @@ class Module extends Model
         'coefficient',
         'type_module',
     ];
-
-    /**
-     * Get the prof who teaches this module.
-     */
-    public function prof(): BelongsTo
-    {
-        return $this->belongsTo(Prof::class, 'prof_id');
-    }
 
     /**
      * Get the semestre this module belongs to.
@@ -52,5 +44,18 @@ class Module extends Model
     public function etudiantModules(): HasMany
     {
         return $this->hasMany(EtudiantModule::class, 'module_id');
+    }
+
+    /**
+     * Get the groupes for this module.
+     */
+    public function groupes(): HasMany
+    {
+        return $this->hasMany(Groupe::class, 'module_id');
+    }
+
+    public function inscriptionsExamen(): HasManyThrough
+    {
+        return $this->hasManyThrough(InscriptionExamen::class, EtudiantModule::class, 'module_id', 'etud_mod_id');
     }
 }

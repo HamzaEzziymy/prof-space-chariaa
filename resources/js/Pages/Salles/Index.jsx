@@ -499,7 +499,7 @@ function SalleRow({ salle, onEdit, onDelete, t, locale }) {
 
             {/* Actions */}
             <td className="px-5 py-3.5">
-                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center justify-end gap-1">
                     <button onClick={() => onEdit(salle)}
                         className="rounded-lg p-1.5 text-slate-400 hover:bg-primary/10 hover:text-primary dark:hover:bg-primary/20 transition"
                         title={t('edit')}>

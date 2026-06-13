@@ -624,12 +624,22 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale, niveaux }) {
     };
 
     const downloadTemplate = () => {
-        const header  = COLS.map(c => c.name).join(',');
-        const example = 'Jean,Dupont,جان,دوبون,CNE123456,A123456,INS001,2000-01-15,Casablanca,test@email.com,M,+212600000000';
-        const blob    = new Blob([header + '\n' + example], { type: 'text/csv;charset=utf-8;' });
-        const url     = URL.createObjectURL(blob);
-        const a       = document.createElement('a');
-        a.href = url; a.download = 'etudiants_template.csv'; a.click();
+        const example = {
+            prenom_fr: 'Jean', nom_fr: 'Dupont', prenom_ar: 'جان', nom_ar: 'دوبون',
+            CNE: 'CNE123456', CIN: 'A123456', Nins: 'INS001',
+            date_naissance: '2000-01-15', lieu_naissance: 'Casablanca',
+            sexe: 'M', telephone: '+212600000000', email: 'test@email.com',
+        };
+        const ws = XLSX.utils.json_to_sheet([example], { header: COLS.map(c => c.name) });
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Etudiants');
+        const colWidths = COLS.map(() => ({ wch: 18 }));
+        ws['!cols'] = colWidths;
+        const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url; a.download = 'etudiants_template.xlsx'; a.click();
         URL.revokeObjectURL(url);
     };
 
@@ -1359,7 +1369,7 @@ function EtudiantRow({ etudiant, onEdit, onDelete, t, locale }) {
                 {etudiant.email || '—'}
             </td>
             <td className="px-5 py-3.5">
-                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center justify-end gap-1">
                     <Link href={route('etudiants.show', etudiant.id)} title={t('view')}
                         className="rounded-lg p-1.5 text-slate-400 hover:bg-indigo-100 hover:text-indigo-600 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-400 transition">
                         <Icon d={ICONS.eye} className="h-4 w-4" />

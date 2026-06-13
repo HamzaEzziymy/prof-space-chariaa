@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Module;
+use App\Models\Groupe;
 use App\Models\Prof;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -19,12 +19,10 @@ class ProfessorController extends Controller
     public function index(Request $request): Response
     {
         $query = Prof::query()
-            ->with(['user:id,nom_fr,prenom_fr,nom_ar,prenom_ar,email,photo_profile_url,is_active',
-                    'modules:id,nom_fr,nom_ar,code_module,prof_id'])
-            ->withCount('modules')
+            ->with(['user:id,nom_fr,prenom_fr,nom_ar,prenom_ar,email,photo_profile_url,is_active'])
+            ->withCount('groupes')
             ->orderBy('created_at', 'desc');
 
-        // Search by name, email, CIN, or telephone
         if ($search = $request->get('search')) {
             $query->where(function ($q) use ($search) {
                 $q->whereHas('user', function ($uq) use ($search) {
@@ -39,14 +37,12 @@ class ProfessorController extends Controller
             });
         }
 
-        // Filter by grade
         if ($grade = $request->get('grade')) {
             $query->where('grade', $grade);
         }
 
         $profs = $query->paginate(12)->withQueryString();
 
-        // Append computed avatar_url
         $profs->getCollection()->transform(function ($prof) {
             if ($prof->user) {
                 $prof->user->avatar_url = $prof->user->photo_profile_url
@@ -56,10 +52,8 @@ class ProfessorController extends Controller
             return $prof;
         });
 
-        // All distinct grades for the filter dropdown
         $grades = Prof::distinct()->pluck('grade')->filter()->values();
 
-        // Available users with role='prof' who don't have a Prof record yet
         $availableUsers = User::where('role', 'prof')
             ->whereDoesntHave('prof')
             ->select(['id', 'nom_fr', 'prenom_fr', 'nom_ar', 'prenom_ar', 'email'])
@@ -67,10 +61,10 @@ class ProfessorController extends Controller
             ->get();
 
         $stats = [
-            'total'      => Prof::count(),
-            'active'     => Prof::whereHas('user', fn ($q) => $q->where('is_active', true))->count(),
-            'inactive'   => Prof::whereHas('user', fn ($q) => $q->where('is_active', false))->count(),
-            'withModules'=> Prof::has('modules')->count(),
+            'total'    => Prof::count(),
+            'active'   => Prof::whereHas('user', fn ($q) => $q->where('is_active', true))->count(),
+            'inactive' => Prof::whereHas('user', fn ($q) => $q->where('is_active', false))->count(),
+            'withGroupes' => Prof::has('groupes')->count(),
         ];
 
         return Inertia::render('Professors/Index', [
@@ -88,63 +82,47 @@ class ProfessorController extends Controller
     public function show(Prof $prof): Response
     {
         $prof->load([
-            'user:id,nom_fr,prenom_fr,nom_ar,prenom_ar,email,photo_profile_url,is_active,email_verified_at,created_at',
-            'modules' => fn ($q) => $q->with('semestre.niveau.filiere')
-                ->select(['id', 'prof_id', 'nom_fr', 'nom_ar', 'code_module', 'coefficient', 'type_module', 'semestre_id']),
+            'user:id,nom_fr,prenom_fr,nom_ar,prenom_ar,email,photo_profile_url,is_active,email_verified_at,created_at,must_change_password',
+            'groupes' => fn ($q) => $q->with('module.semestre.niveau.filiere'),
         ]);
-        $prof->loadCount('modules');
+        $prof->loadCount('groupes');
 
-        // Compute avatar URL
         if ($prof->user) {
             $prof->user->avatar_url = $prof->user->photo_profile_url
                 ? '/storage/' . $prof->user->photo_profile_url
                 : null;
         }
 
-        // Attach enrolled student count per module
-        $prof->modules->each(function ($module) {
-            $module->loadCount('etudiants');
+        $prof->groupes->each(function ($groupe) {
+            $groupe->etudiants_count = $groupe->relationLoaded('module') && $groupe->module
+                ? $groupe->module->etudiants()->count()
+                : 0;
         });
 
-        // Modules not yet assigned to any professor (available to assign)
-        $unassignedModules = \App\Models\Module::whereNull('prof_id')
-            ->with('semestre.niveau.filiere')
-            ->orderBy('nom_fr')
-            ->get(['id', 'nom_fr', 'nom_ar', 'code_module', 'type_module', 'coefficient', 'semestre_id']);
+        $assignableGroupes = Groupe::whereNull('prof_id')
+            ->with('module.semestre.niveau.filiere')
+            ->orderBy('code')
+            ->get(['id', 'code', 'nom_fr', 'nom_ar', 'module_id']);
 
         return Inertia::render('Professors/Show', [
-            'prof'              => $prof,
-            'unassignedModules' => $unassignedModules,
+            'prof' => $prof,
+            'assignableGroupes' => $assignableGroupes,
         ]);
     }
 
-    /**
-     * Assign an existing (unassigned) module to this professor.
-     */
-    public function assignModule(Request $request, Prof $prof): RedirectResponse
+    public function assignGroupe(Prof $prof, Groupe $groupe): RedirectResponse
     {
-        $validated = $request->validate([
-            'module_id' => ['required', 'exists:module,id'],
-        ]);
-
-        $module = Module::findOrFail($validated['module_id']);
-        $module->update(['prof_id' => $prof->id]);
-
-        return back()->with('success', 'module_assigned');
+        $groupe->update(['prof_id' => $prof->id]);
+        return back()->with('success', 'Groupe assigné avec succès.');
     }
 
-    /**
-     * Unassign (remove) a module from this professor.
-     */
-    public function unassignModule(Prof $prof, Module $module): RedirectResponse
+    public function unassignGroupe(Prof $prof, Groupe $groupe): RedirectResponse
     {
-        if ($module->prof_id !== $prof->id) {
-            return back()->with('error', 'module_not_assigned_to_prof');
+        if ($groupe->prof_id !== $prof->id) {
+            return back()->with('error', 'Ce groupe n\'est pas assigné à ce professeur.');
         }
-
-        $module->update(['prof_id' => null]);
-
-        return back()->with('success', 'module_unassigned');
+        $groupe->update(['prof_id' => null]);
+        return back()->with('success', 'Groupe désassigné avec succès.');
     }
 
     /**

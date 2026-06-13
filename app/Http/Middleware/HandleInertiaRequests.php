@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\AppSetting;
+use App\Models\Groupe;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -19,8 +20,21 @@ class HandleInertiaRequests extends Middleware
     {
         $user = $request->user();
 
+        $profModules = collect();
+        $profGroupes = collect();
+
+        if ($user && $user->role === 'prof' && $user->prof) {
+            $profGroupes = $user->prof->groupes()
+                ->with('module.semestre.niveau.filiere')
+                ->get();
+            $profModules = $profGroupes->pluck('module')->filter()->unique('id')->values();
+        }
+
         return [
             ...parent::share($request),
+
+            'profModules' => $profModules,
+            'profGroupes' => $profGroupes,
 
             'auth' => [
                 'user' => $user ? [

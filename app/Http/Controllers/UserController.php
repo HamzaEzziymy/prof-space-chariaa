@@ -145,6 +145,10 @@ class UserController extends Controller
             return back()->with('error', 'cannot_delete_self');
         }
 
+        if ($user->photo_profile_url) {
+            Storage::disk('public')->delete($user->photo_profile_url);
+        }
+
         $user->delete();
 
         return back()->with('success', 'user_deleted');

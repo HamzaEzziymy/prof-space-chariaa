@@ -38,4 +38,12 @@ class EtudiantModule extends Model
     {
         return $this->hasMany(NoteExam::class, 'etud_mod_id');
     }
+
+    /**
+     * Get the inscription examen records for this enrollment.
+     */
+    public function inscriptionsExamen(): HasMany
+    {
+        return $this->hasMany(InscriptionExamen::class, 'etud_mod_id');
+    }
 }

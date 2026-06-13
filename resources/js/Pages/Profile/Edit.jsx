@@ -1,4 +1,5 @@
 import AdminLayout from '@/Layouts/AdminLayout';
+import ProfLayout from '@/Layouts/ProfLayout';
 import { LanguageProvider, useLanguage } from '@/i18n/LanguageContext';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useRef, useState } from 'react';
@@ -594,7 +595,7 @@ function ProfileContent({ mustVerifyEmail, status }) {
                     {/* Right col — 1/3 */}
                     <div className="space-y-5">
                         <PasswordSection isRTL={isRTL} locale={locale} />
-                        <DangerSection   isRTL={isRTL} locale={locale} />
+                        {user.role !== 'prof' && <DangerSection isRTL={isRTL} locale={locale} />}
                     </div>
                 </div>
             </div>
@@ -604,11 +605,15 @@ function ProfileContent({ mustVerifyEmail, status }) {
 
 // ─── Page export ──────────────────────────────────────────────────────────────
 export default function Edit({ mustVerifyEmail, status }) {
+    const { auth } = usePage().props;
+    const isProf = auth?.user?.role === 'prof';
+    const Layout = isProf ? ProfLayout : AdminLayout;
+
     return (
-        <LanguageProvider>
-            <AdminLayout>
+        <LanguageProvider defaultLocale={isProf ? 'ar' : undefined}>
+            <Layout {...(isProf ? { wide: true } : {})}>
                 <ProfileContent mustVerifyEmail={mustVerifyEmail} status={status} />
-            </AdminLayout>
+            </Layout>
         </LanguageProvider>
     );
 }

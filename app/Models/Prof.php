@@ -26,10 +26,20 @@ class Prof extends Model
     }
 
     /**
-     * Get the modules taught by this prof.
+     * Get the groupes assigned to this prof.
      */
-    public function modules(): HasMany
+    public function groupes(): HasMany
     {
-        return $this->hasMany(Module::class, 'prof_id');
+        return $this->hasMany(Groupe::class, 'prof_id');
+    }
+
+    /**
+     * Get the modules taught by this prof (through groupes).
+     */
+    public function modules()
+    {
+        return Module::whereHas('groupes', function ($q) {
+            $q->where('prof_id', $this->id);
+        });
     }
 }

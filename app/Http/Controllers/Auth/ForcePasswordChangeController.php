@@ -35,6 +35,8 @@ class ForcePasswordChangeController extends Controller
         $user->password = $request->password; // model cast handles hashing
         $user->save();
 
-        return redirect()->route('dashboard')->with('status', 'password-changed');
+        $route = $user->role === 'prof' ? 'prof.dashboard' : 'dashboard';
+
+        return redirect()->route($route)->with('status', 'password-changed');
     }
 }

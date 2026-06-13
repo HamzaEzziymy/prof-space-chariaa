@@ -501,11 +501,11 @@ function ProfCard({ prof, displayName, locale, isRTL, t, onEdit, onDelete }) {
             <div className="mx-4 mt-3 mb-4 grid grid-cols-2 rounded-xl border border-slate-100 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-900/30 overflow-hidden">
                 <div className="flex flex-col items-center py-3 px-2 border-e border-slate-100 dark:border-slate-700/60">
                     <span className={`text-lg font-extrabold leading-none tabular-nums
-                        ${prof.modules_count > 0 ? 'text-violet-600 dark:text-violet-400' : 'text-slate-300 dark:text-slate-600'}`}>
-                        {prof.modules_count ?? 0}
+                        ${prof.groupes_count > 0 ? 'text-violet-600 dark:text-violet-400' : 'text-slate-300 dark:text-slate-600'}`}>
+                        {prof.groupes_count ?? 0}
                     </span>
                     <span className="mt-1 text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide">
-                        {t('modules')}
+                        {locale === 'ar' ? 'مجموعات' : 'Groupes'}
                     </span>
                 </div>
                 <div className="flex flex-col items-center py-3 px-2">
@@ -630,7 +630,7 @@ function ProfessorsPage() {
                 <StatCard value={stats?.total}       label={t('totalProfessorsStat')}   icon={ICONS.prof}    color="indigo"  />
                 <StatCard value={stats?.active}      label={t('activeProfessors')}      icon={ICONS.check}   color="emerald" />
                 <StatCard value={stats?.inactive}    label={t('inactiveProfessors')}    icon={ICONS.close}   color="rose"    />
-                <StatCard value={stats?.withModules} label={t('professorsWithModules')} icon={ICONS.modules} color="violet"  />
+                <StatCard value={stats?.withGroupes} label={locale === 'ar' ? 'مع مجموعات' : 'Avec groupes'} icon={ICONS.modules} color="violet"  />
             </div>
 
             {/* ── Search & filter bar ── */}
@@ -788,12 +788,12 @@ function ProfessorsPage() {
                                             {/* Modules count */}
                                             <td className="px-5 py-4">
                                                 <div className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold
-                                                    ${prof.modules_count > 0
+                                                    ${prof.groupes_count > 0
                                                         ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300'
                                                         : 'bg-slate-100 text-slate-500 dark:bg-slate-700/50 dark:text-slate-400'
                                                     }`}>
                                                     <Icon d={ICONS.modules} className="h-3 w-3" />
-                                                    {prof.modules_count} {t('modulesCount')}
+                                                    {prof.groupes_count} {locale === 'ar' ? 'مجموعة' : 'groupe(s)'}
                                                 </div>
                                             </td>
                                             {/* Status */}
@@ -809,7 +809,7 @@ function ProfessorsPage() {
                                             </td>
                                             {/* Actions */}
                                             <td className="px-5 py-4">
-                                                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                                                <div className="flex items-center justify-end gap-1">
                                                     <a href={route('professors.show', prof.id)}
                                                         className="rounded-lg p-1.5 text-slate-400 hover:bg-indigo-100 hover:text-indigo-600 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-400 transition"
                                                         title={locale === 'ar' ? 'عرض الملف' : 'Voir la fiche'}>

@@ -45,9 +45,8 @@ class NoteExamController extends Controller
 
         if ($semestreId) {
             $modules = Module::where('semestre_id', $semestreId)
-                ->with('prof:id,Nom,Prenom')
                 ->orderBy('code_module')
-                ->get(['id', 'code_module', 'nom_fr', 'nom_ar', 'prof_id']);
+                ->get(['id', 'code_module', 'nom_fr', 'nom_ar']);
         }
 
         if ($moduleId && $nexam) {

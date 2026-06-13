@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\EtudiantController;
 use App\Http\Controllers\ModuleController;
+use App\Http\Controllers\GroupeController;
 use App\Http\Controllers\NoteExamController;
 use App\Http\Controllers\RepartitionController;
 use App\Http\Controllers\ProfileController;
@@ -25,7 +26,7 @@ Route::get('/', function () {
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+})->middleware(['auth', 'verified', 'admin'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -67,8 +68,9 @@ Route::middleware(['auth', 'admin'])->prefix('professors')->name('professors.')-
     Route::get('/{prof}',                  [ProfessorController::class, 'show'])->name('show');
     Route::put('/{prof}',                  [ProfessorController::class, 'update'])->name('update');
     Route::delete('/{prof}',               [ProfessorController::class, 'destroy'])->name('destroy');
-    Route::post('/{prof}/assign-module',   [ProfessorController::class, 'assignModule'])->name('assignModule');
-    Route::delete('/{prof}/modules/{module}', [ProfessorController::class, 'unassignModule'])->name('unassignModule');
+    Route::post('/{prof}/groupes/{groupe}', [ProfessorController::class, 'assignGroupe'])->name('assign-groupe');
+    Route::delete('/{prof}/groupes/{groupe}', [ProfessorController::class, 'unassignGroupe'])->name('unassign-groupe');
+
 });
 
 // ── Modules (admin + super_admin) ────────────────────────────────────────────
@@ -80,6 +82,10 @@ Route::middleware(['auth', 'admin'])->prefix('modules')->name('modules.')->group
     Route::post('/import',      [ModuleController::class, 'import'])->name('import');
     Route::post('/import-rows', [ModuleController::class, 'importRows'])->name('importRows');
     Route::post('/export',      [ModuleController::class, 'export'])->name('export');
+    // Groupes
+    Route::post('/{module}/groupes',        [GroupeController::class, 'store'])->name('groupes.store');
+    Route::put('/groupes/{groupe}',         [GroupeController::class, 'update'])->name('groupes.update');
+    Route::delete('/groupes/{groupe}',      [GroupeController::class, 'destroy'])->name('groupes.destroy');
 });
 
 // ── Salles d'examen (admin + super_admin) ─────────────────────────────────────
@@ -131,12 +137,23 @@ Route::middleware(['auth', 'admin'])->prefix('semestres')->group(function () {
     Route::delete('/{semestre}',    [\App\Http\Controllers\SemestreController::class, 'destroy'])->name('semestres.destroy');
 });
 
+// ── Inscription aux examens (admin + super_admin) ─────────────────────────────
+Route::middleware(['auth', 'admin'])->prefix('inscription-examen')->name('inscription-examen.')->group(function () {
+    Route::get('/',             [\App\Http\Controllers\InscriptionExamenController::class, 'index'])->name('index');
+    Route::post('/',            [\App\Http\Controllers\InscriptionExamenController::class, 'store'])->name('store');
+    Route::delete('/{inscriptionExamen}', [\App\Http\Controllers\InscriptionExamenController::class, 'destroy'])->name('destroy');
+    Route::post('/import',      [\App\Http\Controllers\InscriptionExamenController::class, 'import'])->name('import');
+});
+
 // ── Inscription pédagogique (admin + super_admin) ────────────────────────────
 Route::middleware(['auth', 'admin'])->prefix('inscriptions')->name('inscriptions.')->group(function () {
     Route::get('/',             [\App\Http\Controllers\InscriptionPedagogiqueController::class, 'index'])->name('index');
     Route::post('/',            [\App\Http\Controllers\InscriptionPedagogiqueController::class, 'store'])->name('store');
     Route::delete('/{inscription}', [\App\Http\Controllers\InscriptionPedagogiqueController::class, 'destroy'])->name('destroy');
     Route::post('/import',      [\App\Http\Controllers\InscriptionPedagogiqueController::class, 'import'])->name('import');
+    Route::get('/search-students', [\App\Http\Controllers\InscriptionPedagogiqueController::class, 'searchStudents'])->name('searchStudents');
+    Route::get('/module/{module}/students', [\App\Http\Controllers\InscriptionPedagogiqueController::class, 'getModuleStudents'])->name('moduleStudents');
+    Route::get('/student/{etudiant}/modules', [\App\Http\Controllers\InscriptionPedagogiqueController::class, 'getStudentModules'])->name('studentModules');
 });
 
 // ── Users management (super_admin only) ───────────────────────────────────────

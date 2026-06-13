@@ -148,6 +148,11 @@ class EtudiantController extends Controller
      */
     public function destroy(Etudiant $etudiant): RedirectResponse
     {
+        if ($etudiant->photo_url) {
+            $oldPath = str_replace('/storage/', '', $etudiant->photo_url);
+            Storage::disk('public')->delete($oldPath);
+        }
+
         $etudiant->delete();
 
         return back()->with('success', 'etudiant_deleted');
