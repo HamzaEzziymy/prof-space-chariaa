@@ -50,6 +50,14 @@ class DashboardController extends Controller
             ->map(function ($em) use ($module, $statuts) {
                 $notes = NoteExam::where('etud_mod_id', $em->id)->get()->keyBy('Nexam');
 
+                $statut = $statuts[$em->etudiant->id] ?? 'normale';
+                $noteNormale = $notes->first()?->note_normale;
+
+                // For rattrapage, only include students who failed or have no normale note
+                if ($statut === 'rattrapage' && $noteNormale !== null && $noteNormale >= 10) {
+                    return null;
+                }
+
                 return [
                     'etud_mod_id'     => $em->id,
                     'id'              => $em->etudiant->id,
@@ -60,13 +68,15 @@ class DashboardController extends Controller
                     'CNE'             => $em->etudiant->CNE,
                     'sexe'            => $em->etudiant->sexe,
                     'nexam'           => $notes->keys()->first() ?? 1,
-                    'note_normale'    => $notes->first()?->note_normale,
+                    'note_normale'    => $noteNormale,
                     'note_rattrapage' => $notes->first()?->note_rattrapage,
                     'note_finale'     => $notes->first()?->note_finale,
-                    'statut'          => $statuts[$em->etudiant->id] ?? 'normale',
+                    'statut'          => $statut,
                 ];
-            })->sortBy(fn ($s) => ($s['nom_fr'] ?? '').' '.($s['prenom_fr'] ?? ''))
-              ->values();
+            })
+            ->filter()
+            ->sortBy(fn ($s) => ($s['nom_fr'] ?? '').' '.($s['prenom_fr'] ?? ''))
+            ->values();
 
         return Inertia::render('Prof/ModuleNotes', [
             'module'   => $module,

@@ -179,13 +179,15 @@ function ModuleNotesContent({ module, students }) {
                                     <table className="w-full text-xs">
                                         <thead>
                                             <tr className="border-b border-slate-100 text-slate-400 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
-                                                <th className={`px-5 py-3 font-medium ${isRTL ? 'text-right' : 'text-left'}`}>#</th>
                                                 <th className={`px-5 py-3 font-medium ${isRTL ? 'text-right' : 'text-left'}`}>
                                                     {locale === 'ar' ? 'الطالب' : 'Étudiant'}
                                                 </th>
                                                 <th className="px-5 py-3 font-medium text-left">CNE</th>
                                                 <th className="px-5 py-3 font-medium text-center">
                                                     {locale === 'ar' ? 'الحالة' : 'Statut'}
+                                                </th>
+                                                <th className="px-5 py-3 font-medium text-center">
+                                                    {locale === 'ar' ? 'رقم الامتحان' : 'N° examen'}
                                                 </th>
                                                 <th className="px-5 py-3 font-medium text-center">
                                                     {locale === 'ar' ? 'النقطة' : 'Note'}
@@ -205,7 +207,6 @@ function ModuleNotesContent({ module, students }) {
 
                                                 return (
                                                     <tr key={s.etud_mod_id} className="border-b border-slate-50 text-slate-600 transition hover:bg-slate-50/50 dark:border-slate-700/30 dark:text-slate-300 dark:hover:bg-slate-700/20">
-                                                        <td className="px-5 py-2.5 text-slate-400">{i + 1}</td>
                                                         <td className={`px-5 py-2.5 text-sm font-medium ${isRTL ? 'text-right' : 'text-left'}`}>
                                                             {sname}
                                                         </td>
@@ -219,6 +220,7 @@ function ModuleNotesContent({ module, students }) {
                                                                 {statutLabel(s.statut)}
                                                             </span>
                                                         </td>
+                                                        <td className="px-5 py-2.5 text-center font-mono text-xs text-slate-500">{s.nexam ?? '—'}</td>
                                                         <td className="px-5 py-2.5 text-center">
                                                             <input
                                                                 type="number"

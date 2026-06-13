@@ -54,6 +54,40 @@ class InscriptionExamenController extends Controller
                 $noteByEtudiant[$em->etudiant_id] = $noteExams->get($em->id);
             }
 
+            // Filter eligible inscriptions: for rattrapage, only students with note_normale < 10 or null
+            $eligibleIds = $m->inscriptionsExamen->filter(function ($ie) use ($noteByEtudiant) {
+                if ($ie->statut !== 'rattrapage') return true;
+                $nn = $noteByEtudiant[$ie->etudiant_id]?->note_normale ?? $ie->note_normale;
+                return $nn === null || $nn < 10;
+            })->pluck('id')->toArray();
+
+            $filtered = $m->inscriptionsExamen->whereIn('id', $eligibleIds);
+            $inscriptions = $filtered->map(function ($ie) use ($noteByEtudiant) {
+                    $noteNormale = $noteByEtudiant[$ie->etudiant_id]?->note_normale ?? $ie->note_normale;
+                    return [
+                    'id'         => $ie->id,
+                    'Nexam'      => $ie->Nexam,
+                    'statut'     => $ie->statut,
+                    'note_normale'    => $noteNormale,
+                    'note_rattrapage' => $noteByEtudiant[$ie->etudiant_id]?->note_rattrapage ?? $ie->note_rattrapage,
+                    'note_finale'     => $noteByEtudiant[$ie->etudiant_id]?->note_finale ?? $ie->note_finale,
+                    'note_normale_decision_ar' => $noteByEtudiant[$ie->etudiant_id]?->note_normale_decision_ar ?? $ie->note_normale_decision_ar,
+                    'note_normale_decision_fr' => $noteByEtudiant[$ie->etudiant_id]?->note_normale_decision_fr ?? $ie->note_normale_decision_fr,
+                    'note_ratt_decision_ar'    => $noteByEtudiant[$ie->etudiant_id]?->note_ratt_decision_ar ?? $ie->note_ratt_decision_ar,
+                    'note_ratt_decision_fr'    => $noteByEtudiant[$ie->etudiant_id]?->note_ratt_decision_fr ?? $ie->note_ratt_decision_fr,
+                    'decision_finale_ar' => $noteByEtudiant[$ie->etudiant_id]?->decision_finale_ar ?? $ie->decision_finale_ar,
+                    'decision_finale_fr' => $noteByEtudiant[$ie->etudiant_id]?->decision_finale_fr ?? $ie->decision_finale_fr,
+                    'etudiant'   => $ie->etudiant ? [
+                        'id'       => $ie->etudiant->id,
+                        'nom_fr'   => $ie->etudiant->nom_fr,
+                        'prenom_fr'=> $ie->etudiant->prenom_fr,
+                        'nom_ar'   => $ie->etudiant->nom_ar,
+                        'prenom_ar'=> $ie->etudiant->prenom_ar,
+                        'CNE'      => $ie->etudiant->CNE,
+                    ] : null,
+                    ];
+                })->values();
+
             return [
             'id'          => $m->id,
             'nom_fr'      => $m->nom_fr,
@@ -75,36 +109,15 @@ class InscriptionExamenController extends Controller
                     ] : null,
                 ] : null,
             ] : null,
-            'inscriptions_count' => $m->inscriptionsExamen->count(),
-            'inscriptions' => $m->inscriptionsExamen->map(fn ($ie) => [
-                'id'         => $ie->id,
-                'Nexam'      => $ie->Nexam,
-                'statut'     => $ie->statut,
-                'note_normale'    => $noteByEtudiant[$ie->etudiant_id]?->note_normale ?? $ie->note_normale,
-                'note_rattrapage' => $noteByEtudiant[$ie->etudiant_id]?->note_rattrapage ?? $ie->note_rattrapage,
-                'note_finale'     => $noteByEtudiant[$ie->etudiant_id]?->note_finale ?? $ie->note_finale,
-                'note_normale_decision_ar' => $noteByEtudiant[$ie->etudiant_id]?->note_normale_decision_ar ?? $ie->note_normale_decision_ar,
-                'note_normale_decision_fr' => $noteByEtudiant[$ie->etudiant_id]?->note_normale_decision_fr ?? $ie->note_normale_decision_fr,
-                'note_ratt_decision_ar'    => $noteByEtudiant[$ie->etudiant_id]?->note_ratt_decision_ar ?? $ie->note_ratt_decision_ar,
-                'note_ratt_decision_fr'    => $noteByEtudiant[$ie->etudiant_id]?->note_ratt_decision_fr ?? $ie->note_ratt_decision_fr,
-                'decision_finale_ar' => $noteByEtudiant[$ie->etudiant_id]?->decision_finale_ar ?? $ie->decision_finale_ar,
-                'decision_finale_fr' => $noteByEtudiant[$ie->etudiant_id]?->decision_finale_fr ?? $ie->decision_finale_fr,
-                'etudiant'   => $ie->etudiant ? [
-                    'id'       => $ie->etudiant->id,
-                    'nom_fr'   => $ie->etudiant->nom_fr,
-                    'prenom_fr'=> $ie->etudiant->prenom_fr,
-                    'nom_ar'   => $ie->etudiant->nom_ar,
-                    'prenom_ar'=> $ie->etudiant->prenom_ar,
-                    'CNE'      => $ie->etudiant->CNE,
-                ] : null,
-            ]),
-            ];
+            'inscriptions_count' => $inscriptions->count(),
+            'inscriptions' => $inscriptions,
         });
 
         return Inertia::render('InscriptionExamen/Index', [
             'items'      => $items,
             'allModules' => $allModules,
             'stats'      => $stats,
+            'groupBy'    => $request->query('group_by', 'module'),
         ]);
     }
 

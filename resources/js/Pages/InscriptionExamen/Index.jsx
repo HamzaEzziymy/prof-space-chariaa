@@ -678,11 +678,22 @@ function PageContent() {
                                         </p>
                                     </div>
                                 </button>
-                                <button onClick={() => setStatutModal(iId)}
-                                    className="shrink-0 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition">
-                                    <Icon d={I.template} className="h-3.5 w-3.5 inline-block mr-1" />
-                                    {locale === 'ar' ? 'الحالة' : 'Statut'}
-                                </button>
+                                {(() => {
+                                    const s = inscrits.length > 0 ? inscrits[0]?.statut || 'normale' : 'normale';
+                                    const allSame = inscrits.every(i => i.statut === s);
+                                    const label = s === 'normale' ? (locale === 'ar' ? 'عادي' : 'Normale')
+                                        : s === 'rattrapage' ? (locale === 'ar' ? 'استدراك' : 'Rattrapage')
+                                        : (locale === 'ar' ? 'نهائي' : 'Finale');
+                                    const color = s === 'normale' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800'
+                                        : s === 'rattrapage' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+                                        : 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 border-violet-200 dark:border-violet-800';
+                                    return (
+                                        <button onClick={() => setStatutModal(iId)}
+                                            className={`shrink-0 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition hover:brightness-90 ${color}`}>
+                                            {allSame ? label : (locale === 'ar' ? 'متنوع' : 'Mixte')}
+                                        </button>
+                                    );
+                                })()}
                                 <span className="shrink-0 rounded-full bg-slate-100 dark:bg-slate-700 px-2.5 py-0.5 text-xs font-semibold text-slate-500 dark:text-slate-300">{count}</span>
                                 <button onClick={() => toggleExpand(iId)}>
                                     <Icon d={isExpanded ? I.chevronUp : I.chevronDown} className="h-4 w-4 text-slate-400 shrink-0" />
