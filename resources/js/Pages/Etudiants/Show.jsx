@@ -417,7 +417,7 @@ function SectionCard({ title, icon, children }) {
 function ShowPage() {
     const { t, locale, isRTL } = useLanguage();
     const props = usePage().props;
-    const { etudiant, niveaux } = props;
+    const { etudiant, modules, niveaux } = props;
     const { auth } = usePage().props;
     const user = auth?.user;
     const [showEditModal, setShowEditModal] = useState(false);
@@ -561,9 +561,41 @@ function ShowPage() {
                             <InfoRow icon={ICONS.tag} label={locale === 'ar' ? 'المستوى' : 'Niveau'}
                                 value={locale === 'ar' ? (etudiant.niveau.nom_ar || etudiant.niveau.nom_fr) : (etudiant.niveau.nom_fr || etudiant.niveau.nom_ar)} />
                         )}
-                        {etudiant.modules?.length > 0 ? etudiant.modules.map(mod => (
-                            <InfoRow key={mod.id} icon={ICONS.book} label={mod.code || ''} value={mod.intitule_fr || mod.intitule_ar || mod.nom || '—'} />
-                        )) : (
+                        {modules?.length > 0 ? modules.map(mod => {
+                            const modName = locale === 'ar' ? (mod.nom_ar || mod.nom_fr) : (mod.nom_fr || mod.nom_ar);
+                            const details = [mod.code_module, mod.coefficient ? `×${mod.coefficient}` : '', mod.semestre ? (locale === 'ar' ? mod.semestre.nom_ar : mod.semestre.nom_fr) : ''].filter(Boolean).join(' · ');
+                            const hasNotes = mod.notes?.some(n => n.note_normale !== null || n.note_rattrapage !== null || n.note_finale !== null);
+                            return (
+                                <InfoRow key={mod.id} icon={ICONS.book} label={modName} value={
+                                    <div className="space-y-1">
+                                        <p className="text-[11px] text-slate-400">{details}</p>
+                                        {hasNotes && (
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {mod.notes.map((n, i) => (
+                                                    <span key={i} className="space-x-1">
+                                                        {n.note_normale !== null && (
+                                                            <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ${n.note_normale >= 10 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'}`}>
+                                                                N<sub>{n.nexam}</sub>·N: {Number(n.note_normale).toFixed(1)}
+                                                            </span>
+                                                        )}
+                                                        {n.note_rattrapage !== null && (
+                                                            <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ${n.note_rattrapage >= 10 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'}`}>
+                                                                N<sub>{n.nexam}</sub>·R: {Number(n.note_rattrapage).toFixed(1)}
+                                                            </span>
+                                                        )}
+                                                        {n.note_finale !== null && (
+                                                            <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ${n.note_finale >= 10 ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'}`}>
+                                                                N<sub>{n.nexam}</sub>·F: {Number(n.note_finale).toFixed(1)}
+                                                            </span>
+                                                        )}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                } />
+                            );
+                        }) : (
                             <InfoRow icon={ICONS.book} label="" value={<span className="italic text-slate-400">{t('aucunModule')}</span>} />
                         )}
                     </SectionCard>

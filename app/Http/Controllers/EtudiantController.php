@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Etudiant;
+use App\Models\EtudiantModule;
 use App\Models\Filiere;
 use App\Models\Niveau;
+use App\Models\NoteExam;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -81,8 +83,41 @@ class EtudiantController extends Controller
      */
     public function show(Etudiant $etudiant): Response
     {
+        $etudiant->load('niveau.filiere');
+
+        $mods = EtudiantModule::where('etudiant_id', $etudiant->id)
+            ->with('module.semestre.niveau.filiere')
+            ->get()
+            ->map(function ($em) {
+                $notes = NoteExam::where('etud_mod_id', $em->id)->get();
+
+                return [
+                    'id'             => $em->module->id,
+                    'nom_fr'         => $em->module->nom_fr,
+                    'nom_ar'         => $em->module->nom_ar,
+                    'code_module'    => $em->module->code_module,
+                    'coefficient'    => $em->module->coefficient,
+                    'type_module'    => $em->module->type_module,
+                    'semestre'       => $em->module->semestre ? [
+                        'nom_fr' => $em->module->semestre->nom_fr,
+                        'nom_ar' => $em->module->semestre->nom_ar,
+                    ] : null,
+                    'niveau'         => $em->module->semestre?->niveau ? [
+                        'nom_fr' => $em->module->semestre->niveau->nom_fr,
+                        'nom_ar' => $em->module->semestre->niveau->nom_ar,
+                    ] : null,
+                    'notes'          => $notes->map(fn ($n) => [
+                        'nexam'           => $n->Nexam,
+                        'note_normale'    => $n->note_normale,
+                        'note_rattrapage' => $n->note_rattrapage,
+                        'note_finale'     => $n->note_finale,
+                    ]),
+                ];
+            });
+
         return Inertia::render('Etudiants/Show', [
-            'etudiant' => $etudiant->load('modules', 'niveau.filiere'),
+            'etudiant' => $etudiant,
+            'modules'  => $mods,
             'niveaux'  => Niveau::with('filiere')->orderBy('ordre')->get(['id', 'code', 'nom_fr', 'nom_ar', 'filiere_id']),
         ]);
     }

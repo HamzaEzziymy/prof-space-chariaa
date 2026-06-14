@@ -111,7 +111,8 @@ class InscriptionExamenController extends Controller
             ] : null,
             'inscriptions_count' => $inscriptions->count(),
             'inscriptions' => $inscriptions,
-        });
+        ];
+    });
 
         return Inertia::render('InscriptionExamen/Index', [
             'items'      => $items,

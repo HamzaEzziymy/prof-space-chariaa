@@ -139,10 +139,10 @@ export default function AdminLayout({ children, title }) {
         { key: 'students',     href: route('etudiants.index'),   iconKey: 'students',     label: t('students')     },
         { key: 'modules',      href: route('modules.index'),     iconKey: 'modules',      label: t('modules')      },
         { key: 'inscriptions', href: route('inscriptions.index'),iconKey: 'inscriptions', label: t('inscriptions') },
-        { key: 'grades',       href: route('notes.index'),       iconKey: 'grades',       label: t('grades')       },
+        // { key: 'grades',       href: route('notes.index'),       iconKey: 'grades',       label: t('grades')       },
         { key: 'exam-inscriptions', href: route('inscription-examen.index'), iconKey: 'examInscriptions', label: t('examInscriptions') },
-        { key: 'repartition',  href: route('repartition.index'), iconKey: 'repartition',  label: t('repartition')  },
-        { key: 'rooms',        href: route('salles.index'),      iconKey: 'rooms',        label: t('examRooms')    },
+        // { key: 'repartition',  href: route('repartition.index'), iconKey: 'repartition',  label: t('repartition')  },
+        // { key: 'rooms',        href: route('salles.index'),      iconKey: 'rooms',        label: t('examRooms')    },
     ];
     const adminItems = [
         ...(user?.role === 'super_admin'
