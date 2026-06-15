@@ -9,21 +9,41 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Already structurally updated from previous failed run, just add FKs if missing
-        DB::statement('DELETE FROM inscription_examen WHERE module_id = 0 OR etudiant_id = 0');
-
+        // Drop old FKs
         Schema::table('inscription_examen', function (Blueprint $table) {
-            // Add FK if not already present
+            try { $table->dropForeign('fk_ie_etud_mod'); } catch (\Exception $e) {}
+            try { $table->dropForeign('fk_ie_salle'); } catch (\Exception $e) {}
+        });
+
+        // Add new columns if they don't exist
+        if (!Schema::hasColumn('inscription_examen', 'module_id')) {
+            Schema::table('inscription_examen', function (Blueprint $table) {
+                $table->unsignedBigInteger('module_id')->nullable()->after('id');
+                $table->unsignedBigInteger('etudiant_id')->nullable()->after('module_id');
+                $table->string('statut', 20)->nullable()->after('etudiant_id');
+            });
+        }
+
+        // Migrate data from etud_mod_id → (module_id, etudiant_id)
+        DB::statement('
+            UPDATE inscription_examen ie
+            JOIN etudiant_module em ON em.id = ie.etud_mod_id
+            SET ie.module_id = em.module_id,
+                ie.etudiant_id = em.etudiant_id
+            WHERE ie.module_id IS NULL
+        ');
+
+        // Clean up bad data
+        DB::statement('DELETE FROM inscription_examen WHERE module_id IS NULL OR etudiant_id IS NULL');
+
+        // Add new FKs
+        Schema::table('inscription_examen', function (Blueprint $table) {
             try {
                 $table->foreign('module_id')->references('id')->on('module')->onDelete('cascade');
-            } catch (\Exception $e) {
-                // Already exists
-            }
+            } catch (\Exception $e) {}
             try {
                 $table->foreign('etudiant_id')->references('id')->on('etudiant')->onDelete('cascade');
-            } catch (\Exception $e) {
-                // Already exists
-            }
+            } catch (\Exception $e) {}
         });
     }
 
