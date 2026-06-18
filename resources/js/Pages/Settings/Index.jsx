@@ -211,8 +211,8 @@ function UploadPanel({ routeName, fieldName, dimensionLabel, hint, accept, onClo
 // ═════════════════════════════════════════════════════════════════════════════
 // Page
 // ═════════════════════════════════════════════════════════════════════════════
-export default function SettingsIndex({ settings }) {
-    const { t } = useLanguage();
+export default function SettingsIndex({ settings, newUser = false }) {
+    const { t, locale } = useLanguage();
     const { flash } = usePage().props;
 
     return (
@@ -222,6 +222,86 @@ export default function SettingsIndex({ settings }) {
             <Toast message={flash?.error}   type="error" />
 
             <div className="space-y-5 pb-8">
+
+                {/* ══ WELCOME BANNER FOR NEW USER ══════════════════════════ */}
+                {newUser && (
+                    <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900/30 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 shadow-lg overflow-hidden">
+                        <div className="p-6 sm:p-8">
+                            <div className="flex items-start gap-4">
+                                {/* Animated Icon */}
+                                <div className="flex-shrink-0">
+                                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/20 animate-pulse">
+                                        <svg className="h-6 w-6 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                </div>
+
+                                {/* Content */}
+                                <div className="flex-1 min-w-0">
+                                    <h2 className="text-xl sm:text-2xl font-bold text-emerald-900 dark:text-emerald-100 mb-2">
+                                        {locale === 'ar' ? '🎉 أهلاً وسهلاً!' : '🎉 Bienvenue!'}
+                                    </h2>
+                                    <p className="text-sm sm:text-base text-emerald-800 dark:text-emerald-200 mb-4 leading-relaxed">
+                                        {locale === 'ar' 
+                                            ? 'تم إنشاء حسابك الأول بنجاح! أنت الآن مسؤول النظام. يمكنك البدء بتكوين النظام من خلال الإعدادات أدناه.'
+                                            : 'Votre premier compte a été créé avec succès! Vous êtes maintenant l\'administrateur principal. Vous pouvez commencer à configurer le système via les paramètres ci-dessous.'
+                                        }
+                                    </p>
+
+                                    {/* Quick Action Grid */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div className="flex items-center gap-3 rounded-lg bg-white/60 dark:bg-slate-800/40 p-3 backdrop-blur-sm border border-emerald-100 dark:border-emerald-900/20">
+                                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex-shrink-0">
+                                                <Icon d={IC.building} className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                            </span>
+                                            <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300">
+                                                {locale === 'ar' ? 'تعريف مؤسستك' : 'Identifier votre établissement'}
+                                            </p>
+                                        </div>
+
+                                        <div className="flex items-center gap-3 rounded-lg bg-white/60 dark:bg-slate-800/40 p-3 backdrop-blur-sm border border-emerald-100 dark:border-emerald-900/20">
+                                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex-shrink-0">
+                                                <Icon d={IC.image} className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                            </span>
+                                            <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300">
+                                                {locale === 'ar' ? 'إضافة شعار العلامة التجارية' : 'Ajouter votre logo'}
+                                            </p>
+                                        </div>
+
+                                        <div className="flex items-center gap-3 rounded-lg bg-white/60 dark:bg-slate-800/40 p-3 backdrop-blur-sm border border-emerald-100 dark:border-emerald-900/20">
+                                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex-shrink-0">
+                                                <Icon d={IC.globe} className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                            </span>
+                                            <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300">
+                                                {locale === 'ar' ? 'معلومات الاتصال' : 'Infos de contact'}
+                                            </p>
+                                        </div>
+
+                                        <div className="flex items-center gap-3 rounded-lg bg-white/60 dark:bg-slate-800/40 p-3 backdrop-blur-sm border border-emerald-100 dark:border-emerald-900/20">
+                                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex-shrink-0">
+                                                <Icon d={IC.tool} className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                            </span>
+                                            <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300">
+                                                {locale === 'ar' ? 'تخصيص النظام' : 'Personnaliser'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Close Button */}
+                                <button
+                                    onClick={() => window.location.reload()}
+                                    className="mt-1 flex-shrink-0 text-emerald-400 hover:text-emerald-600 dark:text-emerald-500 dark:hover:text-emerald-400 transition"
+                                >
+                                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* ══ HERO: logo + icon ══════════════════════════════════════ */}
                 <BrandHeroCard settings={settings} t={t} />

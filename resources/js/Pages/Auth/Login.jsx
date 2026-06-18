@@ -5,7 +5,7 @@ import { LanguageProvider, useLanguage } from '@/i18n/LanguageContext';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 
 // ─── Login form (inner, needs language context) ───────────────────────────────
-function LoginForm({ status, canResetPassword }) {
+function LoginForm({ status, canResetPassword, registrationOpen = true }) {
     const { locale, toggleLocale, isRTL } = useLanguage();
     const { appSettings } = usePage().props;
     const appName  = appSettings?.app_name ?? 'ProfSpace';
@@ -141,12 +141,17 @@ function LoginForm({ status, canResetPassword }) {
 
                     {/* Footer */}
                     <div className={`border-t border-slate-100 dark:border-slate-700 px-8 py-4 flex items-center justify-between text-sm ${isRTL ? 'flex-row-reverse' : ''}`}>
-                        <Link
-                            href={route('register')}
-                            className="text-primary hover:underline font-medium"
-                        >
-                            {locale === 'ar' ? 'ليس لديك حساب؟ إنشاء حساب' : 'Pas de compte ? S\'inscrire'}
-                        </Link>
+                        {registrationOpen && (
+                            <Link
+                                href={route('register')}
+                                className="text-primary hover:underline font-medium"
+                            >
+                                {locale === 'ar' ? 'ليس لديك حساب؟ إنشاء حساب' : 'Pas de compte ? S\'inscrire'}
+                            </Link>
+                        )}
+                        {!registrationOpen && (
+                            <div />
+                        )}
 
                         {/* Language toggle */}
                         <button
@@ -165,11 +170,11 @@ function LoginForm({ status, canResetPassword }) {
 }
 
 // ─── Page export ──────────────────────────────────────────────────────────────
-export default function Login({ status, canResetPassword }) {
+export default function Login({ status, canResetPassword, registrationOpen = true }) {
     return (
         <LanguageProvider>
             <Head title="Login" />
-            <LoginForm status={status} canResetPassword={canResetPassword} />
+            <LoginForm status={status} canResetPassword={canResetPassword} registrationOpen={registrationOpen} />
         </LanguageProvider>
     );
 }

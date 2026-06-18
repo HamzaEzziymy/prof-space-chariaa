@@ -25,8 +25,13 @@ class SettingsController extends Controller
             }
         }
 
+        // Check if this is a new user (created less than 10 seconds ago)
+        $user = auth()->user();
+        $newUser = $user && $user->created_at && $user->created_at->diffInSeconds(now()) < 10;
+
         return Inertia::render('Settings/Index', [
             'settings' => $settings,
+            'newUser'  => $newUser,
         ]);
     }
 

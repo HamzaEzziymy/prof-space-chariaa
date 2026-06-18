@@ -155,7 +155,7 @@ function RegisterForm() {
                         <button
                             type="submit"
                             disabled={processing}
-                            className="mt-2 w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-white shadow-md shadow-primary/30 transition hover:bg-primary/90 disabled:opacity-60"
+                            className="mt-2 w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-white shadow-md shadow-primary/30 transition hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                             {processing
                                 ? (locale === 'ar' ? 'جاري الإنشاء...' : 'Création...')

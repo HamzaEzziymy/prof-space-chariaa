@@ -448,7 +448,7 @@ export default function AdminLayout({ children, title }) {
                                         {t('profile')}
                                     </Link>
                                     <Link
-                                        href="#"
+                                        href={route('settings.index')}
                                         className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700"
                                     >
                                         <Icon d={icons.settings} className="w-4 h-4" />

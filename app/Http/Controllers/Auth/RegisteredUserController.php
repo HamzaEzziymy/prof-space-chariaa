@@ -21,7 +21,14 @@ class RegisteredUserController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('Auth/Register');
+        // If users already exist, registration is closed
+        if (User::count() > 0) {
+            abort(403, 'Registration is closed.');
+        }
+        
+        return Inertia::render('Auth/Register', [
+            'registrationOpen' => true,
+        ]);
     }
 
     /**
@@ -31,6 +38,13 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        // Check if registration is still open (no users exist yet)
+        if (User::count() > 0) {
+            throw ValidationException::withMessages([
+                'email' => 'Registration is closed. Only the first user can register.',
+            ]);
+        }
+
         $request->validate([
             'nom_fr'   => 'required|string|max:255',
             'prenom_fr' => 'required|string|max:255',
@@ -43,12 +57,13 @@ class RegisteredUserController extends Controller
             'prenom_fr' => $request->prenom_fr,
             'email'     => $request->email,
             'password'  => Hash::make($request->password),
+            'role'      => 'super_admin', // First user is super admin
         ]);
 
         event(new Registered($user));
 
         Auth::login($user);
 
-        return redirect(route('dashboard', absolute: false));
+        return redirect(route('settings.index', absolute: false));
     }
 }
