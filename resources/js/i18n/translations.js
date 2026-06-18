@@ -198,9 +198,9 @@ export const translations = {
         searchSalles: 'Rechercher par nom ou code...',
 
         // Notes / Examens
-        notesManagement: 'Gestion des notes',
-        notesTitle: 'Notes d\'examen',
-        notesSubtitle: 'Saisie et consultation des notes d\'examen',
+        notesManagement: 'Statistiques des notes',
+        notesTitle: 'Statistiques des notes d\'examen',
+        notesSubtitle: 'Aperçu statistique des notes issues des inscriptions aux examens',
         selectFiliere: 'Filière',
         selectNiveau: 'Niveau',
         selectSemestre: 'Semestre',
@@ -675,9 +675,9 @@ export const translations = {
         searchSalles: 'بحث بالاسم أو الرمز...',
 
         // Notes / Examens
-        notesManagement: 'إدارة النقاط',
-        notesTitle: 'نقاط الامتحانات',
-        notesSubtitle: 'إدخال وعرض نقاط الامتحانات',
+        notesManagement: 'إحصائيات النقاط',
+        notesTitle: 'إحصائيات نقاط الامتحانات',
+        notesSubtitle: 'نظرة إحصائية للنقاط المستمدة من تسجيلات الامتحانات',
         selectFiliere: 'الشعبة',
         selectNiveau: 'المستوى',
         selectSemestre: 'الفصل',

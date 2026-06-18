@@ -735,11 +735,11 @@ function ModuleFormModal({ mode, module, semestres, onClose, t, isRTL, locale })
                             <SectionDivider emoji="📝" label={locale === 'ar' ? 'الاسم' : 'Désignation'} />
                             <Field id="nom_fr" label={t('moduleNameFr')} value={data.nom_fr}
                                 onChange={e => setData('nom_fr', e.target.value)}
-                                placeholder={locale === 'ar' ? 'مثال: Mathématiques' : 'Ex: Mathématiques Appliquées'}
+                                placeholder={locale === 'ar' ? 'ex: اسم الوحدة' : 'ex: Nom du module'}
                                 required error={errors.nom_fr} dir="ltr" />
                             <Field id="nom_ar" label={t('moduleNameAr')} value={data.nom_ar}
                                 onChange={e => setData('nom_ar', e.target.value)}
-                                placeholder="مثال: الرياضيات التطبيقية"
+                                placeholder="ex: اسم الوحدة"
                                 error={errors.nom_ar} dir="rtl" />
                         </div>
 

@@ -30,6 +30,7 @@ const icons = {
     chevronDown:'M19 9l-7 7-7-7',
     logout:     'M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1',
     examInscriptions: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+    maintenance: 'M11.42 15.17l-7.42 7.42a2.12 2.12 0 01-3-3l7.42-7.42A6 6 0 0118.75 5.97l-3.78 3.78a1 1 0 000 1.42l1.42 1.42a1 1 0 001.42 0l3.78-3.78A6 6 0 0111.42 15.17z',
     sun:        'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z',
     moon:       'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z',
 };
@@ -139,10 +140,8 @@ export default function AdminLayout({ children, title }) {
         { key: 'students',     href: route('etudiants.index'),   iconKey: 'students',     label: t('students')     },
         { key: 'modules',      href: route('modules.index'),     iconKey: 'modules',      label: t('modules')      },
         { key: 'inscriptions', href: route('inscriptions.index'),iconKey: 'inscriptions', label: t('inscriptions') },
-        // { key: 'grades',       href: route('notes.index'),       iconKey: 'grades',       label: t('grades')       },
         { key: 'exam-inscriptions', href: route('inscription-examen.index'), iconKey: 'examInscriptions', label: t('examInscriptions') },
-        // { key: 'repartition',  href: route('repartition.index'), iconKey: 'repartition',  label: t('repartition')  },
-        // { key: 'rooms',        href: route('salles.index'),      iconKey: 'rooms',        label: t('examRooms')    },
+        { key: 'grades',       href: route('notes.index'),       iconKey: 'grades',       label: t('grades')       },
     ];
     const adminItems = [
         ...(user?.role === 'super_admin'
@@ -158,9 +157,7 @@ export default function AdminLayout({ children, title }) {
         : currentRoute?.includes('users')        ? 'users'
         : currentRoute?.includes('professors')   ? 'professors'
         : currentRoute?.includes('etudiants')    ? 'students'
-        : currentRoute?.includes('salles')       ? 'rooms'
         : currentRoute?.includes('notes')        ? 'grades'
-        : currentRoute?.includes('repartition')   ? 'repartition'
         : currentRoute?.includes('inscription-examen') ? 'exam-inscriptions'
         : currentRoute?.includes('inscriptions') ? 'inscriptions'
         : currentRoute?.includes('structure')    ? 'structure'

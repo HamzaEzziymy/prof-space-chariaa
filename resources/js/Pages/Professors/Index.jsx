@@ -300,7 +300,7 @@ function ProfessorModal({ mode, prof, availableUsers, onClose, t, isRTL, locale 
                                 <Field
                                     id="grade" label={t('profGrade')} value={data.grade}
                                     onChange={e => setData('grade', e.target.value)}
-                                    placeholder={locale === 'ar' ? 'أستاذ مؤهل، دكتور…' : 'PES, Docteur, PH…'}
+                                    placeholder={locale === 'ar' ? 'مثال: أستاذ التعليم العالي' : 'ex: PES, Docteur, PH…'}
                                     hint={t('profGradeHint')} error={errors.grade}
                                 />
                                 <div className="flex flex-wrap gap-1.5">

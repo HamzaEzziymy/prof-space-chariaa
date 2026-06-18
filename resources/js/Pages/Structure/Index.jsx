@@ -168,10 +168,10 @@ function FiliereModal({ mode, filiere, onClose, t, isRTL, locale }) {
                             onChange={e => setData('code', e.target.value)} placeholder="INFO" required
                             error={errors.code} dir="ltr" hint={locale === 'ar' ? 'مثال: INFO, MATH' : 'Ex: INFO, MATH, PHYS'} />
                         <Field id="nom_fr" label={locale === 'ar' ? 'الاسم (بالفرنسية)' : 'Nom (français)'} value={data.nom_fr}
-                            onChange={e => setData('nom_fr', e.target.value)} placeholder="Informatique" required
+                            onChange={e => setData('nom_fr', e.target.value)} placeholder="ex: Nom de la filière" required
                             error={errors.nom_fr} dir="ltr" />
                         <Field id="nom_ar" label={locale === 'ar' ? 'الاسم (بالعربية)' : 'Nom (arabe)'} value={data.nom_ar}
-                            onChange={e => setData('nom_ar', e.target.value)} placeholder="المعلوماتية" required
+                            onChange={e => setData('nom_ar', e.target.value)} placeholder="ex: اسم الشعبة" required
                             error={errors.nom_ar} dir="rtl" />
                         <div>
                             <label htmlFor="description" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">

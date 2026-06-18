@@ -40,19 +40,19 @@ class InscriptionExamen extends Model
         parent::boot();
 
         static::saving(function (self $exam) {
-            $exam->note_normale_decision_ar = $exam->note_normale !== null && $exam->note_normale > 10
+            $exam->note_normale_decision_ar = $exam->note_normale !== null && $exam->note_normale >= 10
                 ? 'مستوفي' : 'غير مستوفي';
-            $exam->note_normale_decision_fr = $exam->note_normale !== null && $exam->note_normale > 10
+            $exam->note_normale_decision_fr = $exam->note_normale !== null && $exam->note_normale >= 10
                 ? 'Validé' : 'Non validé';
 
             if ($exam->note_rattrapage !== null) {
-                $exam->note_ratt_decision_ar = $exam->note_rattrapage > 10 ? 'مستوفي' : 'غير مستوفي';
-                $exam->note_ratt_decision_fr = $exam->note_rattrapage > 10 ? 'Validé' : 'Non validé';
+                $exam->note_ratt_decision_ar = $exam->note_rattrapage >= 10 ? 'مستوفي' : 'غير مستوفي';
+                $exam->note_ratt_decision_fr = $exam->note_rattrapage >= 10 ? 'Validé' : 'Non validé';
             }
 
             $final = $exam->note_rattrapage ?? $exam->note_normale;
-            $exam->decision_finale_ar = $final !== null && $final > 10 ? 'مستوفي' : 'غير مستوفي';
-            $exam->decision_finale_fr = $final !== null && $final > 10 ? 'Validé' : 'Non validé';
+            $exam->decision_finale_ar = $final !== null && $final >= 10 ? 'مستوفي' : 'غير مستوفي';
+            $exam->decision_finale_fr = $final !== null && $final >= 10 ? 'Validé' : 'Non validé';
         });
     }
 

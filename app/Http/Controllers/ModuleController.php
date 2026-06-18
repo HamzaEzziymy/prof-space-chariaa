@@ -398,42 +398,90 @@ class ModuleController extends Controller
         $notFoundCnes   = array_diff(array_keys($cnes), $studentsByCne->keys()->toArray());
 
         $inscriptionsProcessed = 0;
+        $rejected = [];
+
+        // Pre-collect not-found info
+        foreach ($notFoundCnes as $cne) {
+            $rejected[] = [
+                'type'    => 'student_not_found',
+                'line'    => 0,
+                'cne'     => $cne,
+                'code_module' => '',
+                'value'   => '',
+                'reason'  => 'CNE "' . $cne . '" introuvable dans la base',
+            ];
+        }
+        foreach ($notFoundCodes as $code) {
+            $rejected[] = [
+                'type'    => 'module_not_found',
+                'line'    => 0,
+                'cne'     => '',
+                'code_module' => $code,
+                'value'   => '',
+                'reason'  => 'Code module "' . $code . '" introuvable dans la base',
+            ];
+        }
 
         // Process each row
         for ($i = 1, $n = count($rows); $i < $n; $i++) {
             $row = $rows[$i];
             $cne = trim((string) ($row[0] ?? ''));
-            if ($cne === '' || !isset($studentsByCne[$cne])) continue;
+            if ($cne === '') continue;
+
+            if (!isset($studentsByCne[$cne])) continue; // already reported above
 
             $etudiant = $studentsByCne[$cne];
 
             foreach ($moduleCodes as $colIdx => $code) {
-                if (!isset($modulesByCode[$code])) continue;
+                if (!isset($modulesByCode[$code])) continue; // already reported above
 
                 $cellValue = trim((string) ($row[$colIdx + 1] ?? ''));
                 $module    = $modulesByCode[$code];
 
-                if ($cellValue === '1') {
-                    // Create inscription if not exists
-                    $exists = EtudiantModule::where('etudiant_id', $etudiant->id)
-                        ->where('module_id', $module->id)
-                        ->exists();
+                if ($cellValue !== '0' && $cellValue !== '1') {
+                    $rejected[] = [
+                        'type'    => 'invalid_value',
+                        'line'    => $i + 1,
+                        'cne'     => $cne,
+                        'code_module' => $code,
+                        'value'   => $cellValue,
+                        'reason'  => 'Valeur "' . $cellValue . '" invalide à la ligne ' . ($i + 1) . ' (attendu: 0 ou 1)',
+                    ];
+                    continue;
+                }
 
-                    if (!$exists) {
-                        EtudiantModule::create([
+                if ($cellValue === '1') {
+                    try {
+                        EtudiantModule::firstOrCreate([
                             'etudiant_id' => $etudiant->id,
                             'module_id'   => $module->id,
                         ]);
                         $inscriptionsProcessed++;
+                    } catch (\Throwable $e) {
+                        $rejected[] = [
+                            'type'    => 'db_error',
+                            'line'    => $i + 1,
+                            'cne'     => $cne,
+                            'code_module' => $code,
+                            'value'   => $cellValue,
+                            'reason'  => 'Erreur BD : ' . $e->getMessage(),
+                        ];
                     }
                 } elseif ($cellValue === '0') {
-                    // Remove inscription if exists
-                    $deleted = EtudiantModule::where('etudiant_id', $etudiant->id)
-                        ->where('module_id', $module->id)
-                        ->delete();
-
-                    if ($deleted > 0) {
+                    try {
+                        EtudiantModule::where('etudiant_id', $etudiant->id)
+                            ->where('module_id', $module->id)
+                            ->delete();
                         $inscriptionsProcessed++;
+                    } catch (\Throwable $e) {
+                        $rejected[] = [
+                            'type'    => 'db_error',
+                            'line'    => $i + 1,
+                            'cne'     => $cne,
+                            'code_module' => $code,
+                            'value'   => $cellValue,
+                            'reason'  => 'Erreur BD : ' . $e->getMessage(),
+                        ];
                     }
                 }
             }
@@ -445,6 +493,7 @@ class ModuleController extends Controller
             'inscriptions_processed' => $inscriptionsProcessed,
             'students_not_found'      => array_values($notFoundCnes),
             'modules_not_found'       => array_values($notFoundCodes),
+            'rejected'                => $rejected,
         ]);
     }
 }

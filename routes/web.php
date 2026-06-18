@@ -2,15 +2,12 @@
 
 use App\Http\Controllers\EtudiantController;
 use App\Http\Controllers\ModuleController;
-use App\Http\Controllers\NoteExamController;
-use App\Http\Controllers\RepartitionController;
+use App\Http\Controllers\NotesStatController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProfessorController;
-use App\Http\Controllers\SalleController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Auth\ForcePasswordChangeController;
-use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -35,19 +32,9 @@ Route::middleware('auth')->group(function () {
     // Force password change on first login
     Route::get('/password/change',  [ForcePasswordChangeController::class, 'create'])->name('password.change');
     Route::post('/password/change', [ForcePasswordChangeController::class, 'store'])->name('password.change.store');
-});// ── Examens (admin + super_admin) ────────────────────────────────────────────
+});// ── Statistiques des notes (admin + super_admin) ──────────────────────────────
 Route::middleware(['auth', 'admin'])->prefix('notes')->name('notes.')->group(function () {
-    Route::get('/',               [NoteExamController::class, 'index'])->name('index');
-    Route::post('/bulk',         [NoteExamController::class, 'bulkUpdate'])->name('bulk-update');
-    Route::delete('/{noteExam}', [NoteExamController::class, 'destroy'])->name('destroy');
-});
-
-// ── Répartition des examens (admin + super_admin) ────────────────────────────
-Route::middleware(['auth', 'admin'])->prefix('repartition')->name('repartition.')->group(function () {
-    Route::get('/',                        [RepartitionController::class, 'index'])->name('index');
-    Route::get('/niveau/{niveau}',         [RepartitionController::class, 'show'])->name('show');
-    Route::post('/save',                  [RepartitionController::class, 'save'])->name('save');
-    Route::get('/etudiants-modules',       [RepartitionController::class, 'getStudents'])->name('students');
+    Route::get('/', [NotesStatController::class, 'index'])->name('index');
 });
 
 Route::middleware(['auth', 'super_admin'])->prefix('settings')->name('settings.')->group(function () {
@@ -78,14 +65,6 @@ Route::middleware(['auth', 'admin'])->prefix('modules')->name('modules.')->group
     Route::post('/import-inscriptions', [ModuleController::class, 'importInscriptions'])->name('import.inscriptions');
     Route::post('/export',      [ModuleController::class, 'export'])->name('export');
     Route::post('/{module}/assign-prof', [ModuleController::class, 'assignProf'])->name('assign-prof');
-});
-
-// ── Salles d'examen (admin + super_admin) ─────────────────────────────────────
-Route::middleware(['auth', 'admin'])->prefix('salles')->name('salles.')->group(function () {
-    Route::get('/',          [SalleController::class, 'index'])->name('index');
-    Route::post('/',         [SalleController::class, 'store'])->name('store');
-    Route::put('/{salle}',   [SalleController::class, 'update'])->name('update');
-    Route::delete('/{salle}',[SalleController::class, 'destroy'])->name('destroy');
 });
 
 // ── Étudiants (admin + super_admin) ──────────────────────────────────────────

@@ -62,11 +62,13 @@ class EtudiantController extends Controller
         $filieres = Filiere::orderBy('code')->get(['id', 'code', 'nom_fr', 'nom_ar']);
         $niveaux  = Niveau::with('filiere')->orderBy('ordre')->get(['id', 'code', 'nom_fr', 'nom_ar', 'filiere_id']);
 
+        $baseQuery = (clone $query)->reorder();
+        $niveauIds = (clone $baseQuery)->select('niveau_id')->distinct()->pluck('niveau_id');
         $stats = [
-            'total'   => Etudiant::count(),
-            'hommes'  => Etudiant::where('sexe', 'M')->count(),
-            'femmes'  => Etudiant::where('sexe', 'F')->count(),
-            'filieres' => Filiere::count(),
+            'total'    => (clone $baseQuery)->count(),
+            'hommes'   => (clone $baseQuery)->where('sexe', 'M')->count(),
+            'femmes'   => (clone $baseQuery)->where('sexe', 'F')->count(),
+            'filieres' => Niveau::whereIn('id', $niveauIds)->distinct('filiere_id')->count('filiere_id'),
         ];
 
         return Inertia::render('Etudiants/Index', [
@@ -254,29 +256,36 @@ class EtudiantController extends Controller
             $prenom_fr = $data['prenom_fr'] ?? null;
             $nom_fr    = $data['nom_fr']    ?? null;
             $cne       = $data['cne']       ?? null;
+            $cin       = $data['cin']       ?? null;
             $line      = $lineNum + 2;
 
-            if (!$prenom_fr || !$nom_fr) {
+            $reject = function ($reason) use ($line, $data, &$rows_report, &$skipped) {
                 $rows_report[] = [
-                    'line'      => $line,
-                    'status'    => 'rejected',
-                    'prenom_fr' => $prenom_fr ?? '',
-                    'nom_fr'    => $nom_fr ?? '',
-                    'reason'    => 'prenom_fr ou nom_fr manquant',
+                    'line'       => $line,
+                    'status'     => 'rejected',
+                    'prenom_fr'  => $data['prenom_fr'] ?? '',
+                    'nom_fr'     => $data['nom_fr']    ?? '',
+                    'cne'        => $data['cne']        ?? '',
+                    'cin'        => $data['cin']        ?? '',
+                    'nom_ar'     => $data['nom_ar']     ?? '',
+                    'prenom_ar'  => $data['prenom_ar']  ?? '',
+                    'reason'     => $reason,
                 ];
                 $skipped++;
+            };
+
+            if (!$prenom_fr || !$nom_fr) {
+                $reject('prenom_fr ou nom_fr manquant');
                 continue;
             }
 
             if ($cne && Etudiant::where('CNE', $cne)->exists()) {
-                $rows_report[] = [
-                    'line'      => $line,
-                    'status'    => 'rejected',
-                    'prenom_fr' => $prenom_fr,
-                    'nom_fr'    => $nom_fr,
-                    'reason'    => 'CNE "' . $cne . '" déjà existant',
-                ];
-                $skipped++;
+                $reject('CNE "' . $cne . '" déjà existant');
+                continue;
+            }
+
+            if ($cin && Etudiant::where('CIN', $cin)->exists()) {
+                $reject('CIN "' . $cin . '" déjà existant');
                 continue;
             }
 
@@ -286,29 +295,38 @@ class EtudiantController extends Controller
                 if ($niveau) $niveauId = $niveau->id;
             }
 
-            Etudiant::create([
-                'Nins'           => $data['nins']           ?? null,
-                'CNE'            => $cne,
-                'CIN'            => $data['cin']            ?? null,
-                'nom_ar'         => $data['nom_ar']         ?? null,
-                'prenom_ar'      => $data['prenom_ar']      ?? null,
-                'nom_fr'         => $nom_fr,
-                'prenom_fr'      => $prenom_fr,
-                'date_naissance' => $data['date_naissance'] ?? null,
-                'lieu_naissance' => $data['lieu_naissance'] ?? null,
-                'sexe'           => $data['sexe']           ?? null,
-                'telephone'      => $data['telephone']      ?? null,
-                'email'          => $data['email']          ?? null,
-                'filier'         => $data['filier']         ?? null,
-                'niveau_id'      => $niveauId,
-            ]);
+            try {
+                Etudiant::create([
+                    'Nins'           => $data['nins']           ?? null,
+                    'CNE'            => $cne,
+                    'CIN'            => $cin,
+                    'nom_ar'         => $data['nom_ar']         ?? null,
+                    'prenom_ar'      => $data['prenom_ar']      ?? null,
+                    'nom_fr'         => $nom_fr,
+                    'prenom_fr'      => $prenom_fr,
+                    'date_naissance' => $data['date_naissance'] ?? null,
+                    'lieu_naissance' => $data['lieu_naissance'] ?? null,
+                    'sexe'           => $data['sexe']           ?? null,
+                    'telephone'      => $data['telephone']      ?? null,
+                    'email'          => $data['email']          ?? null,
+                    'filier'         => $data['filier']         ?? null,
+                    'niveau_id'      => $niveauId,
+                ]);
+            } catch (\Throwable $e) {
+                $reject('Erreur BD : ' . $e->getMessage());
+                continue;
+            }
 
             $rows_report[] = [
-                'line'      => $line,
-                'status'    => 'imported',
-                'prenom_fr' => $prenom_fr,
-                'nom_fr'    => $nom_fr,
-                'reason'    => null,
+                'line'       => $line,
+                'status'     => 'imported',
+                'prenom_fr'  => $prenom_fr,
+                'nom_fr'     => $nom_fr,
+                'cne'        => $cne,
+                'cin'        => $cin,
+                'nom_ar'     => $data['nom_ar'] ?? '',
+                'prenom_ar'  => $data['prenom_ar'] ?? '',
+                'reason'     => null,
             ];
 
             $imported++;

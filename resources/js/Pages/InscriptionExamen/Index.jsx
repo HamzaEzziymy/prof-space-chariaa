@@ -26,6 +26,7 @@ const I = {
     book:    'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
     chevronDown: 'M19 9l-7 7-7-7',
     chevronUp:   'M5 15l7-7 7 7',
+    excel:       'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 1v5h5M8 13h3m-3 4h3m2-4h3m-3 4h3',
 };
 
 function StatCard({ icon, label, value, color }) {
@@ -323,10 +324,10 @@ function ExcelModal({ onClose, t, locale, isRTL }) {
             <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={onClose} />
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                 <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl dark:bg-slate-900 overflow-hidden flex flex-col max-h-[92vh]" dir={isRTL ? 'rtl' : 'ltr'}>
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-amber-50 dark:bg-amber-900/20 shrink-0">
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-emerald-50 dark:bg-emerald-900/20 shrink-0">
                         <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-900/50">
-                                <Icon d={I.upload} className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/50">
+                                <Icon d={I.excel} className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                             </div>
                             <div>
                                 <p className="font-bold text-slate-800 dark:text-white text-sm">{locale === 'ar' ? 'استيراد تسجيلات الامتحان' : 'Importer inscriptions examen'}</p>
@@ -465,7 +466,7 @@ function ExcelModal({ onClose, t, locale, isRTL }) {
                                 <>
                                     <button type="button" onClick={onClose} className="rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">{t('cancel')}</button>
                                     <button type="button" onClick={submit} disabled={!file || status === 'loading'}
-                                        className="flex items-center gap-2 rounded-xl bg-amber-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-amber-700 disabled:opacity-50 transition">
+                                        className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50 transition">
                                         {status === 'loading' ? <><svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>{locale === 'ar' ? 'جارٍ الاستيراد...' : 'Importation...'}</>
                                             : <><Icon d={I.upload} className="h-4 w-4" />{locale === 'ar' ? 'استيراد' : 'Importer'}</>}
                                     </button>
@@ -621,9 +622,9 @@ function PageContent() {
                 </div>
                 <div className="flex items-center gap-2">
                     <button onClick={() => setShowExcel(true)}
-                        className="flex items-center gap-1.5 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-2.5 text-xs font-semibold text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition">
-                        <Icon d={I.upload} className="h-4 w-4" />
-                        {locale === 'ar' ? 'استيراد Excel' : 'Importer Excel'}
+                        className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30 active:scale-95 transition">
+                        <Icon d={I.excel} className="h-4 w-4" />
+                        <span className="hidden sm:inline">{locale === 'ar' ? 'استيراد Excel' : 'Import Excel'}</span>
                     </button>
                     <button onClick={() => setShowAdd(true)}
                         className="flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition">

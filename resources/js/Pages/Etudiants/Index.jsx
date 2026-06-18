@@ -302,11 +302,11 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux 
                             <div className="grid grid-cols-2 gap-3">
                                 <Field id="prenom_fr" label={t('etudiantPrenomFr')} value={data.prenom_fr}
                                     onChange={e => setData('prenom_fr', e.target.value)}
-                                    placeholder={locale === 'ar' ? 'مثال: Jean' : 'Ex: Jean'}
+                                    placeholder={locale === 'ar' ? 'مثال: الاسم الشخصي' : 'ex: Prénom'}
                                     required error={errors.prenom_fr} dir="ltr" />
                                 <Field id="nom_fr" label={t('etudiantNomFr')} value={data.nom_fr}
                                     onChange={e => setData('nom_fr', e.target.value)}
-                                    placeholder={locale === 'ar' ? 'مثال: Dupont' : 'Ex: Dupont'}
+                                    placeholder={locale === 'ar' ? 'مثال: اسم العائلة' : 'ex: Nom de famille'}
                                     required error={errors.nom_fr} dir="ltr" />
                             </div>
                         </div>
@@ -317,11 +317,11 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux 
                             <div className="grid grid-cols-2 gap-3">
                                 <Field id="prenom_ar" label={t('etudiantPrenomAr')} value={data.prenom_ar}
                                     onChange={e => setData('prenom_ar', e.target.value)}
-                                    placeholder="مثال: جان" dir="rtl"
+                                    placeholder="مثال: الاسم الشخصي" dir="rtl"
                                     error={errors.prenom_ar} />
                                 <Field id="nom_ar" label={t('etudiantNomAr')} value={data.nom_ar}
                                     onChange={e => setData('nom_ar', e.target.value)}
-                                    placeholder="مثال: دوبون" dir="rtl"
+                                    placeholder="مثال: اسم العائلة" dir="rtl"
                                     error={errors.nom_ar} />
                             </div>
                         </div>
@@ -354,7 +354,7 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux 
                                     error={errors.date_naissance} />
                                 <Field id="lieu_naissance" label={t('etudiantLieuNaissance')} value={data.lieu_naissance}
                                     onChange={e => setData('lieu_naissance', e.target.value)}
-                                    placeholder={locale === 'ar' ? 'مثال: الدار البيضاء' : 'Ex: Casablanca'}
+                                    placeholder={locale === 'ar' ? 'مثال: مدينة الميلاد' : 'ex: Ville de naissance'}
                                     error={errors.lieu_naissance}
                                     dir={locale === 'ar' ? 'rtl' : 'ltr'} />
                             </div>
@@ -646,17 +646,26 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale, niveaux }) {
     const downloadRejectedReport = () => {
         const rejected = (report?.rows ?? []).filter(r => r.status === 'rejected');
         if (rejected.length === 0) return;
-        const rows = rejected.map(r => ({ Ligne: r.line, Prenom: r.prenom_fr, Nom: r.nom_fr, Raison: r.reason }));
+        const rows = rejected.map(r => ({
+            [locale === 'ar' ? 'السطر' : 'Ligne']: r.line,
+            [locale === 'ar' ? 'الاسم الفرنسي' : 'Prenom']: r.prenom_fr || '',
+            [locale === 'ar' ? 'النسبة الفرنسية' : 'Nom']: r.nom_fr || '',
+            [locale === 'ar' ? 'الاسم العربي' : 'Prenom Ar']: r.prenom_ar || '',
+            [locale === 'ar' ? 'النسبة العربية' : 'Nom Ar']: r.nom_ar || '',
+            CNE: r.cne || '',
+            CIN: r.cin || '',
+            [locale === 'ar' ? 'السبب' : 'Raison']: r.reason,
+        }));
         const ws = XLSX.utils.json_to_sheet(rows);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Rejets');
-        const colWidths = [{ wch: 8 }, { wch: 20 }, { wch: 20 }, { wch: 40 }];
-        ws['!cols'] = colWidths;
+        const cols = Object.keys(rows[0] || {});
+        ws['!cols'] = cols.map(c => ({ wch: c.length > 10 ? 22 : 14 }));
         const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
         const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url; a.download = 'rapport_rejets.xlsx'; a.click();
+        a.href = url; a.download = 'rapport_rejets_etudiants.xlsx'; a.click();
         URL.revokeObjectURL(url);
     };
 
@@ -903,6 +912,8 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale, niveaux }) {
                                                         <th className="px-3 py-2 text-left font-semibold text-slate-500">{locale === 'ar' ? 'السطر' : 'Ligne'}</th>
                                                         <th className="px-3 py-2 text-left font-semibold text-slate-500">prenom_fr</th>
                                                         <th className="px-3 py-2 text-left font-semibold text-slate-500">nom_fr</th>
+                                                        <th className="px-3 py-2 text-left font-semibold text-slate-500">CNE</th>
+                                                        <th className="px-3 py-2 text-left font-semibold text-slate-500">CIN</th>
                                                         <th className="px-3 py-2 text-left font-semibold text-red-500">{locale === 'ar' ? 'السبب' : 'Raison'}</th>
                                                     </tr>
                                                 </thead>
@@ -910,8 +921,10 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale, niveaux }) {
                                                     {report.rows.filter(r => r.status === 'rejected').map((row, i) => (
                                                         <tr key={i} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-red-50/30 dark:hover:bg-red-900/10">
                                                             <td className="px-3 py-2 text-slate-400 font-mono">{row.line}</td>
-                                                            <td className="px-3 py-2 text-slate-500 max-w-[120px] truncate">{row.prenom_fr || '—'}</td>
-                                                            <td className="px-3 py-2 text-slate-500 max-w-[120px] truncate">{row.nom_fr || '—'}</td>
+                                                            <td className="px-3 py-2 text-slate-500 max-w-[100px] truncate">{row.prenom_fr || '—'}</td>
+                                                            <td className="px-3 py-2 text-slate-500 max-w-[100px] truncate">{row.nom_fr || '—'}</td>
+                                                            <td className="px-3 py-2"><code className="rounded bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 font-bold text-slate-600 dark:text-slate-300">{row.cne || '—'}</code></td>
+                                                            <td className="px-3 py-2"><code className="rounded bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 font-bold text-slate-600 dark:text-slate-300">{row.cin || '—'}</code></td>
                                                             <td className="px-3 py-2 text-red-500 dark:text-red-400">{row.reason}</td>
                                                         </tr>
                                                     ))}

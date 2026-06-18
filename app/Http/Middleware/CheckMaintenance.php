@@ -31,8 +31,25 @@ class CheckMaintenance
                 return $next($request);
             }
 
-            // Detect locale from Accept-Language or stored cookie
-            $locale = $request->cookie('locale') ?? 'fr';
+            // Detect locale from cookie, session, or Accept-Language header
+            $locale = $request->cookie('locale');
+            
+            // If no cookie, check session
+            if (!$locale) {
+                $locale = session('locale');
+            }
+            
+            // If still no locale, check Accept-Language header for Arabic
+            if (!$locale) {
+                $acceptLanguage = $request->header('Accept-Language', '');
+                $locale = str_contains($acceptLanguage, 'ar') ? 'ar' : 'fr';
+            }
+            
+            // Default to French if still no locale found
+            if (!$locale) {
+                $locale = 'fr';
+            }
+
             $message = $locale === 'ar'
                 ? AppSetting::get('maintenance_message_ar', 'الموقع تحت الصيانة.')
                 : AppSetting::get('maintenance_message', 'Maintenance en cours.');
@@ -42,7 +59,7 @@ class CheckMaintenance
                 return response()->json(['message' => $message], 503);
             }
 
-            return response()->view('maintenance', compact('message'), 503);
+            return response()->view('maintenance', compact('message', 'locale'), 503);
         }
 
         return $next($request);

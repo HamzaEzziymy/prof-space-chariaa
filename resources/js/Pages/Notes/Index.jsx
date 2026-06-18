@@ -1,283 +1,45 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { LanguageProvider, useLanguage } from '@/i18n/LanguageContext';
-import { Head, router, usePage } from '@inertiajs/react';
-import { useEffect, useRef, useState } from 'react';
+import { Head, router } from '@inertiajs/react';
+import { useState } from 'react';
 
-function Icon({ d, className = 'w-5 h-5' }) {
-    return (
-        <svg className={className} fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d={d} />
-        </svg>
-    );
-}
-
-const I = {
-    filter:     'M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z',
-    close:      'M6 18L18 6M6 6l12 12',
-    check:      'M5 13l4 4L19 7',
-    chevDown:   'M19 9l-7 7-7-7',
-    search:     'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0',
-    save:       'M5 13l4 4L19 7',
-    plus:       'M12 4v16m8-8H4',
-    trash:      'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16',
-    alert:      'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z',
-    male:       'M16 3h5m0 0v5m0-5l-6 6M9 15a6 6 0 100-12 6 6 0 000 12z',
-    female:     'M12 14a6 6 0 100-12 6 6 0 000 12zm0 0v8m-4-4h8',
-};
-
-function Toast({ flash, t }) {
-    const [visible, setVisible] = useState(false);
-    const msg   = flash?.success || flash?.error;
-    const isErr = !!flash?.error;
-    const map = {
-        notes_saved:      t('saveSuccess'),
-        notes_no_changes: t('noChanges'),
-        note_deleted:     t('noteDeleted'),
+function StatCard({ icon, label, value, sub, color = 'indigo' }) {
+    const colorMap = {
+        indigo: 'from-indigo-500 to-indigo-600',
+        emerald: 'from-emerald-500 to-emerald-600',
+        amber: 'from-amber-500 to-amber-600',
+        rose: 'from-rose-500 to-rose-600',
+        violet: 'from-violet-500 to-violet-600',
+        cyan: 'from-cyan-500 to-cyan-600',
     };
-    useEffect(() => {
-        if (msg) { setVisible(true); const id = setTimeout(() => setVisible(false), 3500); return () => clearTimeout(id); }
-    }, [msg]);
-    if (!visible || !msg) return null;
     return (
-        <div className={`fixed bottom-6 end-6 z-[100] flex items-center gap-3 rounded-xl px-4 py-3 shadow-xl text-sm font-medium ${isErr ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'}`}>
-            <Icon d={isErr ? I.close : I.check} className="h-4 w-4 shrink-0" />
-            {map[msg] ?? msg}
+        <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${colorMap[color]} text-white shadow-lg`}>
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d={icon} />
+                </svg>
+            </div>
+            <div className="min-w-0">
+                <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">{label}</p>
+                <p className="text-2xl font-bold text-slate-800 dark:text-white">{value ?? '—'}</p>
+                {sub !== undefined && <p className="text-xs text-slate-400 dark:text-slate-500">{sub}</p>}
+            </div>
         </div>
     );
 }
 
-function NotesContent({ filieres, niveaux, semestres, modules, salles, rows, filters, t, locale, isRTL }) {
-    const { flash } = usePage().props;
-    const [filiereId, setFiliereId]   = useState(filters?.filiere_id ?? '');
-    const [niveauId, setNiveauId]     = useState(filters?.niveau_id ?? '');
-    const [semestreId, setSemestreId] = useState(filters?.semestre_id ?? '');
-    const [moduleId, setModuleId]     = useState(filters?.module_id ?? '');
-    const [nexam, setNexam]           = useState(filters?.Nexam ?? 1);
-
-    const [saving, setSaving]         = useState(false);
-    const [localRows, setLocalRows]   = useState(rows ?? []);
-    const [dirty, setDirty]           = useState(false);
-    const searchTimeout = useRef(null);
-
-    useEffect(() => { setLocalRows(rows ?? []); setDirty(false); }, [rows]);
-
-    const applyFilters = (overrides = {}) => {
-        const params = {};
-        const f = { filiereId, niveauId, semestreId, moduleId, nexam, ...overrides };
-        if (f.filiereId)  params.filiere_id  = f.filiereId;
-        if (f.niveauId)   params.niveau_id   = f.niveauId;
-        if (f.semestreId) params.semestre_id = f.semestreId;
-        if (f.moduleId)   params.module_id   = f.moduleId;
-        params.Nexam = f.nexam;
-
-        router.get(route('notes.index'), params, { preserveState: true, replace: true });
-    };
-
-    const handleFiliere  = (v) => { setFiliereId(v); setNiveauId(''); setSemestreId(''); setModuleId(''); applyFilters({ filiereId: v, niveauId: '', semestreId: '', moduleId: '' }); };
-    const handleNiveau   = (v) => { setNiveauId(v); setSemestreId(''); setModuleId(''); applyFilters({ niveauId: v, semestreId: '', moduleId: '' }); };
-    const handleSemestre = (v) => { setSemestreId(v); setModuleId(''); applyFilters({ semestreId: v, moduleId: '' }); };
-    const handleModule   = (v) => { setModuleId(v); applyFilters({ moduleId: v }); };
-    const handleNexam    = (v) => { setNexam(v); applyFilters({ nexam: v }); };
-
-    const updateNote = (etudModId, field, value) => {
-        setLocalRows(prev => prev.map(r => {
-            if (r.etud_mod_id !== etudModId) return r;
-            const updated = { ...r, note: { ...(r.note || {}), [field]: value } };
-            return updated;
-        }));
-        setDirty(true);
-    };
-
-    const bulkSave = () => {
-        setSaving(true);
-        const notes = localRows
-            .filter(r => r.note?.note_normale !== undefined || r.note?.note_rattrapage !== undefined || r.note?.note_finale !== undefined)
-            .map(r => ({
-                etud_mod_id:  r.etud_mod_id,
-                Nexam:        parseInt(nexam),
-                note_normale:    r.note?.note_normale ?? null,
-                note_rattrapage: r.note?.note_rattrapage ?? null,
-                note_finale:     r.note?.note_finale ?? null,
-                id_salle:        r.note?.id_salle ?? null,
-            }));
-        router.post(route('notes.bulk-update'), { notes }, {
-            preserveState: true,
-            preserveScroll: true,
-            onSuccess: () => { setSaving(false); setDirty(false); },
-            onError:   () => { setSaving(false); },
-            onFinish:  () => { setSaving(false); },
-        });
-    };
-
-    const deleteNote = (etudModId) => {
-        const row = localRows.find(r => r.etud_mod_id === etudModId);
-        if (!row?.note?.id) return;
-        if (!confirm(t('confirmDeleteNoteMsg'))) return;
-        router.delete(route('notes.destroy', row.note.id), {
-            preserveState: true,
-            preserveScroll: true,
-        });
-    };
-
-    const hasModule = !!moduleId;
-
+function DistributionBar({ label, count, max, color, pct }) {
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-4 sm:p-6 lg:p-8">
-            <div className="mx-auto max-w-7xl">
-                {/* Header */}
-                <div className="mb-6">
-                    <h1 className="text-2xl font-bold text-slate-800 dark:text-white">{t('notesTitle')}</h1>
-                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t('notesSubtitle')}</p>
+        <div className="flex items-center gap-3">
+            <span className="w-16 text-right text-xs font-medium text-slate-600 dark:text-slate-300">{label}</span>
+            <div className="flex-1">
+                <div className="h-5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
+                    <div className={`h-full rounded-full transition-all duration-500 ${color}`}
+                        style={{ width: `${max > 0 ? (count / max) * 100 : 0}%` }} />
                 </div>
-
-                {/* Filters */}
-                <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                    <SelectFilter label={t('selectFiliere')} value={filiereId} onChange={handleFiliere}
-                        options={filieres.map(f => ({ value: f.id, label: `${f.code} — ${locale === 'ar' ? (f.nom_ar || f.nom_fr) : f.nom_fr}` }))}
-                        placeholder={locale === 'ar' ? 'اختر الشعبة...' : 'Filière...'} />
-
-                    <SelectFilter label={t('selectNiveau')} value={niveauId} onChange={handleNiveau}
-                        options={niveaux.map(n => ({ value: n.id, label: `${locale === 'ar' ? (n.nom_ar || n.nom_fr) : n.nom_fr} (${n.code})` }))}
-                        placeholder={locale === 'ar' ? 'اختر المستوى...' : 'Niveau...'} />
-
-                    <SelectFilter label={t('selectSemestre')} value={semestreId} onChange={handleSemestre}
-                        options={semestres.map(s => ({ value: s.id, label: `${locale === 'ar' ? (s.nom_ar || s.nom_fr) : s.nom_fr} (${s.code})` }))}
-                        placeholder={locale === 'ar' ? 'اختر الفصل...' : 'Semestre...'} />
-
-                    <SelectFilter label={t('selectModule')} value={moduleId} onChange={handleModule}
-                        options={modules.map(m => ({ value: m.id, label: `${locale === 'ar' ? (m.nom_ar || m.nom_fr) : m.nom_fr} (${m.code_module})` }))}
-                        placeholder={locale === 'ar' ? 'اختر المادة...' : 'Module...'} />
-
-                    <SelectFilter label={t('selectNexam')} value={nexam} onChange={handleNexam}
-                        options={[1,2,3,4,5,6].map(n => ({ value: n, label: `${t('nexamLabel')} ${n}` }))} />
-
-                </div>
-
-                {/* Bulk Save bar */}
-                {hasModule && (
-                    <div className={`sticky top-4 z-10 mb-4 flex items-center justify-between rounded-xl border bg-white p-3 shadow-lg dark:border-slate-700 dark:bg-slate-800 ${dirty ? 'border-amber-300 dark:border-amber-700' : ''}`}>
-                        <span className="text-sm text-slate-500 dark:text-slate-400">
-                            {localRows.length} {t('student').toLowerCase()}{localRows.length > 1 ? 's' : ''}
-                            {dirty && <span className="ms-2 text-amber-600 dark:text-amber-400">— {locale === 'ar' ? 'تغييرات غير محفوظة' : 'modifications non enregistrées'}</span>}
-                        </span>
-                        <button onClick={bulkSave} disabled={saving}
-                            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition active:scale-95 ${saving ? 'bg-slate-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
-                            {saving ? (
-                                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-                            ) : <Icon d={I.check} className="h-4 w-4" />}
-                            {saving ? t('saving') : t('bulkSave')}
-                        </button>
-                    </div>
-                )}
-
-                {/* Content */}
-                {!hasModule ? (
-                    <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-white py-20 dark:border-slate-700 dark:bg-slate-800">
-                        <Icon d={I.search} className="mb-3 h-12 w-12 text-slate-300 dark:text-slate-600" />
-                        <p className="text-sm text-slate-400 dark:text-slate-500">{t('noModuleSelected')}</p>
-                    </div>
-                ) : localRows.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-white py-20 dark:border-slate-700 dark:bg-slate-800">
-                        <Icon d={I.alert} className="mb-3 h-12 w-12 text-slate-300 dark:text-slate-600" />
-                        <p className="text-sm text-slate-400 dark:text-slate-500">{t('noStudents')}</p>
-                    </div>
-                ) : (
-                    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-b border-slate-100 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50">
-                                        <th className="px-3 py-3 text-start text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">#</th>
-                                        <th className="px-3 py-3 text-start text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t('student')}</th>
-                                        <th className="px-3 py-3 text-start text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">CNE</th>
-                                        <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t('noteNormale')} <span className="text-[10px] font-normal">/20</span></th>
-                                        <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t('noteRattrapage')} <span className="text-[10px] font-normal">/20</span></th>
-                                        <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t('noteFinale')} <span className="text-[10px] font-normal">/20</span></th>
-                                        <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t('examRoom')}</th>
-                                        <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t('actions')}</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                                    {localRows.map((row, idx) => {
-                                        const e = row.etudiant;
-                                        const n = row.note || {};
-                                        return (
-                                            <tr key={row.etud_mod_id} className="group transition hover:bg-slate-50/50 dark:hover:bg-slate-700/20">
-                                                <td className="px-3 py-3 text-xs text-slate-400">{idx + 1}</td>
-                                                <td className="px-3 py-3">
-                                                    <div className="flex items-center gap-2.5">
-                                                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 text-xs font-bold text-indigo-700 dark:from-indigo-900/30 dark:to-purple-900/30 dark:text-indigo-300">
-                                                            {e?.sexe === 'F'
-                                                                ? <Icon d={I.female} className="h-4 w-4 text-rose-500" />
-                                                                : <Icon d={I.male} className="h-4 w-4 text-indigo-500" />}
-                                                        </span>
-                                                        <span className="font-medium text-slate-800 dark:text-slate-200">
-                                                            {locale === 'ar'
-                                                                ? `${e?.prenom_ar || e?.prenom_fr} ${e?.nom_ar || e?.nom_fr}`
-                                                                : `${e?.prenom_fr} ${e?.nom_fr}`}
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-3 py-3">
-                                                    <code className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-mono text-slate-600 dark:bg-slate-700 dark:text-slate-300">{e?.CNE}</code>
-                                                </td>
-                                                <td className="px-3 py-3 text-center">
-                                                    <input type="number" step="0.01" min="0" max="20"
-                                                        value={n.note_normale ?? ''}
-                                                        onChange={e => updateNote(row.etud_mod_id, 'note_normale', e.target.value === '' ? null : parseFloat(e.target.value))}
-                                                        className={`w-20 rounded-lg border px-2 py-1.5 text-center text-sm transition focus:outline-none focus:ring-2 dark:text-white
-                                                            ${n.note_normale !== undefined && n.note_normale !== null
-                                                                ? 'border-indigo-200 bg-indigo-50 dark:border-indigo-800 dark:bg-indigo-900/20'
-                                                                : 'border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-700'}`} />
-                                                </td>
-                                                <td className="px-3 py-3 text-center">
-                                                    <input type="number" step="0.01" min="0" max="20"
-                                                        value={n.note_rattrapage ?? ''}
-                                                        onChange={e => updateNote(row.etud_mod_id, 'note_rattrapage', e.target.value === '' ? null : parseFloat(e.target.value))}
-                                                        className={`w-20 rounded-lg border px-2 py-1.5 text-center text-sm transition focus:outline-none focus:ring-2 dark:text-white
-                                                            ${n.note_rattrapage !== undefined && n.note_rattrapage !== null
-                                                                ? 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20'
-                                                                : 'border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-700'}`} />
-                                                </td>
-                                                <td className="px-3 py-3 text-center">
-                                                    <input type="number" step="0.01" min="0" max="20"
-                                                        value={n.note_finale ?? ''}
-                                                        onChange={e => updateNote(row.etud_mod_id, 'note_finale', e.target.value === '' ? null : parseFloat(e.target.value))}
-                                                        className={`w-20 rounded-lg border px-2 py-1.5 text-center text-sm font-semibold transition focus:outline-none focus:ring-2 dark:text-white
-                                                            ${n.note_finale !== undefined && n.note_finale !== null
-                                                                ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20'
-                                                                : 'border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-700'}`} />
-                                                </td>
-                                                <td className="px-3 py-3 text-center">
-                                                    <select value={n.id_salle ?? ''}
-                                                        onChange={e => updateNote(row.etud_mod_id, 'id_salle', e.target.value || null)}
-                                                        className="w-24 rounded-lg border border-slate-200 bg-white px-1.5 py-1.5 text-xs transition focus:outline-none focus:ring-2 dark:border-slate-600 dark:bg-slate-700 dark:text-white">
-                                                        <option value="">—</option>
-                                                        {salles.map(s => (
-                                                            <option key={s.id} value={s.id}>
-                                                                {locale === 'ar' ? (s.nomSalle_ar || s.nomSalle_fr || s.code_salle) : (s.nomSalle_fr || s.nomSalle_ar || s.code_salle)}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </td>
-                                                <td className="px-3 py-3 text-center">
-                                                    {n.id && (
-                                                        <button onClick={() => deleteNote(row.etud_mod_id)}
-                                                            className="rounded-lg p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20">
-                                                            <Icon d={I.trash} className="h-4 w-4" />
-                                                        </button>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                )}
             </div>
-            <Toast flash={flash} t={t} />
+            <span className="w-10 text-right text-xs font-semibold text-slate-600 dark:text-slate-300">{count}</span>
+            <span className="w-12 text-right text-xs text-slate-400">{pct !== undefined ? `${pct}%` : ''}</span>
         </div>
     );
 }
@@ -297,14 +59,214 @@ function SelectFilter({ label, value, onChange, options, placeholder }) {
     );
 }
 
-export default function NotesIndex({ filieres, niveaux, semestres, modules, salles, rows, filters }) {
+function NotesContent({ filieres, niveaux, semestres, modules, stats, perModule, distribution, filters, t, locale, isRTL }) {
+    const [filiereId, setFiliereId]   = useState(filters?.filiere_id ?? '');
+    const [niveauId, setNiveauId]     = useState(filters?.niveau_id ?? '');
+    const [semestreId, setSemestreId] = useState(filters?.semestre_id ?? '');
+    const [moduleId, setModuleId]     = useState(filters?.module_id ?? '');
+    const [nexam, setNexam]           = useState(filters?.Nexam ?? '');
+
+    const applyFilters = (overrides = {}) => {
+        const params = {};
+        const f = { filiereId, niveauId, semestreId, moduleId, nexam, ...overrides };
+        if (f.filiereId)  params.filiere_id  = f.filiereId;
+        if (f.niveauId)   params.niveau_id   = f.niveauId;
+        if (f.semestreId) params.semestre_id = f.semestreId;
+        if (f.moduleId)   params.module_id   = f.moduleId;
+        if (f.nexam)      params.Nexam       = f.nexam;
+        router.get(route('notes.index'), params, { preserveState: true, replace: true });
+    };
+
+    const handleFiliere  = (v) => { setFiliereId(v); setNiveauId(''); setSemestreId(''); setModuleId(''); applyFilters({ filiereId: v, niveauId: '', semestreId: '', moduleId: '' }); };
+    const handleNiveau   = (v) => { setNiveauId(v); setSemestreId(''); setModuleId(''); applyFilters({ niveauId: v, semestreId: '', moduleId: '' }); };
+    const handleSemestre = (v) => { setSemestreId(v); setModuleId(''); applyFilters({ semestreId: v, moduleId: '' }); };
+    const handleModule   = (v) => { setModuleId(v); applyFilters({ moduleId: v }); };
+    const handleNexam    = (v) => { setNexam(v); applyFilters({ Nexam: v }); };
+
+    const total = (stats?.pass_count ?? 0) + (stats?.fail_count ?? 0);
+    const passRate = total > 0 ? Math.round((stats.pass_count / total) * 100) : null;
+    const maxDist = Math.max(...Object.values(distribution), 1);
+
+    const icons = {
+        users: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
+        modules: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10',
+        clipboard: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
+        chart: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
+        academic: 'M12 14l9-5-9-5-9 5 9 5zm0 0l-6.16-3.422M12 14l6.16-3.422M12 14v6',
+        trending: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6',
+    };
+
+    return (
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-4 sm:p-6 lg:p-8" dir={isRTL ? 'rtl' : 'ltr'}>
+            <div className="mx-auto max-w-7xl">
+                <div className="mb-6">
+                    <h1 className="text-2xl font-bold text-slate-800 dark:text-white">{t('notesTitle')}</h1>
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t('notesSubtitle')}</p>
+                </div>
+
+                <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                    <SelectFilter label={t('selectFiliere')} value={filiereId} onChange={handleFiliere}
+                        options={filieres.map(f => ({ value: f.id, label: `${f.code} — ${locale === 'ar' ? (f.nom_ar || f.nom_fr) : f.nom_fr}` }))}
+                        placeholder={locale === 'ar' ? 'اختر الشعبة...' : 'Filière...'} />
+                    <SelectFilter label={t('selectNiveau')} value={niveauId} onChange={handleNiveau}
+                        options={niveaux.map(n => ({ value: n.id, label: `${locale === 'ar' ? (n.nom_ar || n.nom_fr) : n.nom_fr} (${n.code})` }))}
+                        placeholder={locale === 'ar' ? 'اختر المستوى...' : 'Niveau...'} />
+                    <SelectFilter label={t('selectSemestre')} value={semestreId} onChange={handleSemestre}
+                        options={semestres.map(s => ({ value: s.id, label: `${locale === 'ar' ? (s.nom_ar || s.nom_fr) : s.nom_fr} (${s.code})` }))}
+                        placeholder={locale === 'ar' ? 'اختر الفصل...' : 'Semestre...'} />
+                    <SelectFilter label={t('selectModule')} value={moduleId} onChange={handleModule}
+                        options={modules.map(m => ({ value: m.id, label: `${locale === 'ar' ? (m.nom_ar || m.nom_fr) : m.nom_fr} (${m.code_module})` }))}
+                        placeholder={locale === 'ar' ? 'اختر المادة...' : 'Module...'} />
+                    <SelectFilter label={locale === 'ar' ? 'رقم الامتحان' : 'N° Examen'} value={nexam} onChange={handleNexam}
+                        options={[1,2,3,4,5,6].map(n => ({ value: n, label: `${locale === 'ar' ? 'امتحان' : 'Examen'} ${n}` }))}
+                        placeholder={locale === 'ar' ? 'الكل...' : 'Tous...'} />
+                </div>
+
+                {stats && (
+                    <>
+                        <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
+                            <StatCard icon={icons.users} label={locale === 'ar' ? 'إجمالي الطلاب' : 'Total Étudiants'} value={stats.total_students} color="indigo" />
+                            <StatCard icon={icons.modules} label={locale === 'ar' ? 'إجمالي المواد' : 'Total Modules'} value={stats.total_modules} color="violet" />
+                            <StatCard icon={icons.clipboard} label={locale === 'ar' ? 'إجمالي التسجيلات' : 'Total Inscriptions'} value={stats.total_inscriptions} color="cyan" />
+                            <StatCard icon={icons.chart} label={locale === 'ar' ? 'معدل النتيجة العادية' : 'Moy. Note Normale'} value={stats.avg_note_normale} sub="/20" color="emerald" />
+                            <StatCard icon={icons.trending} label={locale === 'ar' ? 'معدل النتيجة النهائية' : 'Moy. Note Finale'} value={stats.avg_note_finale} sub="/20" color="amber" />
+                            <StatCard icon={icons.academic} label={locale === 'ar' ? 'نسبة النجاح' : 'Taux Réussite'}
+                                value={passRate !== null ? `${passRate}%` : '—'}
+                                sub={locale === 'ar' ? `${stats.pass_count} ناجح / ${stats.fail_count} راسب` : `${stats.pass_count} validé / ${stats.fail_count} non validé`}
+                                color="rose" />
+                        </div>
+
+                        <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+                            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                                <h3 className="mb-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                    {locale === 'ar' ? 'توزيع النتائج' : 'Distribution des notes'}
+                                </h3>
+                                <div className="space-y-3">
+                                    <DistributionBar label={locale === 'ar' ? 'بدون' : 'N/R'} count={distribution.no_grade} max={maxDist} color="bg-slate-400" pct={stats.total_inscriptions > 0 ? Math.round((distribution.no_grade / stats.total_inscriptions) * 100) : 0} />
+                                    <DistributionBar label="0-5" count={distribution['0_5']} max={maxDist} color="bg-red-400" pct={stats.total_inscriptions > 0 ? Math.round((distribution['0_5'] / stats.total_inscriptions) * 100) : 0} />
+                                    <DistributionBar label="5-10" count={distribution['5_10']} max={maxDist} color="bg-orange-400" pct={stats.total_inscriptions > 0 ? Math.round((distribution['5_10'] / stats.total_inscriptions) * 100) : 0} />
+                                    <DistributionBar label="10-15" count={distribution['10_15']} max={maxDist} color="bg-emerald-400" pct={stats.total_inscriptions > 0 ? Math.round((distribution['10_15'] / stats.total_inscriptions) * 100) : 0} />
+                                    <DistributionBar label="15-20" count={distribution['15_20']} max={maxDist} color="bg-green-500" pct={stats.total_inscriptions > 0 ? Math.round((distribution['15_20'] / stats.total_inscriptions) * 100) : 0} />
+                                </div>
+                            </div>
+
+                            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                                <h3 className="mb-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                    {locale === 'ar' ? 'حالة التقييم' : 'État des évaluations'}
+                                </h3>
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3 dark:bg-slate-700/50">
+                                        <span className="text-sm text-slate-600 dark:text-slate-300">{locale === 'ar' ? 'مع نتيجة عادية' : 'Avec note normale'}</span>
+                                        <span className="font-bold text-indigo-600 dark:text-indigo-400">{stats.with_note_normale}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3 dark:bg-slate-700/50">
+                                        <span className="text-sm text-slate-600 dark:text-slate-300">{locale === 'ar' ? 'مع نتيجة استدراكية' : 'Avec note rattrapage'}</span>
+                                        <span className="font-bold text-amber-600 dark:text-amber-400">{stats.with_note_rattrapage}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3 dark:bg-slate-700/50">
+                                        <span className="text-sm text-slate-600 dark:text-slate-300">{locale === 'ar' ? 'مع نتيجة نهائية' : 'Avec note finale'}</span>
+                                        <span className="font-bold text-emerald-600 dark:text-emerald-400">{stats.with_note_finale}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between rounded-xl bg-emerald-50 px-4 py-3 dark:bg-emerald-900/20">
+                                        <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">{locale === 'ar' ? 'ناجحون (معدل >= 10)' : 'Validés (moy. >= 10)'}</span>
+                                        <span className="font-bold text-emerald-600 dark:text-emerald-400">{stats.pass_count}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between rounded-xl bg-red-50 px-4 py-3 dark:bg-red-900/20">
+                                        <span className="text-sm font-semibold text-red-700 dark:text-red-300">{locale === 'ar' ? 'راسبون (معدل < 10)' : 'Non validés (moy. < 10)'}</span>
+                                        <span className="font-bold text-red-600 dark:text-red-400">{stats.fail_count}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {perModule.length > 0 && (
+                            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                                <div className="border-b border-slate-100 px-5 py-4 dark:border-slate-700">
+                                    <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                        {locale === 'ar' ? 'إحصائيات حسب المواد' : 'Statistiques par module'}
+                                    </h3>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="border-b border-slate-100 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50">
+                                                <th className="px-4 py-3 text-start text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">#</th>
+                                                <th className="px-4 py-3 text-start text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'المادة' : 'Module'}</th>
+                                                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'الطلاب' : 'Étudiants'}</th>
+                                                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'معدل النتيجة' : 'Moy. Note'}</th>
+                                                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'ناجح' : 'Validé'}</th>
+                                                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'راسب' : 'Non validé'}</th>
+                                                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'نسبة النجاح' : '% Réussite'}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                                            {perModule.map((m, idx) => {
+                                                const modTotal = (m.pass_count ?? 0) + (m.fail_count ?? 0);
+                                                const modRate = modTotal > 0 ? Math.round((m.pass_count / modTotal) * 100) : null;
+                                                return (
+                                                    <tr key={m.module_id} className="transition hover:bg-slate-50/50 dark:hover:bg-slate-700/20">
+                                                        <td className="px-4 py-3 text-xs text-slate-400">{idx + 1}</td>
+                                                        <td className="px-4 py-3">
+                                                            <span className="font-medium text-slate-800 dark:text-slate-200">
+                                                                {locale === 'ar' ? (m.nom_ar || m.nom_fr) : m.nom_fr}
+                                                            </span>
+                                                            <span className="ms-2 text-xs text-slate-400">({m.code_module})</span>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-center font-medium text-slate-700 dark:text-slate-300">{m.student_count}</td>
+                                                        <td className="px-4 py-3 text-center font-medium text-slate-700 dark:text-slate-300">{m.avg_note_finale ?? '—'}</td>
+                                                        <td className="px-4 py-3 text-center">
+                                                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400">
+                                                                {m.pass_count}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-center">
+                                                            <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-700 dark:bg-red-900/20 dark:text-red-400">
+                                                                {m.fail_count}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-center">
+                                                            <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                                                modRate >= 50
+                                                                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400'
+                                                                    : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'
+                                                            }`}>
+                                                                {modRate !== null ? `${modRate}%` : '—'}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+                    </>
+                )}
+
+                {!stats?.total_inscriptions && (
+                    <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-white py-20 dark:border-slate-700 dark:bg-slate-800">
+                        <svg className="mb-3 h-12 w-12 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        <p className="text-sm text-slate-400 dark:text-slate-500">
+                            {locale === 'ar' ? 'لا توجد إحصائيات متاحة. يرجى تحديد الفلتر المناسب.' : 'Aucune statistique disponible. Sélectionnez un filtre.'}
+                        </p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+export default function NotesIndex({ filieres, niveaux, semestres, modules, stats, perModule, distribution, filters }) {
     const { locale, isRTL } = useLanguage();
     const { t } = useLanguage();
     return (
         <LanguageProvider>
             <AdminLayout>
                 <Head title={t('notesManagement')} />
-                <NotesContent {...{ filieres, niveaux, semestres, modules, salles, rows, filters, t, locale, isRTL }} />
+                <NotesContent {...{ filieres, niveaux, semestres, modules, stats, perModule, distribution, filters, t, locale, isRTL }} />
             </AdminLayout>
         </LanguageProvider>
     );

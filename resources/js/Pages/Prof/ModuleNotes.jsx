@@ -22,7 +22,7 @@ function computeDecision(note) {
     if (note === null || note === undefined || note === '') return null;
     const v = parseFloat(note);
     if (isNaN(v)) return null;
-    return v > 10;
+    return v >= 10;
 }
 
 function Toast({ message, type, onClose }) {
@@ -230,7 +230,7 @@ function ModuleNotesContent({ module, students }) {
                                                                 value={noteVal}
                                                                 onChange={(e) => handleNoteChange(s.etud_mod_id, field, e.target.value)}
                                                                 className={`w-16 rounded-md border px-2 py-1 text-center text-xs font-medium transition-all focus:ring-2 focus:ring-primary/30 ${
-                                                                    noteVal > 10
+                                                                    noteVal >= 10
                                                                         ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300'
                                                                         : noteVal !== ''
                                                                         ? 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300'

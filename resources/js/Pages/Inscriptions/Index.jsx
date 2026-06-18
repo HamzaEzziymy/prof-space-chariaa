@@ -1326,6 +1326,44 @@ function HorizontalInscriptionModal({ onClose, t, locale }) {
         }
     };
 
+    const downloadRejectedReport = () => {
+        const rejected = report?.rejected ?? [];
+        if (rejected.length === 0 && !report?.students_not_found?.length && !report?.modules_not_found?.length) return;
+        const rows = [];
+        rejected.forEach(r => {
+            rows.push({
+                [locale === 'ar' ? 'النوع' : 'Type']: r.type,
+                CNE: r.cne || '',
+                [locale === 'ar' ? 'الوحدة' : 'Module']: r.code_module || '',
+                [locale === 'ar' ? 'القيمة' : 'Valeur']: r.value || '',
+                [locale === 'ar' ? 'السبب' : 'Raison']: r.reason,
+            });
+        });
+        (report?.students_not_found ?? []).forEach(cne => {
+            rows.push({
+                [locale === 'ar' ? 'النوع' : 'Type']: 'student_not_found',
+                CNE: cne,
+                [locale === 'ar' ? 'الوحدة' : 'Module']: '',
+                [locale === 'ar' ? 'القيمة' : 'Valeur']: '',
+                [locale === 'ar' ? 'السبب' : 'Raison']: locale === 'ar' ? 'CNE غير موجود في قاعدة البيانات' : 'CNE introuvable dans la base',
+            });
+        });
+        (report?.modules_not_found ?? []).forEach(code => {
+            rows.push({
+                [locale === 'ar' ? 'النوع' : 'Type']: 'module_not_found',
+                CNE: '',
+                [locale === 'ar' ? 'الوحدة' : 'Module']: code,
+                [locale === 'ar' ? 'القيمة' : 'Valeur']: '',
+                [locale === 'ar' ? 'السبب' : 'Raison']: locale === 'ar' ? 'رمز الوحدة غير موجود في قاعدة البيانات' : 'Code module introuvable dans la base',
+            });
+        });
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Erreurs');
+        ws['!cols'] = [{ wch: 22 }, { wch: 16 }, { wch: 16 }, { wch: 10 }, { wch: 50 }];
+        XLSX.writeFile(wb, 'rapport_erreurs_inscriptions.xlsx');
+    };
+
     const ext      = file?.name?.split('.').pop()?.toLowerCase();
     const isXlsx   = ['xlsx', 'xls', 'ods'].includes(ext);
     const fileIcon = isXlsx ? '📊' : '📄';
@@ -1533,6 +1571,53 @@ function HorizontalInscriptionModal({ onClose, t, locale }) {
                                         <p className="text-[11px] text-amber-500 dark:text-amber-500">{locale === 'ar' ? 'تسجيلات تمت معالجتها' : 'Inscriptions traitées'}</p>
                                     </div>
                                 </div>
+
+                                {report.rejected?.length > 0 && (
+                                    <div className="rounded-xl border border-red-200 dark:border-red-800 overflow-hidden">
+                                        <div className="flex items-center justify-between gap-2 bg-red-50 dark:bg-red-900/20 px-4 py-2.5 border-b border-red-200 dark:border-red-800">
+                                            <div className="flex items-center gap-2">
+                                                <svg className="h-4 w-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                                </svg>
+                                                <span className="text-xs font-semibold text-red-600 dark:text-red-400">
+                                                    {locale === 'ar' ? 'تقرير الأخطاء' : 'Rapport des erreurs'}
+                                                </span>
+                                            </div>
+                                            <button type="button" onClick={downloadRejectedReport}
+                                                className="flex items-center gap-1.5 rounded-lg border border-red-300 bg-white px-2.5 py-1.5 text-[10px] font-semibold text-red-600 hover:bg-red-50 dark:border-red-700 dark:bg-red-950 dark:text-red-400 dark:hover:bg-red-900/40 transition">
+                                                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2v-7a2 2 0 012-2h.172M15 3h4a2 2 0 012 2v4M11 3H7a2 2 0 00-2 2v.172" />
+                                                </svg>
+                                                {locale === 'ar' ? 'تحميل Excel' : 'Télécharger Excel'}
+                                            </button>
+                                        </div>
+                                        <div className="overflow-x-auto max-h-52">
+                                            <table className="w-full text-xs">
+                                                <thead>
+                                                    <tr className="border-b border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800">
+                                                        <th className="px-3 py-2 text-left font-semibold text-slate-500">{locale === 'ar' ? 'النوع' : 'Type'}</th>
+                                                        <th className="px-3 py-2 text-left font-semibold text-slate-500">CNE</th>
+                                                        <th className="px-3 py-2 text-left font-semibold text-slate-500">{locale === 'ar' ? 'الوحدة' : 'Module'}</th>
+                                                        <th className="px-3 py-2 text-left font-semibold text-slate-500">{locale === 'ar' ? 'القيمة' : 'Valeur'}</th>
+                                                        <th className="px-3 py-2 text-left font-semibold text-red-500">{locale === 'ar' ? 'السبب' : 'Raison'}</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {report.rejected.map((r, i) => (
+                                                        <tr key={i} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-red-50/30 dark:hover:bg-red-900/10">
+                                                            <td className="px-3 py-2"><span className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-700 px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:text-slate-300">{r.type}</span></td>
+                                                            <td className="px-3 py-2"><code className="rounded bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 font-bold text-slate-600 dark:text-slate-300">{r.cne || '—'}</code></td>
+                                                            <td className="px-3 py-2"><code className="rounded bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 font-bold text-slate-600 dark:text-slate-300">{r.code_module || '—'}</code></td>
+                                                            <td className="px-3 py-2 text-slate-500">{r.value || '—'}</td>
+                                                            <td className="px-3 py-2 text-red-500 dark:text-red-400">{r.reason}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {report.students_not_found?.length > 0 && (
                                     <div className="rounded-xl border border-amber-200 dark:border-amber-800 overflow-hidden">
                                         <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 px-4 py-2.5 border-b border-amber-200 dark:border-amber-800">
@@ -1563,7 +1648,7 @@ function HorizontalInscriptionModal({ onClose, t, locale }) {
                                         </div>
                                     </div>
                                 )}
-                                {(!report.students_not_found || report.students_not_found.length === 0) && (!report.modules_not_found || report.modules_not_found.length === 0) && (
+                                {(!report.rejected || report.rejected.length === 0) && (!report.students_not_found || report.students_not_found.length === 0) && (!report.modules_not_found || report.modules_not_found.length === 0) && (
                                     <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20 px-4 py-3">
                                         <svg className="h-5 w-5 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />

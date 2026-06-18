@@ -230,11 +230,11 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux 
                             <div className="grid grid-cols-2 gap-3">
                                 <Field id="prenom_fr" label={t('etudiantPrenomFr')} value={data.prenom_fr}
                                     onChange={e => setData('prenom_fr', e.target.value)}
-                                    placeholder={locale === 'ar' ? 'مثال: Jean' : 'Ex: Jean'}
+                                    placeholder={locale === 'ar' ? 'مثال: الاسم الشخصي' : 'ex: Prénom'}
                                     required error={errors.prenom_fr} dir="ltr" />
                                 <Field id="nom_fr" label={t('etudiantNomFr')} value={data.nom_fr}
                                     onChange={e => setData('nom_fr', e.target.value)}
-                                    placeholder={locale === 'ar' ? 'مثال: Dupont' : 'Ex: Dupont'}
+                                    placeholder={locale === 'ar' ? 'مثال: اسم العائلة' : 'ex: Nom de famille'}
                                     required error={errors.nom_fr} dir="ltr" />
                             </div>
                         </div>
@@ -245,11 +245,11 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux 
                             <div className="grid grid-cols-2 gap-3">
                                 <Field id="prenom_ar" label={t('etudiantPrenomAr')} value={data.prenom_ar}
                                     onChange={e => setData('prenom_ar', e.target.value)}
-                                    placeholder="مثال: جان" dir="rtl"
+                                    placeholder="مثال: الاسم الشخصي" dir="rtl"
                                     error={errors.prenom_ar} />
                                 <Field id="nom_ar" label={t('etudiantNomAr')} value={data.nom_ar}
                                     onChange={e => setData('nom_ar', e.target.value)}
-                                    placeholder="مثال: دوبون" dir="rtl"
+                                    placeholder="مثال: اسم العائلة" dir="rtl"
                                     error={errors.nom_ar} />
                             </div>
                         </div>
@@ -282,7 +282,7 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux 
                                     error={errors.date_naissance} />
                                 <Field id="lieu_naissance" label={t('etudiantLieuNaissance')} value={data.lieu_naissance}
                                     onChange={e => setData('lieu_naissance', e.target.value)}
-                                    placeholder={locale === 'ar' ? 'مثال: الدار البيضاء' : 'Ex: Casablanca'}
+                                    placeholder={locale === 'ar' ? 'مثال: مدينة الميلاد' : 'ex: Ville de naissance'}
                                     error={errors.lieu_naissance}
                                     dir={locale === 'ar' ? 'rtl' : 'ltr'} />
                             </div>

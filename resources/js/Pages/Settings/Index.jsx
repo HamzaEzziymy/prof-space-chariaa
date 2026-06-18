@@ -449,10 +449,10 @@ function IdentityCard({ settings, t }) {
             <form onSubmit={(e) => { e.preventDefault(); post(route('settings.general')); }} className="space-y-5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <Field label={t('settingsAppName')} error={errors.app_name} required>
-                        <Input value={data.app_name} onChange={e => setData('app_name', e.target.value)} placeholder="ProfSpace" />
+                        <Input value={data.app_name} onChange={e => setData('app_name', e.target.value)} placeholder="ex: Nom de l'application" />
                     </Field>
                     <Field label={t('settingsAppNameAr')} error={errors.app_name_ar} required>
-                        <Input dir="rtl" value={data.app_name_ar} onChange={e => setData('app_name_ar', e.target.value)} placeholder="فضاء الأستاذ" />
+                        <Input dir="rtl" value={data.app_name_ar} onChange={e => setData('app_name_ar', e.target.value)} placeholder="ex: اسم التطبيق" />
                     </Field>
                     <Field label={t('settingsTagline')} error={errors.app_tagline}>
                         <Input value={data.app_tagline} onChange={e => setData('app_tagline', e.target.value)} placeholder="Gestion académique" />
@@ -491,7 +491,7 @@ function ContactCard({ settings, t }) {
             <form onSubmit={(e) => { e.preventDefault(); post(route('settings.general')); }} className="space-y-5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <Field label={t('settingsInstitution')} error={errors.institution_name}>
-                        <Input value={data.institution_name} onChange={e => setData('institution_name', e.target.value)} placeholder="Université Mohammed V..." />
+                        <Input value={data.institution_name} onChange={e => setData('institution_name', e.target.value)} placeholder="ex: Nom de l'établissement" />
                     </Field>
                     <Field label={t('settingsContactEmail')} error={errors.contact_email}>
                         <Input type="email" icon={IC.mail} value={data.contact_email} onChange={e => setData('contact_email', e.target.value)} placeholder="contact@universite.ma" />
