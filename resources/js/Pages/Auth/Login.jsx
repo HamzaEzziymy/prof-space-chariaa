@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
@@ -25,12 +26,23 @@ function LoginForm({ status, canResetPassword, registrationOpen = true }) {
         });
     };
 
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => { requestAnimationFrame(() => setMounted(true)); }, []);
+
+    const slideFrom = isRTL ? 'translate-x-full opacity-0' : '-translate-x-full opacity-0';
+
     return (
         <div
-            className="flex min-h-screen items-center justify-center bg-slate-100 dark:bg-slate-900 p-4"
+            className="relative flex min-h-screen items-center justify-center bg-slate-100 dark:bg-slate-900 p-4 overflow-hidden"
             dir={isRTL ? 'rtl' : 'ltr'}
         >
-            <div className="w-full max-w-md">
+            {/* Background */}
+            <div className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                style={{ backgroundImage: `url('/storage/images/zllij-bg.jfif')` }}
+            />
+            <div className="absolute inset-0 bg-white/70 dark:bg-slate-900/80" />
+
+            <div className={`relative w-full max-w-md z-10 transition-all duration-700 ease-out ${mounted ? 'translate-x-0 opacity-100' : slideFrom}`}>
 
                 {/* Card */}
                 <div className="rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800">

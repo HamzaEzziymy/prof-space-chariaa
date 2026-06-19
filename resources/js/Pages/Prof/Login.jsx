@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { LanguageProvider, useLanguage } from '@/i18n/LanguageContext';
 import InputError from '@/Components/InputError';
@@ -22,11 +22,21 @@ function LoginForm() {
         });
     };
 
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => { requestAnimationFrame(() => setMounted(true)); }, []);
+
+    // Prof: opposite direction to admin — Arabic slides from left, French from right
+    const slideFrom = isRTL ? '-translate-x-full opacity-0' : 'translate-x-full opacity-0';
+
     return (
-        <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-900 p-4"
+        <div className="relative flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-900 p-4 overflow-hidden"
             dir={isRTL ? 'rtl' : 'ltr'}
         >
-            <div className="w-full max-w-sm">
+            <div className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                style={{ backgroundImage: `url('/storage/images/zllij-bg.jfif')` }}
+            />
+            <div className="absolute inset-0 bg-white/70 dark:bg-slate-900/80" />
+            <div className={`relative w-full max-w-sm z-10 transition-all duration-700 ease-out ${mounted ? 'translate-x-0 opacity-100' : slideFrom}`}>
                 <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
 
                     <div className="px-8 pt-10 pb-6 text-center">
