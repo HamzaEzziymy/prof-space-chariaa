@@ -2,35 +2,56 @@ import AdminLayout from '@/Layouts/AdminLayout';
 import { LanguageProvider, useLanguage } from '@/i18n/LanguageContext';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useState, useRef, useEffect } from 'react';
+import {
+    AcademicCapIcon,
+    ArrowLeftIcon,
+    ArrowPathIcon,
+    ArrowDownTrayIcon,
+    ArrowUpTrayIcon,
+    BookOpenIcon,
+    CalendarDaysIcon,
+    CheckIcon,
+    ChevronDownIcon,
+    ChevronLeftIcon,
+    ChevronRightIcon,
+    EnvelopeIcon,
+    ExclamationTriangleIcon,
+    EyeIcon,
+    IdentificationIcon,
+    MagnifyingGlassIcon,
+    MapPinIcon,
+    PencilIcon,
+    PhoneIcon,
+    PlusIcon,
+    TagIcon,
+    TrashIcon,
+    UserIcon,
+    XMarkIcon,
+} from '@heroicons/react/24/outline';
 
-function Icon({ d, className = 'w-5 h-5', fill = 'none' }) {
-    return (
-        <svg className={className} fill={fill} stroke={fill === 'none' ? 'currentColor' : 'none'}
-            strokeWidth={1.8} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d={d} />
-        </svg>
-    );
+function Icon({ icon: IconComponent, className = 'w-5 h-5' }) {
+    return IconComponent ? <IconComponent className={className} aria-hidden="true" /> : null;
 }
 
 const ICONS = {
-    back:       'M10 19l-7-7m0 0l7-7m-7 7h18',
-    mail:       'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
-    phone:      'M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z',
-    id:         'M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2',
-    etudiant:   'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
-    calendar:   'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
-    pin:        'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z',
-    tag:        'M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z',
-    edit:       'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
-    trash:      'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16',
-    plus:       'M12 4v16m8-8H4',
-    close:      'M6 18L18 6M6 6l12 12',
-    check:      'M5 13l4 4L19 7',
-    chevDown:   'M19 9l-7 7-7-7',
-    book:       'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
-    upload:     'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12',
-    male:       'M16 3h5m0 0v5m0-5l-6 6M9 15a6 6 0 100-12 6 6 0 000 12z',
-    female:     'M12 14a6 6 0 100-12 6 6 0 000 12zm0 0v8m-4-4h8',
+    back: ArrowLeftIcon,
+    mail: EnvelopeIcon,
+    phone: PhoneIcon,
+    id: IdentificationIcon,
+    etudiant: AcademicCapIcon,
+    calendar: CalendarDaysIcon,
+    pin: MapPinIcon,
+    tag: TagIcon,
+    edit: PencilIcon,
+    trash: TrashIcon,
+    plus: PlusIcon,
+    close: XMarkIcon,
+    check: CheckIcon,
+    chevDown: ChevronDownIcon,
+    book: BookOpenIcon,
+    upload: ArrowUpTrayIcon,
+    male: UserIcon,
+    female: UserIcon,
 };
 
 // ─── Avatar ────────────────────────────────────────────────────────────────────
@@ -61,9 +82,7 @@ function Field({ id, label, value, onChange, required, error, placeholder, hint,
             {hint && !error && <p className="text-xs text-slate-400">{hint}</p>}
             {error && (
                 <p className="flex items-center gap-1 text-xs text-red-500">
-                    <svg className="h-3 w-3 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
+                    <ExclamationTriangleIcon className="h-3 w-3 shrink-0" />
                     {error}
                 </p>
             )}
@@ -101,7 +120,7 @@ function PhotoUpload({ currentUrl, onFileSelect, onRemove, t, locale }) {
                 <div className="h-14 w-14 shrink-0 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-700 flex items-center justify-center ring-1 ring-slate-200 dark:ring-slate-600">
                     {src
                         ? <img src={src} alt="" className="h-full w-full object-cover" />
-                        : <Icon d={ICONS.etudiant} className="h-6 w-6 text-slate-400" />
+                        : <Icon icon={ICONS.etudiant} className="h-6 w-6 text-slate-400" />
                     }
                 </div>
                 <div className="flex items-center gap-2">
@@ -109,13 +128,13 @@ function PhotoUpload({ currentUrl, onFileSelect, onRemove, t, locale }) {
                         onChange={(e) => { const f = e.target.files[0]; e.target.value = ''; handleFile(f); }} />
                     <button type="button" onClick={() => fileRef.current?.click()}
                         className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
-                        <Icon d={ICONS.upload} className="h-3.5 w-3.5" />
+                        <Icon icon={ICONS.upload} className="h-3.5 w-3.5" />
                         {t('etudiantPhotoUpload')}
                     </button>
                     {currentUrl && (
                         <button type="button" onClick={onRemove}
                             className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 dark:border-red-800 px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition">
-                            <Icon d={ICONS.trash} className="h-3.5 w-3.5" />
+                            <Icon icon={ICONS.trash} className="h-3.5 w-3.5" />
                             {t('etudiantPhotoRemove')}
                         </button>
                     )}
@@ -201,7 +220,7 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux 
                 <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-6 py-4 shrink-0">
                     <div className="flex items-center gap-3">
                         <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${isEdit ? 'bg-indigo-100 dark:bg-indigo-900/40' : 'bg-indigo-100 dark:bg-indigo-900/40'}`}>
-                            <Icon d={isEdit ? ICONS.edit : ICONS.etudiant}
+                            <Icon icon={isEdit ? ICONS.edit : ICONS.etudiant}
                                 className={`h-5 w-5 ${isEdit ? 'text-indigo-600 dark:text-indigo-400' : 'text-indigo-600 dark:text-indigo-400'}`} />
                         </div>
                         <div>
@@ -217,7 +236,7 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux 
                     </div>
                     <button onClick={onClose}
                         className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
-                        <Icon d={ICONS.close} className="h-5 w-5" />
+                        <Icon icon={ICONS.close} className="h-5 w-5" />
                     </button>
                 </div>
 
@@ -300,7 +319,7 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux 
                                                         : 'border-rose-400 bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300')
                                                     : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
                                                 }`}>
-                                            <Icon d={opt.icon} className="h-4 w-4" />
+                                            <Icon icon={opt.icon} className="h-4 w-4" />
                                             {opt.label}
                                         </button>
                                     ))}
@@ -354,7 +373,7 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux 
                                                 </code>
                                             )}
                                             {data.sexe && (
-                                                <span className="flex items-center text-slate-400"><Icon d={data.sexe === 'M' ? ICONS.male : ICONS.female} className="h-3.5 w-3.5" /></span>
+                                                <span className="flex items-center text-slate-400"><Icon icon={data.sexe === 'M' ? ICONS.male : ICONS.female} className="h-3.5 w-3.5" /></span>
                                             )}
                                         </div>
                                     </div>
@@ -373,8 +392,8 @@ function EtudiantFormModal({ mode, etudiant, onClose, t, isRTL, locale, niveaux 
                             className={`flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition disabled:opacity-60
                                 ${isEdit ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
                             {processing
-                                ? <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-                                : <Icon d={isEdit ? ICONS.check : ICONS.plus} className="h-4 w-4" />
+                                ? <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                                : <Icon icon={isEdit ? ICONS.check : ICONS.plus} className="h-4 w-4" />
                             }
                             {processing ? '...' : (isEdit ? t('save') : t('addEtudiant'))}
                         </button>
@@ -390,7 +409,7 @@ function InfoRow({ icon, label, value, mono = false }) {
     return (
         <div className="flex items-start gap-3 py-3 border-b border-slate-100 dark:border-slate-700/60 last:border-0">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-700/50 mt-0.5">
-                <Icon d={icon} className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                <Icon icon={icon} className="h-4 w-4 text-slate-500 dark:text-slate-400" />
             </div>
             <div className="min-w-0 flex-1">
                 <p className="text-xs text-slate-400 dark:text-slate-500 leading-none mb-1">{label}</p>
@@ -406,7 +425,7 @@ function SectionCard({ title, icon, children }) {
     return (
         <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm overflow-hidden">
             <div className="flex items-center gap-2.5 border-b border-slate-100 dark:border-slate-700/60 px-5 py-4 bg-slate-50/70 dark:bg-slate-700/30">
-                <Icon d={icon} className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
+                <Icon icon={icon} className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
                 <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">{title}</h3>
             </div>
             <div className="px-5 py-1">{children}</div>
@@ -465,7 +484,7 @@ function ShowPage() {
             {toast && (
                 <div className={`fixed bottom-6 end-6 z-[100] flex items-center gap-3 rounded-xl px-4 py-3 shadow-xl text-sm font-medium
                     ${toast.isErr ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'}`}>
-                    <Icon d={toast.isErr ? ICONS.close : ICONS.check} className="h-4 w-4 shrink-0" />
+                    <Icon icon={toast.isErr ? ICONS.close : ICONS.check} className="h-4 w-4 shrink-0" />
                     {toast.text}
                 </div>
             )}
@@ -475,7 +494,7 @@ function ShowPage() {
                     href={route('etudiants.index')}
                     className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition"
                 >
-                    <Icon d={isRTL ? 'M14 5l7 7m0 0l-7 7m7-7H3' : ICONS.back} className="h-4 w-4" />
+                    <Icon icon={isRTL ? 'M14 5l7 7m0 0l-7 7m7-7H3' : ICONS.back} className="h-4 w-4" />
                     {t('backToEtudiants')}
                 </Link>
             </div>
@@ -503,7 +522,7 @@ function ShowPage() {
                                             ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
                                             : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
                                     }`}>
-                                        <Icon d={etudiant.sexe === 'M' ? ICONS.male : ICONS.female} className="h-3.5 w-3.5 shrink-0" /> {etudiant.sexe === 'M' ? t('etudiantSexeM') : t('etudiantSexeF')}
+                                        <Icon icon={etudiant.sexe === 'M' ? ICONS.male : ICONS.female} className="h-3.5 w-3.5 shrink-0" /> {etudiant.sexe === 'M' ? t('etudiantSexeM') : t('etudiantSexeF')}
                                     </span>
                                 )}
                             </div>
@@ -512,7 +531,7 @@ function ShowPage() {
                             <div className="flex items-center gap-2">
                                 <button onClick={() => setShowEditModal(true)}
                                     className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-xs font-semibold text-white shadow-sm transition">
-                                    <Icon d={ICONS.edit} className="h-3.5 w-3.5" />
+                                    <Icon icon={ICONS.edit} className="h-3.5 w-3.5" />
                                     {t('edit')}
                                 </button>
                             </div>
@@ -618,3 +637,4 @@ export default function EtudiantShow(props) {
         </LanguageProvider>
     );
 }
+

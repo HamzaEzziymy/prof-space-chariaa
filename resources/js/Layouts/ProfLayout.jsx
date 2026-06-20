@@ -1,34 +1,18 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
 import { useLanguage } from '@/i18n/LanguageContext';
-
-const Icon = ({ d, className = 'w-5 h-5' }) => (
-    <svg className={className} fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d={d} />
-    </svg>
-);
-
-const I = {
-    dashboard:  'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',
-    book:       'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
-    menu:       'M4 6h16M4 12h16M4 18h16',
-    close:      'M6 18L18 6M6 6l12 12',
-    chevronDown:'M19 9l-7 7-7-7',
-    chevronRight:'M9 18l6-6-6-6',
-    group:      'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 4h-6m0 0h-6m6 0V5M9 11h6',
-    sun:        'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z',
-    moon:       'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z',
-    users:      'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
-    logout:     'M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1',
-};
-
-function Tooltip({ children, label, visible }) {
-    return visible ? (
-        <div className="pointer-events-none fixed z-[999] -translate-y-1/2 rounded-md bg-gray-900 px-2.5 py-1.5 text-xs text-white shadow-lg whitespace-nowrap">
-            {label}
-        </div>
-    ) : null;
-}
+import {
+    HomeIcon,
+    BookOpenIcon,
+    UserIcon,
+    Bars3Icon,
+    XMarkIcon,
+    ChevronDownIcon,
+    ArrowRightOnRectangleIcon,
+    SunIcon,
+    MoonIcon,
+    Cog6ToothIcon,
+} from '@heroicons/react/24/outline';
 
 export default function ProfLayout({ children, wide }) {
     const { t, locale, toggleLocale, isRTL } = useLanguage();
@@ -72,7 +56,6 @@ export default function ProfLayout({ children, wide }) {
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
-    // Reset mobile sidebar when switching locale
     useEffect(() => { setSidebarOpen(false); }, [isRTL, isDesktop]);
 
     const handleToggle = useCallback(() => {
@@ -108,8 +91,8 @@ export default function ProfLayout({ children, wide }) {
 
     const mainStyle = isDesktop
         ? (isRTL
-            ? { marginRight: SIDEBAR_W, marginLeft: 0, transition: 'margin 0.3s ease' }
-            : { marginLeft: SIDEBAR_W, marginRight: 0, transition: 'margin 0.3s ease' })
+            ? { marginRight: SIDEBAR_W, marginLeft: 0,  transition: 'margin 0.3s ease' }
+            : { marginLeft:  SIDEBAR_W, marginRight: 0, transition: 'margin 0.3s ease' })
         : { marginLeft: 0, marginRight: 0 };
 
     const userDisplay = user
@@ -156,6 +139,7 @@ export default function ProfLayout({ children, wide }) {
 
             {/* Sidebar */}
             <aside style={sidebarStyle} className="flex flex-col bg-white dark:bg-slate-900 border-e border-slate-200 dark:border-slate-700/60 overflow-hidden shadow-sm">
+
                 {/* Logo */}
                 <div className={`flex h-14 shrink-0 items-center border-b border-slate-200 dark:border-slate-700/60 px-4 gap-3 ${sidebarCollapsed ? 'justify-center' : ''}`}>
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl overflow-hidden">
@@ -189,9 +173,11 @@ export default function ProfLayout({ children, wide }) {
                             } ${sidebarCollapsed ? 'justify-center' : ''}`}
                         >
                             <span className={`flex-shrink-0 ${isOnDashboard ? 'text-white' : 'text-slate-400 dark:text-slate-500'}`}>
-                                <Icon d={I.dashboard} />
+                                <HomeIcon className="w-5 h-5" />
                             </span>
-                            {!sidebarCollapsed && <span className="truncate">{locale === 'ar' ? 'لوحة التحكم' : 'Tableau de bord'}</span>}
+                            {!sidebarCollapsed && (
+                                <span className="truncate">{locale === 'ar' ? 'لوحة التحكم' : 'Tableau de bord'}</span>
+                            )}
                         </Link>
                     </div>
 
@@ -221,7 +207,7 @@ export default function ProfLayout({ children, wide }) {
                                                     isSelected ? 'text-primary bg-primary/5' : 'text-slate-400 dark:text-slate-500'
                                                 }`}
                                             >
-                                                <Icon d={I.book} className="w-4 h-4" />
+                                                <BookOpenIcon className="w-4 h-4" />
                                             </Link>
                                         );
                                     }
@@ -236,7 +222,7 @@ export default function ProfLayout({ children, wide }) {
                                                     : 'text-slate-600 dark:text-slate-300'
                                             }`}
                                         >
-                                            <Icon d={I.book} className="w-3.5 h-3.5 shrink-0 text-slate-300" />
+                                            <BookOpenIcon className="w-3.5 h-3.5 shrink-0 text-slate-300" />
                                             <span className="truncate">{name}</span>
                                             {mod.code_module && (
                                                 <span className={`ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] ${
@@ -280,6 +266,7 @@ export default function ProfLayout({ children, wide }) {
 
             {/* Main content */}
             <div style={mainStyle} className="flex flex-1 flex-col overflow-hidden">
+
                 {/* Header */}
                 <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 dark:border-slate-700 dark:bg-slate-800">
                     <div className="flex items-center gap-3">
@@ -297,7 +284,9 @@ export default function ProfLayout({ children, wide }) {
                                         : (locale === 'ar' ? 'قائمة' : 'Menu'))
                             }
                         >
-                            <Icon d={!isDesktop && sidebarOpen ? I.close : I.menu} className="w-4 h-4" />
+                            {!isDesktop && sidebarOpen
+                                ? <XMarkIcon className="w-4 h-4" />
+                                : <Bars3Icon className="w-4 h-4" />}
                         </button>
 
                         <Link href={route('prof.dashboard')} className="flex items-center gap-2.5 lg:hidden">
@@ -312,6 +301,7 @@ export default function ProfLayout({ children, wide }) {
                     </div>
 
                     <div className="flex items-center gap-1">
+                        {/* Language toggle */}
                         <button
                             onClick={toggleLocale}
                             className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
@@ -320,13 +310,17 @@ export default function ProfLayout({ children, wide }) {
                             <span>{locale === 'fr' ? 'عربية' : 'Français'}</span>
                         </button>
 
+                        {/* Dark mode */}
                         <button
                             onClick={() => setDarkMode(!darkMode)}
                             className="rounded-lg p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
                         >
-                            <Icon d={darkMode ? I.sun : I.moon} className="w-4 h-4" />
+                            {darkMode
+                                ? <SunIcon className="w-4 h-4" />
+                                : <MoonIcon className="w-4 h-4" />}
                         </button>
 
+                        {/* Profile */}
                         <div className="relative" ref={profileRef}>
                             <button
                                 onClick={() => setProfileOpen(!profileOpen)}
@@ -344,7 +338,7 @@ export default function ProfLayout({ children, wide }) {
                                         {locale === 'ar' ? 'أستاذ' : 'Professeur'}
                                     </p>
                                 </div>
-                                <Icon d={I.chevronDown} className="w-3 h-3 text-slate-400 hidden sm:block" />
+                                <ChevronDownIcon className="w-3 h-3 text-slate-400 hidden sm:block" />
                             </button>
 
                             {profileOpen && (
@@ -356,14 +350,14 @@ export default function ProfLayout({ children, wide }) {
                                         href={route('prof.dashboard')}
                                         className="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700"
                                     >
-                                        <Icon d={I.dashboard} className="w-4 h-4" />
+                                        <HomeIcon className="w-4 h-4" />
                                         {locale === 'ar' ? 'لوحة التحكم' : 'Tableau de bord'}
                                     </Link>
                                     <Link
                                         href={route('profile.edit')}
                                         className="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700"
                                     >
-                                        <Icon d={I.users} className="w-4 h-4" />
+                                        <UserIcon className="w-4 h-4" />
                                         {t('profile')}
                                     </Link>
                                     <div className="border-t border-slate-100 dark:border-slate-700" />
@@ -374,7 +368,7 @@ export default function ProfLayout({ children, wide }) {
                                         replace
                                         className="flex w-full items-center gap-3 px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
                                     >
-                                        <Icon d={I.logout} className="w-4 h-4" />
+                                        <ArrowRightOnRectangleIcon className="w-4 h-4" />
                                         {t('logout')}
                                     </Link>
                                 </div>

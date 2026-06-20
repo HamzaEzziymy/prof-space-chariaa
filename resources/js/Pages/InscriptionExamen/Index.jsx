@@ -2,38 +2,56 @@ import AdminLayout from '@/Layouts/AdminLayout';
 import { LanguageProvider, useLanguage } from '@/i18n/LanguageContext';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useState, useEffect, useRef } from 'react';
+import {
+    ArrowDownTrayIcon,
+    ArrowPathIcon,
+    ArrowUpTrayIcon,
+    CheckIcon,
+    ChevronDownIcon,
+    ChevronLeftIcon,
+    ChevronRightIcon,
+    ChevronUpIcon,
+    DocumentTextIcon,
+    ExclamationTriangleIcon,
+    FunnelIcon,
+    MagnifyingGlassIcon,
+    PencilIcon,
+    PlusIcon,
+    TableCellsIcon,
+    TrashIcon,
+    UserGroupIcon,
+    XMarkIcon,
+} from '@heroicons/react/24/outline';
 import * as XLSX from 'xlsx';
 
-function Icon({ d, className = 'w-5 h-5', fill = 'none' }) {
-    return (
-        <svg className={className} fill={fill} stroke={fill === 'none' ? 'currentColor' : 'none'}
-            strokeWidth={1.8} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d={d} />
-        </svg>
-    );
+function Icon({ icon: IconComponent, className = 'w-5 h-5' }) {
+    return IconComponent ? <IconComponent className={className} aria-hidden="true" /> : null;
 }
 
 const I = {
-    search:  'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0',
-    plus:    'M12 4v16m8-8H4',
-    trash:   'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16',
-    check:   'M5 13l4 4L19 7',
-    close:   'M6 18L18 6M6 6l12 12',
-    upload:  'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12',
-    download:'M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2v-7a2 2 0 012-2h.172M15 3h4a2 2 0 012 2v4M11 3H7a2 2 0 00-2 2v.172',
-    file:    'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z M14 2v6h6',
-    users:   'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
-    book:    'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
-    chevronDown: 'M19 9l-7 7-7-7',
-    chevronUp:   'M5 15l7-7 7 7',
-    excel:       'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 1v5h5M8 13h3m-3 4h3m2-4h3m-3 4h3',
+    search: MagnifyingGlassIcon,
+    plus: PlusIcon,
+    trash: TrashIcon,
+    check: CheckIcon,
+    close: XMarkIcon,
+    upload: ArrowUpTrayIcon,
+    download: ArrowDownTrayIcon,
+    file: DocumentTextIcon,
+    users: UserGroupIcon,
+    book: DocumentTextIcon,
+    chevronDown: ChevronDownIcon,
+    chevronUp: ChevronLeftIcon,
+    excel: TableCellsIcon,
+    filter: FunnelIcon,
+    edit: PencilIcon,
+    warning: ExclamationTriangleIcon,
 };
 
 function StatCard({ icon, label, value, color }) {
     return (
         <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 flex items-center gap-3 shadow-sm">
             <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${color}`}>
-                <Icon d={icon} className="h-5 w-5 text-white" />
+                <Icon icon={icon} className="h-5 w-5 text-white" />
             </div>
             <div>
                 <p className="text-xs font-medium text-slate-400 dark:text-slate-500">{label}</p>
@@ -145,7 +163,7 @@ function AddModal({ onClose, t, locale, isRTL, allModules }) {
                             {locale === 'ar' ? 'تسجيل امتحان جديد' : 'Nouvelle inscription examen'}
                         </h2>
                         <button onClick={onClose} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
-                            <Icon d={I.close} className="h-5 w-5" />
+                            <Icon icon={I.close} className="h-5 w-5" />
                         </button>
                     </div>
                     <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
@@ -160,7 +178,7 @@ function AddModal({ onClose, t, locale, isRTL, allModules }) {
                         </div>
                         {loadingStudents && (
                             <div className="flex items-center justify-center py-8 text-sm text-slate-400">
-                                <svg className="h-5 w-5 animate-spin mr-2" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                                <ArrowPathIcon className="h-5 w-5 animate-spin mr-2" />
                                 {locale === 'ar' ? 'جارٍ تحميل الطلاب...' : 'Chargement des étudiants...'}
                             </div>
                         )}
@@ -212,8 +230,8 @@ function AddModal({ onClose, t, locale, isRTL, allModules }) {
                             </button>
                             <button type="submit" disabled={processing || !data.module_id || enrolled.length === 0 || data.students.every((s, i) => existingIds.includes(enrolled[i]?.id))}
                                 className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition disabled:opacity-50">
-                                {processing && <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>}
-                                <Icon d={I.check} className="h-4 w-4" />
+                                {processing && <ArrowPathIcon className="h-4 w-4 animate-spin" />}
+                                <Icon icon={I.check} className="h-4 w-4" />
                                 {locale === 'ar' ? 'تسجيل' : 'Inscrire'}
                             </button>
                         </div>
@@ -327,7 +345,7 @@ function ExcelModal({ onClose, t, locale, isRTL }) {
                     <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-emerald-50 dark:bg-emerald-900/20 shrink-0">
                         <div className="flex items-center gap-3">
                             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/50">
-                                <Icon d={I.excel} className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                                <Icon icon={I.excel} className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                             </div>
                             <div>
                                 <p className="font-bold text-slate-800 dark:text-white text-sm">{locale === 'ar' ? 'استيراد تسجيلات الامتحان' : 'Importer inscriptions examen'}</p>
@@ -335,13 +353,13 @@ function ExcelModal({ onClose, t, locale, isRTL }) {
                             </div>
                         </div>
                         <button onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800 transition">
-                            <Icon d={I.close} className="h-5 w-5" />
+                            <Icon icon={I.close} className="h-5 w-5" />
                         </button>
                     </div>
                     <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
                         <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
                             <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-4 py-2.5 border-b border-slate-200 dark:border-slate-700">
-                                <Icon d={I.search} className="h-4 w-4 text-slate-400" />
+                                <Icon icon={I.search} className="h-4 w-4 text-slate-400" />
                                 <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'الأعمدة المطلوبة' : 'Colonnes attendues'}</span>
                             </div>
                             <div className="flex flex-wrap gap-2 px-4 py-3">
@@ -361,7 +379,7 @@ function ExcelModal({ onClose, t, locale, isRTL }) {
                                 className={`group relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 cursor-pointer transition-all ${dragging ? 'border-amber-400 bg-amber-50 dark:border-amber-500 dark:bg-amber-900/20' : 'border-slate-300 bg-slate-50 hover:border-amber-400 hover:bg-amber-50/50 dark:border-slate-600 dark:bg-slate-800/50 dark:hover:border-amber-500'}`}>
                                 <input ref={fileInput} type="file" accept=".csv,.xlsx,.xls,.ods,.tsv,.txt" className="hidden" onChange={e => handleFile(e.target.files[0])} />
                                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-200 dark:bg-slate-700 group-hover:bg-amber-100 dark:group-hover:bg-amber-900/30 transition">
-                                    <Icon d={I.upload} className="h-6 w-6 text-slate-400 group-hover:text-amber-500 transition" />
+                                    <Icon icon={I.upload} className="h-6 w-6 text-slate-400 group-hover:text-amber-500 transition" />
                                 </div>
                                 <p className="mt-3 text-sm font-medium text-slate-600 dark:text-slate-300">{locale === 'ar' ? 'اربط الملف هنا' : 'Déposez le fichier ici'}</p>
                                 <span className="mt-2 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">{locale === 'ar' ? 'أو اختر ملفًا' : 'ou cliquez pour parcourir'}</span>
@@ -375,7 +393,7 @@ function ExcelModal({ onClose, t, locale, isRTL }) {
                                     <p className="text-xs text-slate-400">{(file.size / 1024).toFixed(1)} Ko</p>
                                 </div>
                                 <button onClick={reset} className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-red-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 transition">
-                                    <Icon d={I.close} className="h-3.5 w-3.5" />{locale === 'ar' ? 'تغيير' : 'Changer'}</button>
+                                    <Icon icon={I.close} className="h-3.5 w-3.5" />{locale === 'ar' ? 'تغيير' : 'Changer'}</button>
                             </div>
                         )}
                         {hasPreview && status !== 'done' && (
@@ -414,14 +432,14 @@ function ExcelModal({ onClose, t, locale, isRTL }) {
                                 </div>
                                 {report.imported > 0 && (
                                     <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20 px-4 py-3">
-                                        <Icon d={I.check} className="h-5 w-5 text-emerald-500 shrink-0" />
+                                        <Icon icon={I.check} className="h-5 w-5 text-emerald-500 shrink-0" />
                                         <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">{locale === 'ar' ? 'تم الاستيراد بنجاح' : 'Importation réussie'}</p>
                                     </div>
                                 )}
                                 {report.report?.some(r => r.status === 'rejected') && (
                                     <div className="rounded-xl border border-red-200 dark:border-red-800 overflow-hidden">
                                         <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 px-4 py-2.5 border-b border-red-200 dark:border-red-800">
-                                            <Icon d={I.trash} className="h-4 w-4 text-red-500" />
+                                            <Icon icon={I.trash} className="h-4 w-4 text-red-500" />
                                             <span className="text-xs font-semibold text-red-600 dark:text-red-400">{locale === 'ar' ? 'أخطاء' : 'Erreurs'}</span>
                                         </div>
                                         <div className="overflow-x-auto max-h-36">
@@ -448,7 +466,7 @@ function ExcelModal({ onClose, t, locale, isRTL }) {
                         )}
                         {status === 'error' && report && (
                             <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20 p-4">
-                                <Icon d={I.close} className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+                                <Icon icon={I.close} className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
                                 <p className="text-sm font-semibold text-red-700 dark:text-red-400">{report.message || 'Erreur inconnue'}</p>
                             </div>
                         )}
@@ -456,7 +474,7 @@ function ExcelModal({ onClose, t, locale, isRTL }) {
                     <div className={`flex items-center justify-between gap-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 px-6 py-4 shrink-0 ${isRTL ? 'flex-row-reverse' : ''}`}>
                         <button type="button" onClick={downloadTemplate}
                             className="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition">
-                            <Icon d={I.download} className="h-4 w-4 text-amber-500" />
+                            <Icon icon={I.download} className="h-4 w-4 text-amber-500" />
                             {locale === 'ar' ? 'نموذج' : 'Télécharger modèle'}
                         </button>
                         <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -467,8 +485,8 @@ function ExcelModal({ onClose, t, locale, isRTL }) {
                                     <button type="button" onClick={onClose} className="rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">{t('cancel')}</button>
                                     <button type="button" onClick={submit} disabled={!file || status === 'loading'}
                                         className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50 transition">
-                                        {status === 'loading' ? <><svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>{locale === 'ar' ? 'جارٍ الاستيراد...' : 'Importation...'}</>
-                                            : <><Icon d={I.upload} className="h-4 w-4" />{locale === 'ar' ? 'استيراد' : 'Importer'}</>}
+                                        {status === 'loading' ? <><ArrowPathIcon className="h-4 w-4 animate-spin" />{locale === 'ar' ? 'جارٍ الاستيراد...' : 'Importation...'}</>
+                                            : <><Icon icon={I.upload} className="h-4 w-4" />{locale === 'ar' ? 'استيراد' : 'Importer'}</>}
                                     </button>
                                 </>
                             )}
@@ -521,7 +539,7 @@ function StatutModal({ moduleId, onClose, t, locale, isRTL, setToast }) {
                             {locale === 'ar' ? 'تغيير الحالة' : 'Changer le statut'}
                         </h2>
                         <button onClick={onClose} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
-                            <Icon d={I.close} className="h-5 w-5" />
+                            <Icon icon={I.close} className="h-5 w-5" />
                         </button>
                     </div>
                     <div className="p-6 space-y-3">
@@ -567,7 +585,7 @@ function StatutModal({ moduleId, onClose, t, locale, isRTL, setToast }) {
                         </button>
                         <button onClick={handleConfirm} disabled={!selected || loading}
                             className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition disabled:opacity-50">
-                            {loading && <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>}
+                            {loading && <ArrowPathIcon className="h-4 w-4 animate-spin" />}
                             {confirmFinale && selected === 'finale'
                                 ? (locale === 'ar' ? 'تأكيد' : 'Confirmer')
                                 : (locale === 'ar' ? 'تطبيق' : 'Appliquer')}
@@ -609,7 +627,7 @@ function PageContent() {
             <Head title={t('examInscriptions')} />
             {toast && (
                 <div className={`fixed bottom-6 end-6 z-[100] flex items-center gap-3 rounded-xl px-4 py-3 shadow-xl text-sm font-medium ${toast.isErr ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'}`}>
-                    <Icon d={toast.isErr ? I.close : I.check} className="h-4 w-4 shrink-0" />
+                    <Icon icon={toast.isErr ? I.close : I.check} className="h-4 w-4 shrink-0" />
                     {toast.text}
                 </div>
             )}
@@ -623,12 +641,12 @@ function PageContent() {
                 <div className="flex items-center gap-2">
                     <button onClick={() => setShowExcel(true)}
                         className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30 active:scale-95 transition">
-                        <Icon d={I.excel} className="h-4 w-4" />
+                        <Icon icon={I.excel} className="h-4 w-4" />
                         <span className="hidden sm:inline">{locale === 'ar' ? 'استيراد Excel' : 'Import Excel'}</span>
                     </button>
                     <button onClick={() => setShowAdd(true)}
                         className="flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition">
-                        <Icon d={I.plus} className="h-4 w-4" />
+                        <Icon icon={I.plus} className="h-4 w-4" />
                         {locale === 'ar' ? 'إضافة تسجيل' : 'Ajouter inscription'}
                     </button>
                 </div>
@@ -642,7 +660,7 @@ function PageContent() {
             <div className="flex items-center gap-2 mb-4">
                 <button onClick={() => toggleGroup('module')}
                     className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition ${groupBy === 'module' ? 'bg-indigo-600 text-white shadow-sm' : 'border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
-                    <Icon d={I.book} className="h-3.5 w-3.5" />
+                    <Icon icon={I.book} className="h-3.5 w-3.5" />
                     {locale === 'ar' ? 'حسب الوحدة' : 'Par module'}
                 </button>
 
@@ -670,7 +688,7 @@ function PageContent() {
                             <div className={`flex items-center gap-3 px-5 py-4 ${isExpanded ? 'border-b border-slate-100 dark:border-slate-700/60' : ''}`}>
                                 <button onClick={() => toggleExpand(iId)} className="flex items-center gap-3 flex-1 min-w-0 text-start">
                                     <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition ${isMod ? 'bg-indigo-100 dark:bg-indigo-900/30' : 'bg-amber-100 dark:bg-amber-900/30'}`}>
-                                        <Icon d={isMod ? I.book : I.users} className={`h-4 w-4 ${isMod ? 'text-indigo-600 dark:text-indigo-400' : 'text-amber-600 dark:text-amber-400'}`} />
+                                        <Icon icon={isMod ? I.book : I.users} className={`h-4 w-4 ${isMod ? 'text-indigo-600 dark:text-indigo-400' : 'text-amber-600 dark:text-amber-400'}`} />
                                     </div>
                                     <div className="flex-1 min-w-0 text-start">
                                         <p className="text-sm font-bold text-slate-800 dark:text-white truncate">{title}</p>
@@ -697,7 +715,7 @@ function PageContent() {
                                 })()}
                                 <span className="shrink-0 rounded-full bg-slate-100 dark:bg-slate-700 px-2.5 py-0.5 text-xs font-semibold text-slate-500 dark:text-slate-300">{count}</span>
                                 <button onClick={() => toggleExpand(iId)}>
-                                    <Icon d={isExpanded ? I.chevronUp : I.chevronDown} className="h-4 w-4 text-slate-400 shrink-0" />
+                                    <Icon icon={isExpanded ? I.chevronUp : I.chevronDown} className="h-4 w-4 text-slate-400 shrink-0" />
                                 </button>
                             </div>
                             {isExpanded && (
@@ -760,7 +778,7 @@ function PageContent() {
                                                                 <button onClick={() => router.delete(route('inscription-examen.destroy', ie.id), { preserveScroll: true })}
                                                                     className="rounded-lg p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition"
                                                                     title={locale === 'ar' ? 'حذف' : 'Supprimer'}>
-                                                                    <Icon d={I.trash} className="h-3.5 w-3.5" />
+                                                                    <Icon icon={I.trash} className="h-3.5 w-3.5" />
                                                                 </button>
                                                             </td>
                                                         </tr>
@@ -776,7 +794,7 @@ function PageContent() {
                 }) : (
                     <div className="flex flex-col items-center justify-center py-16 text-center rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
                         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800 mb-3">
-                            <Icon d={I.file} className="h-6 w-6 text-slate-300 dark:text-slate-600" />
+                            <Icon icon={I.file} className="h-6 w-6 text-slate-300 dark:text-slate-600" />
                         </div>
                         <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{locale === 'ar' ? 'لا توجد تسجيلات امتحان بعد' : 'Aucune inscription examen'}</p>
                         <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{locale === 'ar' ? 'أضف تسجيلًا جديدًا أو استورد من Excel' : 'Ajoutez une inscription ou importez depuis Excel'}</p>
@@ -819,3 +837,5 @@ function InnerTitle() {
     const { t } = useLanguage();
     return <>{t('examInscriptions')}</>;
 }
+
+

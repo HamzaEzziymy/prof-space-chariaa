@@ -3,41 +3,66 @@ import { useViewMode } from '@/hooks/useViewMode';
 import { LanguageProvider, useLanguage } from '@/i18n/LanguageContext';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
+import {
+    ArrowDownTrayIcon,
+    ArrowLeftIcon,
+    ArrowPathIcon,
+    ArrowUpTrayIcon,
+    Bars3Icon,
+    Bars3BottomLeftIcon,
+    BookOpenIcon,
+    CalculatorIcon,
+    CheckIcon,
+    ChevronDownIcon,
+    ChevronLeftIcon,
+    ChevronRightIcon,
+    DocumentTextIcon,
+    ExclamationTriangleIcon,
+    FunnelIcon,
+    InformationCircleIcon,
+    MagnifyingGlassIcon,
+    PencilIcon,
+    PlusIcon,
+    Squares2X2Icon,
+    TableCellsIcon,
+    TagIcon,
+    TrashIcon,
+    UserGroupIcon,
+    UserIcon,
+    XMarkIcon,
+} from '@heroicons/react/24/outline';
 import * as XLSX from 'xlsx';
 
 // ─── Icon helper ──────────────────────────────────────────────────────────────
-function Icon({ d, className = 'w-5 h-5', fill = 'none' }) {
-    return (
-        <svg className={className} fill={fill} stroke={fill === 'none' ? 'currentColor' : 'none'}
-            strokeWidth={1.8} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d={d} />
-        </svg>
-    );
+function Icon({ icon: IconComponent, className = 'w-5 h-5' }) {
+    return IconComponent ? <IconComponent className={className} aria-hidden="true" /> : null;
 }
 
 const ICONS = {
-    module:    'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
-    plus:      'M12 4v16m8-8H4',
-    search:    'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0',
-    edit:      'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
-    trash:     'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16',
-    close:     'M6 18L18 6M6 6l12 12',
-    check:     'M5 13l4 4L19 7',
-    chevLeft:  'M15 19l-7-7 7-7',
-    chevRight: 'M9 5l7 7-7 7',
-    chevDown:  'M19 9l-7 7-7-7',
-    empty:     'M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
-    user:      'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
-    students:  'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
-    tag:       'M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z',
-    filter:    'M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z',
-    coef:      'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z',
-    upload:    'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12',
-    download:  'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4',
-    excel:     'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 1v5h5M8 13h3m-3 4h3m2-4h3m-3 4h3',
-    info:      'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
-    warn:      'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
-    form:      'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+    module: BookOpenIcon,
+    plus: PlusIcon,
+    search: MagnifyingGlassIcon,
+    edit: PencilIcon,
+    trash: TrashIcon,
+    close: XMarkIcon,
+    check: CheckIcon,
+    chevLeft: ChevronLeftIcon,
+    chevRight: ChevronRightIcon,
+    chevDown: ChevronDownIcon,
+    empty: BookOpenIcon,
+    user: UserIcon,
+    students: UserGroupIcon,
+    tag: TagIcon,
+    filter: FunnelIcon,
+    coef: CalculatorIcon,
+    upload: ArrowUpTrayIcon,
+    download: ArrowDownTrayIcon,
+    excel: TableCellsIcon,
+    info: InformationCircleIcon,
+    warn: ExclamationTriangleIcon,
+    form: DocumentTextIcon,
+    back: ArrowLeftIcon,
+    grip: Bars3Icon,
 };
 
 // ─── Type colour helpers ──────────────────────────────────────────────────────
@@ -70,9 +95,7 @@ function Field({ id, label, value, onChange, required, error, placeholder, hint,
             {hint && !error && <p className="text-xs text-slate-400">{hint}</p>}
             {error && (
                 <p className="flex items-center gap-1 text-xs text-red-500">
-                    <svg className="h-3 w-3 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
+                    <ExclamationTriangleIcon className="h-3 w-3 shrink-0" />
                     {error}
                 </p>
             )}
@@ -97,15 +120,13 @@ function SelectField({ id, label, value, onChange, required, error, hint, childr
                     {children}
                 </select>
                 <span className="pointer-events-none absolute inset-y-0 end-3 flex items-center text-slate-400">
-                    <Icon d={ICONS.chevDown} className="h-4 w-4" />
+                    <Icon icon={ICONS.chevDown} className="h-4 w-4" />
                 </span>
             </div>
             {hint && !error && <p className="text-xs text-slate-400">{hint}</p>}
             {error && (
                 <p className="flex items-center gap-1 text-xs text-red-500">
-                    <svg className="h-3 w-3 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
+                    <ExclamationTriangleIcon className="h-3 w-3 shrink-0" />
                     {error}
                 </p>
             )}
@@ -138,7 +159,7 @@ function Toast({ flash, t }) {
     return (
         <div className={`fixed bottom-6 end-6 z-[100] flex items-center gap-3 rounded-xl px-4 py-3 shadow-xl text-sm font-medium animate-fade-in
             ${isErr ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'}`}>
-            <Icon d={isErr ? ICONS.close : ICONS.check} className="h-4 w-4 shrink-0" />
+            <Icon icon={isErr ? ICONS.close : ICONS.check} className="h-4 w-4 shrink-0" />
             {map[msg] ?? msg}
         </div>
     );
@@ -163,7 +184,7 @@ function AddMethodPicker({ onSelect, t, isRTL, locale, onClose }) {
                             </p>
                         </div>
                         <button onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
-                            <Icon d={ICONS.close} className="h-4 w-4" />
+                            <Icon icon={ICONS.close} className="h-4 w-4" />
                         </button>
                     </div>
                     {/* Options */}
@@ -171,7 +192,7 @@ function AddMethodPicker({ onSelect, t, isRTL, locale, onClose }) {
                         <button onClick={() => onSelect('form')}
                             className="group w-full flex items-center gap-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 p-4 text-left hover:border-indigo-400 hover:bg-indigo-50/50 dark:hover:border-indigo-500 dark:hover:bg-indigo-900/10 transition-all">
                             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-900/40 group-hover:bg-indigo-200 dark:group-hover:bg-indigo-900/60 transition">
-                                <Icon d={ICONS.form} className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+                                <Icon icon={ICONS.form} className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
                             </div>
                             <div>
                                 <p className="font-semibold text-slate-800 dark:text-white text-sm">{t('addViaForm')}</p>
@@ -179,13 +200,13 @@ function AddMethodPicker({ onSelect, t, isRTL, locale, onClose }) {
                                     {locale === 'ar' ? 'أدخل بيانات الوحدة يدوياً' : 'Remplissez le formulaire champ par champ'}
                                 </p>
                             </div>
-                            <Icon d={ICONS.chevRight} className={`h-5 w-5 text-slate-300 dark:text-slate-600 ms-auto ${isRTL ? 'rotate-180' : ''}`} />
+                            <Icon icon={ICONS.chevRight} className={`h-5 w-5 text-slate-300 dark:text-slate-600 ms-auto ${isRTL ? 'rotate-180' : ''}`} />
                         </button>
 
                         <button onClick={() => onSelect('excel')}
                             className="group w-full flex items-center gap-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 p-4 text-left hover:border-emerald-400 hover:bg-emerald-50/50 dark:hover:border-emerald-500 dark:hover:bg-emerald-900/10 transition-all">
                             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/40 group-hover:bg-emerald-200 dark:group-hover:bg-emerald-900/60 transition">
-                                <Icon d={ICONS.excel} className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                                <Icon icon={ICONS.excel} className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                             </div>
                             <div>
                                 <p className="font-semibold text-slate-800 dark:text-white text-sm">{t('addViaExcel')}</p>
@@ -193,7 +214,7 @@ function AddMethodPicker({ onSelect, t, isRTL, locale, onClose }) {
                                     {locale === 'ar' ? 'استورد عدة وحدات دفعة واحدة' : 'Importez plusieurs modules en une seule fois'}
                                 </p>
                             </div>
-                            <Icon d={ICONS.chevRight} className={`h-5 w-5 text-slate-300 dark:text-slate-600 ms-auto ${isRTL ? 'rotate-180' : ''}`} />
+                            <Icon icon={ICONS.chevRight} className={`h-5 w-5 text-slate-300 dark:text-slate-600 ms-auto ${isRTL ? 'rotate-180' : ''}`} />
                         </button>
                     </div>
                 </div>
@@ -359,7 +380,7 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale, semestres }) {
                     <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-emerald-50 dark:bg-emerald-900/20 shrink-0">
                         <div className="flex items-center gap-3">
                             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/50">
-                                <Icon d={ICONS.upload} className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                                <Icon icon={ICONS.upload} className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                             </div>
                             <div>
                                 <p className="font-bold text-slate-800 dark:text-white text-sm">{t('importTitle')}</p>
@@ -367,7 +388,7 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale, semestres }) {
                             </div>
                         </div>
                         <button onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800 transition">
-                            <Icon d={ICONS.close} className="h-5 w-5" />
+                            <Icon icon={ICONS.close} className="h-5 w-5" />
                         </button>
                     </div>
 
@@ -377,7 +398,7 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale, semestres }) {
                         {/* Column schema */}
                         <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
                             <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-4 py-2.5 border-b border-slate-200 dark:border-slate-700">
-                                <Icon d={ICONS.info} className="h-4 w-4 text-slate-400" />
+                                <Icon icon={ICONS.info} className="h-4 w-4 text-slate-400" />
                                 <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{t('importCols')}</span>
                             </div>
                             <div className="flex flex-wrap gap-2 px-4 py-3">
@@ -427,7 +448,7 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale, semestres }) {
                                 <input ref={fileInput} type="file" accept=".csv,.xlsx,.xls,.ods,.tsv,.txt"
                                     className="hidden" onChange={e => handleFile(e.target.files[0])} />
                                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-200 dark:bg-slate-700 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/30 transition">
-                                    <Icon d={ICONS.upload} className="h-6 w-6 text-slate-400 group-hover:text-emerald-500 transition" />
+                                    <Icon icon={ICONS.upload} className="h-6 w-6 text-slate-400 group-hover:text-emerald-500 transition" />
                                 </div>
                                 <p className="mt-3 text-sm font-medium text-slate-600 dark:text-slate-300">{t('importDrop')}</p>
                                 <p className="text-xs text-slate-400">{t('importOr')}</p>
@@ -448,7 +469,7 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale, semestres }) {
                                 </div>
                                 <button onClick={reset}
                                     className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-red-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 transition">
-                                    <Icon d={ICONS.close} className="h-3.5 w-3.5" />
+                                    <Icon icon={ICONS.close} className="h-3.5 w-3.5" />
                                     {locale === 'ar' ? 'إزالة' : 'Changer'}
                                 </button>
                             </div>
@@ -574,7 +595,7 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale, semestres }) {
                                 {report.rows?.filter(r => r.status === 'rejected').length > 0 && (
                                     <div className="rounded-xl border border-red-200 dark:border-red-800 overflow-hidden">
                                         <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 px-4 py-2.5 border-b border-red-200 dark:border-red-800">
-                                            <Icon d={ICONS.warn} className="h-4 w-4 text-red-500" />
+                                            <Icon icon={ICONS.warn} className="h-4 w-4 text-red-500" />
                                             <span className="text-xs font-semibold text-red-600 dark:text-red-400">
                                                 {locale === 'ar' ? 'تقرير الأخطاء' : 'Rapport des rejets'}
                                             </span>
@@ -607,7 +628,7 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale, semestres }) {
                                 {/* All good */}
                                 {(!report.rows || report.rows.filter(r => r.status === 'rejected').length === 0) && report.imported > 0 && (
                                     <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20 px-4 py-3">
-                                        <Icon d={ICONS.check} className="h-5 w-5 text-emerald-500 shrink-0" />
+                                        <Icon icon={ICONS.check} className="h-5 w-5 text-emerald-500 shrink-0" />
                                         <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
                                             {locale === 'ar' ? 'تم استيراد جميع الوحدات بنجاح' : 'Tous les modules ont été importés avec succès'}
                                         </p>
@@ -619,7 +640,7 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale, semestres }) {
                         {/* Fatal error */}
                         {status === 'error' && report && (
                             <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20 p-4">
-                                <Icon d={ICONS.warn} className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+                                <Icon icon={ICONS.warn} className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
                                 <div className="space-y-1">
                                     <p className="text-sm font-semibold text-red-700 dark:text-red-400">
                                         {report.error === 'parse_error' ? t('importParseError') : t('importEmpty')}
@@ -634,7 +655,7 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale, semestres }) {
                     <div className={`flex items-center justify-between gap-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 px-6 py-4 shrink-0 ${isRTL ? 'flex-row-reverse' : ''}`}>
                         <button type="button" onClick={downloadTemplate}
                             className="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition">
-                            <Icon d={ICONS.download} className="h-4 w-4 text-emerald-500" />
+                            <Icon icon={ICONS.download} className="h-4 w-4 text-emerald-500" />
                             {t('importTemplate')}
                         </button>
                         <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -653,12 +674,9 @@ function ExcelImportModal({ onClose, onSuccess, t, isRTL, locale, semestres }) {
                                         disabled={!file || status === 'loading'}
                                         className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50 transition">
                                         {status === 'loading' ? (
-                                            <><svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                                            </svg>{t('importProcessing')}</>
+                                            <><ArrowPathIcon className="h-4 w-4 animate-spin" />{t('importProcessing')}</>
                                         ) : (
-                                            <><Icon d={ICONS.upload} className="h-4 w-4" />{t('importStart')}</>
+                                            <><Icon icon={ICONS.upload} className="h-4 w-4" />{t('importStart')}</>
                                         )}
                                     </button>
                                 </>
@@ -707,7 +725,7 @@ function ModuleFormModal({ mode, module, semestres, onClose, t, isRTL, locale })
                 <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-6 py-4 shrink-0">
                     <div className="flex items-center gap-3">
                         <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${isEdit ? 'bg-indigo-100 dark:bg-indigo-900/40' : 'bg-violet-100 dark:bg-violet-900/40'}`}>
-                            <Icon d={isEdit ? ICONS.edit : ICONS.module}
+                            <Icon icon={isEdit ? ICONS.edit : ICONS.module}
                                 className={`h-5 w-5 ${isEdit ? 'text-indigo-600 dark:text-indigo-400' : 'text-violet-600 dark:text-violet-400'}`} />
                         </div>
                         <div>
@@ -723,7 +741,7 @@ function ModuleFormModal({ mode, module, semestres, onClose, t, isRTL, locale })
                     </div>
                     <button onClick={onClose}
                         className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
-                        <Icon d={ICONS.close} className="h-5 w-5" />
+                        <Icon icon={ICONS.close} className="h-5 w-5" />
                     </button>
                 </div>
 
@@ -774,7 +792,7 @@ function ModuleFormModal({ mode, module, semestres, onClose, t, isRTL, locale })
                                                 }`}>
                                             {active && (
                                                 <span className="absolute end-2 top-2 flex h-4 w-4 items-center justify-center rounded-full bg-current/20">
-                                                    <Icon d={ICONS.check} className="h-2.5 w-2.5" />
+                                                    <Icon icon={ICONS.check} className="h-2.5 w-2.5" />
                                                 </span>
                                             )}
                                             <span className={`text-xs font-semibold ${active ? '' : 'text-slate-600 dark:text-slate-400'}`}>
@@ -821,7 +839,7 @@ function ModuleFormModal({ mode, module, semestres, onClose, t, isRTL, locale })
                                 </p>
                                 <div className="flex items-center gap-3">
                                     <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-100 dark:bg-violet-900/30">
-                                        <Icon d={ICONS.module} className="h-4 w-4 text-violet-500 dark:text-violet-400" />
+                                        <Icon icon={ICONS.module} className="h-4 w-4 text-violet-500 dark:text-violet-400" />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">
@@ -858,8 +876,8 @@ function ModuleFormModal({ mode, module, semestres, onClose, t, isRTL, locale })
                             className={`flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition disabled:opacity-60
                                 ${isEdit ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-violet-600 hover:bg-violet-700'}`}>
                             {processing
-                                ? <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-                                : <Icon d={isEdit ? ICONS.check : ICONS.plus} className="h-4 w-4" />
+                                ? <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                                : <Icon icon={isEdit ? ICONS.check : ICONS.plus} className="h-4 w-4" />
                             }
                             {processing ? '...' : (isEdit ? t('save') : t('addModule'))}
                         </button>
@@ -883,13 +901,13 @@ function DeleteModal({ module, onClose, t, isRTL, locale }) {
                 dir={isRTL ? 'rtl' : 'ltr'}>
                 <div className="px-6 pt-6 pb-4">
                     <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
-                        <Icon d={ICONS.trash} className="h-6 w-6 text-red-500" />
+                        <Icon icon={ICONS.trash} className="h-6 w-6 text-red-500" />
                     </div>
                     <h3 className="text-sm font-semibold text-slate-800 dark:text-white">{t('confirmDeleteModule')}</h3>
                     <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t('confirmDeleteModuleMsg')}</p>
                     <div className="mt-4 flex items-center gap-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 px-4 py-3">
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-100 dark:bg-violet-900/30">
-                            <Icon d={ICONS.module} className="h-4 w-4 text-violet-500 dark:text-violet-400" />
+                            <Icon icon={ICONS.module} className="h-4 w-4 text-violet-500 dark:text-violet-400" />
                         </div>
                         <div>
                             <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{name}</p>
@@ -1006,7 +1024,7 @@ function ExportModal({ onClose, t, isRTL, locale, semestres, types, filters }) {
                     <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-indigo-50 dark:bg-indigo-900/20 shrink-0">
                         <div className="flex items-center gap-3">
                             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-900/50">
-                                <Icon d={ICONS.download} className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                                <Icon icon={ICONS.download} className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
                             </div>
                             <div>
                                 <p className="font-bold text-slate-800 dark:text-white text-sm">{t('exportTitleModules')}</p>
@@ -1014,7 +1032,7 @@ function ExportModal({ onClose, t, isRTL, locale, semestres, types, filters }) {
                             </div>
                         </div>
                         <button onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800 transition">
-                            <Icon d={ICONS.close} className="h-5 w-5" />
+                            <Icon icon={ICONS.close} className="h-5 w-5" />
                         </button>
                     </div>
 
@@ -1025,7 +1043,7 @@ function ExportModal({ onClose, t, isRTL, locale, semestres, types, filters }) {
                             <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
                                 <div className="relative">
                                     <span className={`pointer-events-none absolute inset-y-0 ${isRTL ? 'end-3' : 'start-3'} flex items-center text-slate-400`}>
-                                        <Icon d={ICONS.search} className="h-4 w-4" />
+                                        <Icon icon={ICONS.search} className="h-4 w-4" />
                                     </span>
                                     <input type="text" value={fSearch} onChange={e => setFSearch(e.target.value)}
                                         placeholder={t('searchModules')}
@@ -1070,20 +1088,20 @@ function ExportModal({ onClose, t, isRTL, locale, semestres, types, filters }) {
                                             <div key={key} draggable
                                                 onDragStart={e => handleDragStart(e, idx)} onDragOver={e => handleDragOver(e, idx)} onDragEnd={handleDragEnd}
                                                 className="flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50/50 dark:border-indigo-800 dark:bg-indigo-900/10 px-3 py-2 transition hover:border-indigo-300 dark:hover:border-indigo-700 cursor-grab active:cursor-grabbing select-none">
-                                                <span className="text-slate-400"><Icon d="M8 6h2v2H8V6zm6 0h2v2h-2V6zM8 11h2v2H8v-2zm6 0h2v2h-2v-2zm-6 5h2v2H8v-2zm6 0h2v2h-2v-2z" className="h-4 w-4" /></span>
+                                                <span className="text-slate-400"><Icon icon={ICONS.grip} className="h-4 w-4" /></span>
                                                 <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-200">{fieldLabel(key)}</span>
                                                 <code className="text-[10px] text-slate-400 font-mono hidden sm:inline">{key}</code>
                                                 <button onClick={() => moveUp(idx)} disabled={idx === 0}
                                                     className="rounded-lg p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-100 disabled:opacity-30 disabled:cursor-not-allowed dark:hover:bg-indigo-900/30 transition">
-                                                    <Icon d={ICONS.chevLeft} className="h-3.5 w-3.5" />
+                                                    <Icon icon={ICONS.chevLeft} className="h-3.5 w-3.5" />
                                                 </button>
                                                 <button onClick={() => moveDown(idx)} disabled={idx === selectedFields.length - 1}
                                                     className="rounded-lg p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-100 disabled:opacity-30 disabled:cursor-not-allowed dark:hover:bg-indigo-900/30 transition">
-                                                    <Icon d={ICONS.chevRight} className="h-3.5 w-3.5" />
+                                                    <Icon icon={ICONS.chevRight} className="h-3.5 w-3.5" />
                                                 </button>
                                                 <button onClick={() => setSelectedFields(prev => prev.filter(k => k !== key))}
                                                     className="rounded-lg p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition">
-                                                    <Icon d={ICONS.close} className="h-3.5 w-3.5" />
+                                                    <Icon icon={ICONS.close} className="h-3.5 w-3.5" />
                                                 </button>
                                             </div>
                                         ))}
@@ -1097,7 +1115,7 @@ function ExportModal({ onClose, t, isRTL, locale, semestres, types, filters }) {
                                         {unselected.map(f => (
                                             <button key={f.key} onClick={() => setSelectedFields(prev => [...prev, f.key])}
                                                 className="inline-flex items-center gap-1 rounded-lg border border-dashed border-slate-300 dark:border-slate-600 px-2.5 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:border-indigo-700 dark:hover:text-indigo-400 dark:hover:bg-indigo-900/20 transition">
-                                                <Icon d={ICONS.plus} className="h-3 w-3" />
+                                                <Icon icon={ICONS.plus} className="h-3 w-3" />
                                                 {locale === 'ar' ? f.label_ar : f.label_fr}
                                             </button>
                                         ))}
@@ -1116,7 +1134,7 @@ function ExportModal({ onClose, t, isRTL, locale, semestres, types, filters }) {
                                 ].map(opt => (
                                     <button key={opt.value} onClick={() => setFormat(opt.value)}
                                         className={`flex items-center gap-2 rounded-xl border-2 px-4 py-2.5 text-sm font-medium transition-all ${format === opt.value ? 'border-indigo-400 bg-indigo-50 text-indigo-700 dark:border-indigo-500 dark:bg-indigo-900/20 dark:text-indigo-300' : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300'}`}>
-                                        <Icon d={opt.icon} className="h-4 w-4" />
+                                        <Icon icon={opt.icon} className="h-4 w-4" />
                                         {opt.label}
                                     </button>
                                 ))}
@@ -1129,9 +1147,9 @@ function ExportModal({ onClose, t, isRTL, locale, semestres, types, filters }) {
                         <button onClick={doExport} disabled={loading || selectedFields.length === 0}
                             className="flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition active:scale-95">
                             {loading ? (
-                                <><svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>...</>
+                                <><ArrowPathIcon className="h-4 w-4 animate-spin" />...</>
                             ) : (
-                                <><Icon d={ICONS.download} className="h-4 w-4" />{t('exportDownload')}</>
+                                <><Icon icon={ICONS.download} className="h-4 w-4" />{t('exportDownload')}</>
                             )}
                         </button>
                     </div>
@@ -1156,7 +1174,7 @@ function ModuleCard({ module, onEdit, onDelete, t, locale }) {
                 <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2.5">
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-50 dark:bg-violet-900/30">
-                            <Icon d={ICONS.module} className="h-4 w-4 text-violet-500 dark:text-violet-400" />
+                            <Icon icon={ICONS.module} className="h-4 w-4 text-violet-500 dark:text-violet-400" />
                         </div>
                         <code className="rounded-lg bg-slate-100 dark:bg-slate-700 px-2 py-0.5 font-mono text-[11px] font-bold text-slate-600 dark:text-slate-300 tracking-wide">
                             {module.code_module || '—'}
@@ -1181,12 +1199,12 @@ function ModuleCard({ module, onEdit, onDelete, t, locale }) {
                 <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                     {module.coefficient != null && module.coefficient !== '' && (
                         <span className="flex items-center gap-1 rounded-lg bg-slate-50 dark:bg-slate-700/60 px-2 py-1">
-                            <Icon d={ICONS.coef} className="h-3.5 w-3.5 text-slate-400" />
+                            <Icon icon={ICONS.coef} className="h-3.5 w-3.5 text-slate-400" />
                             <span className="font-semibold text-slate-700 dark:text-slate-200">{module.coefficient}</span>
                         </span>
                     )}
                     <span className="flex items-center gap-1 rounded-lg bg-slate-50 dark:bg-slate-700/60 px-2 py-1 flex-1">
-                        <Icon d={ICONS.students} className="h-3.5 w-3.5 text-slate-400" />
+                        <Icon icon={ICONS.students} className="h-3.5 w-3.5 text-slate-400" />
                         <span className="font-semibold text-slate-700 dark:text-slate-200">{module.etudiants_count ?? 0}</span>
                         <span className="truncate">{t('studentsCount')}</span>
                     </span>
@@ -1195,7 +1213,7 @@ function ModuleCard({ module, onEdit, onDelete, t, locale }) {
                 {/* Semestre */}
                 {module.semestre && (
                     <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-                        <Icon d={ICONS.tag} className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                        <Icon icon={ICONS.tag} className="h-3.5 w-3.5 shrink-0 text-amber-500" />
                         <span className="truncate">
                             {module.semestre.code}
                             {module.semestre.niveau ? ` · ${locale === 'ar' ? (module.semestre.niveau.nom_ar || module.semestre.niveau.nom_fr) : (module.semestre.niveau.nom_fr || module.semestre.niveau.nom_ar)}` : ''}
@@ -1208,11 +1226,11 @@ function ModuleCard({ module, onEdit, onDelete, t, locale }) {
             <div className="flex border-t border-slate-100 dark:border-slate-700/60">
                 <button onClick={() => onEdit(module)}
                     className="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 dark:text-slate-400 dark:hover:bg-indigo-900/20 dark:hover:text-indigo-400 transition border-e border-slate-100 dark:border-slate-700/60">
-                    <Icon d={ICONS.edit} className="h-3.5 w-3.5" />{t('edit')}
+                    <Icon icon={ICONS.edit} className="h-3.5 w-3.5" />{t('edit')}
                 </button>
                 <button onClick={() => onDelete(module)}
                     className="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-slate-500 hover:bg-red-50 hover:text-red-500 dark:text-slate-400 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition">
-                    <Icon d={ICONS.trash} className="h-3.5 w-3.5" />{t('delete')}
+                    <Icon icon={ICONS.trash} className="h-3.5 w-3.5" />{t('delete')}
                 </button>
             </div>
         </div>
@@ -1256,7 +1274,7 @@ function ModuleRow({ module, onEdit, onDelete, t, locale }) {
             </td>
             <td className="px-3 py-3.5">
                 <span className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300">
-                    <Icon d={ICONS.students} className="h-3.5 w-3.5 text-slate-400" />
+                    <Icon icon={ICONS.students} className="h-3.5 w-3.5 text-slate-400" />
                     {module.etudiants_count ?? 0}
                 </span>
             </td>
@@ -1281,11 +1299,11 @@ function ModuleRow({ module, onEdit, onDelete, t, locale }) {
                 <div className="flex items-center justify-end gap-1">
                     <button onClick={() => onEdit(module)} title={t('edit')}
                         className="rounded-lg p-1.5 text-slate-400 hover:bg-indigo-100 hover:text-indigo-600 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-400 transition">
-                        <Icon d={ICONS.edit} className="h-4 w-4" />
+                        <Icon icon={ICONS.edit} className="h-4 w-4" />
                     </button>
                     <button onClick={() => onDelete(module)} title={t('delete')}
                         className="rounded-lg p-1.5 text-slate-400 hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/30 transition">
-                        <Icon d={ICONS.trash} className="h-4 w-4" />
+                        <Icon icon={ICONS.trash} className="h-4 w-4" />
                     </button>
                 </div>
             </td>
@@ -1310,7 +1328,7 @@ function Pagination({ meta, isRTL, t }) {
                         <button key={i} disabled={!link.url}
                             onClick={() => link.url && router.get(link.url, {}, { preserveState: true })}
                             className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed dark:border-slate-600 dark:bg-slate-700 dark:hover:bg-slate-600">
-                            <Icon d={isFirst ? ICONS.chevLeft : ICONS.chevRight} className="h-4 w-4" />
+                            <Icon icon={isFirst ? ICONS.chevLeft : ICONS.chevRight} className="h-4 w-4" />
                         </button>
                     );
                     return (
@@ -1331,7 +1349,7 @@ function EmptyState({ hasFilter, onAdd, t, locale }) {
     return (
         <div className="flex flex-col items-center justify-center py-24 text-center">
             <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
-                <Icon d={hasFilter ? ICONS.empty : ICONS.module} className="h-9 w-9 text-slate-300 dark:text-slate-600" />
+                <Icon icon={hasFilter ? ICONS.empty : ICONS.module} className="h-9 w-9 text-slate-300 dark:text-slate-600" />
             </div>
             <p className="text-base font-semibold text-slate-700 dark:text-slate-200">
                 {hasFilter ? (locale === 'ar' ? 'لا توجد نتائج' : 'Aucun résultat') : t('noModules')}
@@ -1344,7 +1362,7 @@ function EmptyState({ hasFilter, onAdd, t, locale }) {
             {!hasFilter && (
                 <button onClick={onAdd}
                     className="mt-6 flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-700 transition shadow-sm">
-                    <Icon d={ICONS.plus} className="h-4 w-4" />{t('addModule')}
+                    <Icon icon={ICONS.plus} className="h-4 w-4" />{t('addModule')}
                 </button>
             )}
         </div>
@@ -1352,11 +1370,11 @@ function EmptyState({ hasFilter, onAdd, t, locale }) {
 }
 
 // ─── Stat card ────────────────────────────────────────────────────────────────
-function StatCard({ label, value, colorClass, iconPath }) {
+function StatCard({ label, value, colorClass, icon }) {
     return (
         <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
             <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${colorClass}`}>
-                <Icon d={iconPath} className="h-5 w-5" />
+                <Icon icon={icon} className="h-5 w-5" />
             </div>
             <div>
                 <p className="text-2xl font-bold text-slate-800 dark:text-white">{value}</p>
@@ -1421,10 +1439,10 @@ function ModulesContent({ modules, semestres, types, filters, stats, profs }) {
     const hasFilter = !!(search || typeFilter || semestreFilter);
 
     const statCards = [
-        { label: t('totalModulesStat'),  value: stats.total,        colorClass: 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400', iconPath: ICONS.module   },
-        { label: t('modulesWithProf'), value: stats.withProfs, colorClass: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400', iconPath: ICONS.user },
-        { label: t('modulesWithStudents'), value: stats.withStudents, colorClass: 'bg-sky-100 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400', iconPath: ICONS.students            },
-        { label: locale === 'ar' ? 'أنواع الوحدات' : 'Types distincts', value: stats.types, colorClass: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400', iconPath: ICONS.tag },
+        { label: t('totalModulesStat'),  value: stats.total,        colorClass: 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400', icon: ICONS.module   },
+        { label: t('modulesWithProf'), value: stats.withProfs, colorClass: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400', icon: ICONS.user },
+        { label: t('modulesWithStudents'), value: stats.withStudents, colorClass: 'bg-sky-100 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400', icon: ICONS.students            },
+        { label: locale === 'ar' ? 'أنواع الوحدات' : 'Types distincts', value: stats.types, colorClass: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400', icon: ICONS.tag },
     ];
 
     return (
@@ -1435,7 +1453,7 @@ function ModulesContent({ modules, semestres, types, filters, stats, profs }) {
             {/* ── Import success toast ── */}
             {importToast && (
                 <div className="fixed bottom-6 end-6 z-[100] flex items-center gap-3 rounded-xl bg-emerald-600 px-4 py-3 shadow-xl text-sm font-medium text-white animate-fade-in">
-                    <Icon d={ICONS.check} className="h-4 w-4 shrink-0" />
+                    <Icon icon={ICONS.check} className="h-4 w-4 shrink-0" />
                     {locale === 'ar'
                         ? `تم استيراد ${importToast.count} وحدة بنجاح`
                         : `${importToast.count} module(s) importé(s) avec succès`}
@@ -1480,7 +1498,7 @@ function ModulesContent({ modules, semestres, types, filters, stats, profs }) {
                     <div>
                         <h1 className="flex items-center gap-2.5 text-xl font-bold text-slate-800 dark:text-white">
                             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 dark:bg-violet-900/30">
-                                <Icon d={ICONS.module} className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                                <Icon icon={ICONS.module} className="h-4 w-4 text-violet-600 dark:text-violet-400" />
                             </span>
                             {t('modulesManagement')}
                         </h1>
@@ -1494,21 +1512,21 @@ function ModulesContent({ modules, semestres, types, filters, stats, profs }) {
                         {/* Quick form button */}
                         <button onClick={() => setModal({ type: 'form' })}
                             className="flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-violet-700 active:scale-95 transition">
-                            <Icon d={ICONS.plus} className="h-4 w-4" />
+                            <Icon icon={ICONS.plus} className="h-4 w-4" />
                             {t('addModule')}
                         </button>
                         {/* Excel import button */}
                         <button onClick={() => setModal({ type: 'excel' })}
                             title={t('addViaExcel')}
                             className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30 active:scale-95 transition">
-                            <Icon d={ICONS.excel} className="h-4 w-4" />
+                            <Icon icon={ICONS.excel} className="h-4 w-4" />
                             <span className="hidden sm:inline">{locale === 'ar' ? 'استيراد Excel' : 'Import Excel'}</span>
                         </button>
                         {/* Export button */}
                         <button onClick={() => setModal({ type: 'export' })}
                             title={t('exportModules')}
                             className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 active:scale-95 transition">
-                            <Icon d={ICONS.download} className="h-4 w-4" />
+                            <Icon icon={ICONS.download} className="h-4 w-4" />
                             <span className="hidden sm:inline">{t('exportModules')}</span>
                         </button>
                     </div>
@@ -1524,7 +1542,7 @@ function ModulesContent({ modules, semestres, types, filters, stats, profs }) {
                     {/* Search */}
                     <div className="relative flex-1 min-w-[220px]">
                         <span className={`pointer-events-none absolute inset-y-0 ${isRTL ? 'end-3' : 'start-3'} flex items-center text-slate-400`}>
-                            <Icon d={ICONS.search} className="h-4 w-4" />
+                            <Icon icon={ICONS.search} className="h-4 w-4" />
                         </span>
                         <input type="text" value={search} onChange={e => handleSearch(e.target.value)}
                             placeholder={t('searchModules')}
@@ -1536,7 +1554,7 @@ function ModulesContent({ modules, semestres, types, filters, stats, profs }) {
                         {search && (
                             <button onClick={() => handleSearch('')}
                                 className={`absolute inset-y-0 ${isRTL ? 'start-3' : 'end-3'} flex items-center text-slate-300 hover:text-slate-500 transition`}>
-                                <Icon d={ICONS.close} className="h-3.5 w-3.5" />
+                                <Icon icon={ICONS.close} className="h-3.5 w-3.5" />
                             </button>
                         )}
                     </div>
@@ -1544,7 +1562,7 @@ function ModulesContent({ modules, semestres, types, filters, stats, profs }) {
                     {/* Type filter */}
                     <div className="relative">
                         <span className={`pointer-events-none absolute inset-y-0 ${isRTL ? 'end-3' : 'start-3'} flex items-center text-slate-400`}>
-                            <Icon d={ICONS.filter} className="h-4 w-4" />
+                            <Icon icon={ICONS.filter} className="h-4 w-4" />
                         </span>
                         <select value={typeFilter} onChange={e => handleType(e.target.value)}
                             className={`appearance-none rounded-xl border border-slate-200 bg-white py-2.5 text-sm text-slate-700 shadow-sm transition
@@ -1555,14 +1573,14 @@ function ModulesContent({ modules, semestres, types, filters, stats, profs }) {
                             {types.map(type => <option key={type} value={type}>{type}</option>)}
                         </select>
                         <span className={`pointer-events-none absolute inset-y-0 ${isRTL ? 'start-3' : 'end-3'} flex items-center text-slate-400`}>
-                            <Icon d={ICONS.chevDown} className="h-4 w-4" />
+                            <Icon icon={ICONS.chevDown} className="h-4 w-4" />
                         </span>
                     </div>
 
                     {/* Semestre filter */}
                     <div className="relative">
                         <span className={`pointer-events-none absolute inset-y-0 ${isRTL ? 'end-3' : 'start-3'} flex items-center text-slate-400`}>
-                            <Icon d={ICONS.tag} className="h-4 w-4" />
+                            <Icon icon={ICONS.tag} className="h-4 w-4" />
                         </span>
                         <select value={semestreFilter} onChange={e => handleSemestre(e.target.value)}
                             className={`appearance-none rounded-xl border border-slate-200 bg-white py-2.5 text-sm text-slate-700 shadow-sm transition
@@ -1582,7 +1600,7 @@ function ModulesContent({ modules, semestres, types, filters, stats, profs }) {
                             })}
                         </select>
                         <span className={`pointer-events-none absolute inset-y-0 ${isRTL ? 'start-3' : 'end-3'} flex items-center text-slate-400`}>
-                            <Icon d={ICONS.chevDown} className="h-4 w-4" />
+                            <Icon icon={ICONS.chevDown} className="h-4 w-4" />
                         </span>
                     </div>
 
@@ -1594,8 +1612,8 @@ function ModulesContent({ modules, semestres, types, filters, stats, profs }) {
                                     ${v === 'list' ? 'border-s border-slate-200 dark:border-slate-700' : ''}
                                     ${viewMode === v ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'}`}>
                                 {v === 'grid'
-                                    ? <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
-                                    : <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" /></svg>
+                                    ? <Squares2X2Icon className="h-4 w-4" />
+                                    : <Bars3BottomLeftIcon className="h-4 w-4" />
                                 }
                                 <span className="hidden sm:inline">{v === 'grid' ? (locale === 'ar' ? 'شبكي' : 'Grille') : (locale === 'ar' ? 'قائمة' : 'Liste')}</span>
                             </button>
@@ -1610,19 +1628,19 @@ function ModulesContent({ modules, semestres, types, filters, stats, profs }) {
                         {search && (
                             <span className="flex items-center gap-1 rounded-full bg-indigo-100 dark:bg-indigo-900/30 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">
                                 "{search}"
-                                <button onClick={() => handleSearch('')} className="ms-1 hover:text-red-500"><Icon d={ICONS.close} className="h-3 w-3" /></button>
+                                <button onClick={() => handleSearch('')} className="ms-1 hover:text-red-500"><Icon icon={ICONS.close} className="h-3 w-3" /></button>
                             </span>
                         )}
                         {typeFilter && (
                             <span className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${typePill(typeFilter)}`}>
                                 {typeFilter}
-                                <button onClick={() => handleType('')} className="ms-1 hover:text-red-500"><Icon d={ICONS.close} className="h-3 w-3" /></button>
+                                <button onClick={() => handleType('')} className="ms-1 hover:text-red-500"><Icon icon={ICONS.close} className="h-3 w-3" /></button>
                             </span>
                         )}
                         {semestreFilter && (
                             <span className="flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/30 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
                                 {semestres?.find(s => s.id == semestreFilter)?.code || semestreFilter}
-                                <button onClick={() => handleSemestre('')} className="ms-1 hover:text-red-500"><Icon d={ICONS.close} className="h-3 w-3" /></button>
+                                <button onClick={() => handleSemestre('')} className="ms-1 hover:text-red-500"><Icon icon={ICONS.close} className="h-3 w-3" /></button>
                             </span>
                         )}
                         <button onClick={() => { handleSearch(''); handleType(''); handleSemestre(''); }} className="text-xs text-slate-400 hover:text-red-400 transition">
@@ -1709,3 +1727,5 @@ export default function ModulesIndex({ modules, semestres, types, filters, stats
         </LanguageProvider>
     );
 }
+
+

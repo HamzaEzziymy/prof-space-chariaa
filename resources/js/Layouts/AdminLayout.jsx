@@ -1,43 +1,33 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import { useLanguage } from '@/i18n/LanguageContext';
-
-// ─── Icons ────────────────────────────────────────────────────────────────────
-const Icon = ({ d, className = 'w-5 h-5' }) => (
-    <svg className={className} fill="none" stroke="currentColor" strokeWidth={1.8}
-        viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d={d} />
-    </svg>
-);
-
-const icons = {
-    dashboard:  'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',
-    professors: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z',
-    students:   'M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222',
-    modules:    'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
-    rooms:      'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
-    grades:     'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',
-    inscriptions: 'M15.172 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V6.828a2 2 0 00-.586-1.414l-2.828-2.828A2 2 0 0015.172 2zM9 12l2 2 4-4',
-    niveaux:    'M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 0h7v7h-7v-7z',
-    semestres:  'M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z',
-    users:      'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
-    settings:   'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z',
-    bell:       'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9',
-    menu:       'M4 6h16M4 12h16M4 18h7',
-    close:      'M6 18L18 6M6 6l12 12',
-    tree:       'M12 3v18M8 7h8M6 11h12M4 15h16M8 19h8',
-    repartition:'M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7',
-    chevronDown:'M19 9l-7 7-7-7',
-    logout:     'M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1',
-    examInscriptions: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
-    maintenance: 'M11.42 15.17l-7.42 7.42a2.12 2.12 0 01-3-3l7.42-7.42A6 6 0 0118.75 5.97l-3.78 3.78a1 1 0 000 1.42l1.42 1.42a1 1 0 001.42 0l3.78-3.78A6 6 0 0111.42 15.17z',
-    sun:        'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z',
-    moon:       'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z',
-};
+import {
+    HomeIcon,
+    UserGroupIcon,
+    AcademicCapIcon,
+    BookOpenIcon,
+    BuildingOffice2Icon,
+    ClipboardDocumentListIcon,
+    DocumentTextIcon,
+    Squares2X2Icon,
+    CalendarDaysIcon,
+    UserIcon,
+    Cog6ToothIcon,
+    BellIcon,
+    Bars3Icon,
+    XMarkIcon,
+    ChevronDownIcon,
+    ArrowRightOnRectangleIcon,
+    SunIcon,
+    MoonIcon,
+    ShareIcon,
+    WrenchScrewdriverIcon,
+    ClipboardDocumentCheckIcon,
+} from '@heroicons/react/24/outline';
 
 // ─── Sidebar Nav Item ─────────────────────────────────────────────────────────
-function SideNavItem({ href, iconKey, label, active, collapsed, isRTL }) {
-    const [tooltip, setTooltip] = useState(null); // { top, left/right }
+function SideNavItem({ href, icon: IconComponent, label, active, collapsed, isRTL }) {
+    const [tooltip, setTooltip] = useState(null);
 
     const handleMouseEnter = (e) => {
         if (!collapsed) return;
@@ -65,16 +55,16 @@ function SideNavItem({ href, iconKey, label, active, collapsed, isRTL }) {
                 ].join(' ')}
             >
                 <span className={`flex-shrink-0 ${active ? 'text-white' : 'text-slate-400 dark:text-slate-500'}`}>
-                    <Icon d={icons[iconKey]} />
+                    <IconComponent className="w-5 h-5" />
                 </span>
                 {!collapsed && <span className="truncate">{label}</span>}
             </Link>
 
-            {/* Tooltip rendered via portal-style fixed positioning — escapes sidebar overflow */}
+            {/* Tooltip — fixed-position, escapes sidebar overflow */}
             {collapsed && tooltip && (
                 <div
                     className="pointer-events-none fixed z-[999] -translate-y-1/2 rounded-md bg-gray-900 px-2.5 py-1.5 text-xs text-white shadow-lg whitespace-nowrap"
-                    style={{ top: tooltip.top, ...( isRTL ? { right: tooltip.right } : { left: tooltip.left }) }}
+                    style={{ top: tooltip.top, ...(isRTL ? { right: tooltip.right } : { left: tooltip.left }) }}
                 >
                     {label}
                 </div>
@@ -89,24 +79,21 @@ export default function AdminLayout({ children, title }) {
     const { auth, appSettings } = usePage().props;
     const user = auth?.user;
 
-    // Live values from DB — fall back to translation keys if not set
     const appName    = isRTL ? (appSettings?.app_name_ar || appSettings?.app_name || t('appName'))
                              : (appSettings?.app_name    || t('appName'));
     const appTagline = isRTL ? (appSettings?.app_tagline_ar || appSettings?.app_tagline || t('adminPanel'))
                              : (appSettings?.app_tagline    || t('adminPanel'));
-    const appLogoUrl = appSettings?.app_logo_url ?? null;
 
     const [sidebarOpen, setSidebarOpen]           = useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(
         () => localStorage.getItem('sidebar_collapsed') === 'true'
     );
-    const [darkMode, setDarkMode]                 = useState(() => localStorage.getItem('theme') === 'dark');
-    const [profileOpen, setProfileOpen]       = useState(false);
-    const [notifOpen, setNotifOpen]           = useState(false);
+    const [darkMode, setDarkMode]   = useState(() => localStorage.getItem('theme') === 'dark');
+    const [profileOpen, setProfileOpen] = useState(false);
+    const [notifOpen, setNotifOpen]     = useState(false);
     const profileRef = useRef(null);
     const notifRef   = useRef(null);
 
-    // Window width tracking for mobile breakpoint
     const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024);
     useEffect(() => {
         const onResize = () => setIsDesktop(window.innerWidth >= 1024);
@@ -114,13 +101,11 @@ export default function AdminLayout({ children, title }) {
         return () => window.removeEventListener('resize', onResize);
     }, []);
 
-    // Dark mode
     useEffect(() => {
         document.documentElement.classList.toggle('dark', darkMode);
         localStorage.setItem('theme', darkMode ? 'dark' : 'light');
     }, [darkMode]);
 
-    // Close dropdowns on outside click
     useEffect(() => {
         const handler = (e) => {
             if (profileRef.current && !profileRef.current.contains(e.target)) setProfileOpen(false);
@@ -130,45 +115,43 @@ export default function AdminLayout({ children, title }) {
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
-    // Reset mobile sidebar when switching language or going to desktop
     useEffect(() => { setSidebarOpen(false); }, [isRTL, isDesktop]);
 
     const navItems = [
-        { key: 'dashboard',    href: route('dashboard'),         iconKey: 'dashboard',    label: t('dashboard')    },
-        { key: 'structure',    href: route('structure.index'),   iconKey: 'tree',         label: t('structure')    },
-        { key: 'professors',   href: route('professors.index'),  iconKey: 'professors',   label: t('professors')   },
-        { key: 'students',     href: route('etudiants.index'),   iconKey: 'students',     label: t('students')     },
-        { key: 'modules',      href: route('modules.index'),     iconKey: 'modules',      label: t('modules')      },
-        { key: 'inscriptions', href: route('inscriptions.index'),iconKey: 'inscriptions', label: t('inscriptions') },
-        { key: 'exam-inscriptions', href: route('inscription-examen.index'), iconKey: 'examInscriptions', label: t('examInscriptions') },
-        { key: 'grades',       href: route('notes.index'),       iconKey: 'grades',       label: t('grades')       },
+        { key: 'dashboard',          href: route('dashboard'),                  icon: HomeIcon,                    label: t('dashboard')        },
+        { key: 'structure',          href: route('structure.index'),            icon: ShareIcon,                   label: t('structure')        },
+        { key: 'professors',         href: route('professors.index'),           icon: UserGroupIcon,               label: t('professors')       },
+        { key: 'students',           href: route('etudiants.index'),            icon: AcademicCapIcon,             label: t('students')         },
+        { key: 'modules',            href: route('modules.index'),              icon: BookOpenIcon,                label: t('modules')          },
+        { key: 'inscriptions',       href: route('inscriptions.index'),         icon: ClipboardDocumentListIcon,   label: t('inscriptions')     },
+        { key: 'exam-inscriptions',  href: route('inscription-examen.index'),   icon: ClipboardDocumentCheckIcon, label: t('examInscriptions') },
+        { key: 'grades',             href: route('notes.index'),                icon: DocumentTextIcon,            label: t('grades')           },
     ];
+
     const adminItems = [
         ...(user?.role === 'super_admin'
-            ? [{ key: 'users',    href: route('users.index'),    iconKey: 'users',    label: t('users')    }]
+            ? [{ key: 'users',    href: route('users.index'),    icon: UserIcon,       label: t('users')    }]
             : []),
         ...(user?.role === 'super_admin'
-            ? [{ key: 'settings', href: route('settings.index'), iconKey: 'settings', label: t('settings') }]
+            ? [{ key: 'settings', href: route('settings.index'), icon: Cog6ToothIcon,  label: t('settings') }]
             : []),
     ];
 
     const currentRoute = route().current();
-    const currentRouteKey = currentRoute?.includes('settings') ? 'settings'
-        : currentRoute?.includes('users')        ? 'users'
-        : currentRoute?.includes('professors')   ? 'professors'
-        : currentRoute?.includes('etudiants')    ? 'students'
-        : currentRoute?.includes('notes')        ? 'grades'
-        : currentRoute?.includes('inscription-examen') ? 'exam-inscriptions'
-        : currentRoute?.includes('inscriptions') ? 'inscriptions'
-        : currentRoute?.includes('structure')    ? 'structure'
-        : currentRoute?.includes('modules')      ? 'modules'
-        : currentRoute?.includes('dashboard')    ? 'dashboard'
+    const currentRouteKey = currentRoute?.includes('settings')          ? 'settings'
+        : currentRoute?.includes('users')               ? 'users'
+        : currentRoute?.includes('professors')          ? 'professors'
+        : currentRoute?.includes('etudiants')           ? 'students'
+        : currentRoute?.includes('notes')               ? 'grades'
+        : currentRoute?.includes('inscription-examen')  ? 'exam-inscriptions'
+        : currentRoute?.includes('inscriptions')        ? 'inscriptions'
+        : currentRoute?.includes('structure')           ? 'structure'
+        : currentRoute?.includes('modules')             ? 'modules'
+        : currentRoute?.includes('dashboard')           ? 'dashboard'
         : currentRoute ?? '';
-    const SIDEBAR_W    = sidebarCollapsed ? 72 : 256; // px
 
-    // ── Sidebar position:
-    //   LTR → anchored to left.  Hidden = translateX(-100%).  Visible = translateX(0).
-    //   RTL → anchored to right. Hidden = translateX(+100%).  Visible = translateX(0).
+    const SIDEBAR_W = sidebarCollapsed ? 72 : 256;
+
     const sidebarVisible = isDesktop || sidebarOpen;
     const sidebarStyle = {
         position:  'fixed',
@@ -176,22 +159,17 @@ export default function AdminLayout({ children, title }) {
         bottom:    0,
         width:     SIDEBAR_W,
         zIndex:    40,
-        // Anchor to the correct edge
         ...(isRTL ? { right: 0, left: 'auto' } : { left: 0, right: 'auto' }),
-        // Slide transform for mobile
         transform: sidebarVisible
             ? 'translateX(0)'
             : isRTL ? 'translateX(100%)' : 'translateX(-100%)',
         transition: 'transform 0.3s ease, width 0.3s ease',
     };
 
-    // ── Main content offset:
-    //   LTR → margin-left = sidebar width.
-    //   RTL → margin-right = sidebar width, margin-left = 0.
     const mainStyle = isDesktop
         ? (isRTL
-            ? { marginRight: SIDEBAR_W, marginLeft: 0,        transition: 'margin 0.3s ease' }
-            : { marginLeft:  SIDEBAR_W, marginRight: 0,       transition: 'margin 0.3s ease' })
+            ? { marginRight: SIDEBAR_W, marginLeft: 0,  transition: 'margin 0.3s ease' }
+            : { marginLeft:  SIDEBAR_W, marginRight: 0, transition: 'margin 0.3s ease' })
         : { marginLeft: 0, marginRight: 0 };
 
     const userDisplay = user
@@ -203,16 +181,6 @@ export default function AdminLayout({ children, title }) {
     const userInitial = user
         ? ((isRTL ? user.nom_ar?.[0] : user.nom_fr?.[0]) ?? user.email?.[0]?.toUpperCase())
         : 'A';
-
-    // Reusable avatar — shows photo if available, falls back to initial
-    const UserAvatar = ({ size = 'sm' }) => {
-        const cls = size === 'sm'
-            ? 'h-8 w-8 rounded-full text-sm font-bold'
-            : 'h-8 w-8 rounded-full text-sm font-bold';
-        return user?.avatar_url
-            ? <img src={user.avatar_url} alt="avatar" className={`${cls} object-cover`} />
-            : <div className={`${cls} bg-primary flex items-center justify-center text-white`}>{userInitial}</div>;
-    };
 
     return (
         <div
@@ -234,7 +202,6 @@ export default function AdminLayout({ children, title }) {
             >
                 {/* Logo */}
                 <div className={`flex h-16 shrink-0 items-center border-b border-slate-200 dark:border-slate-700/60 px-4 gap-3 ${sidebarCollapsed ? 'justify-center' : ''}`}>
-                    {/* Favicon/Icon — square slot, no bg when image set */}
                     <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl overflow-hidden ${appSettings?.app_favicon_url ? '' : 'bg-primary'}`}>
                         {appSettings?.app_favicon_url
                             ? <img src={appSettings.app_favicon_url} alt={appName} className="h-full w-full object-cover" />
@@ -251,7 +218,6 @@ export default function AdminLayout({ children, title }) {
 
                 {/* Nav */}
                 <div className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 py-4">
-                    {/* Main items */}
                     <div className="space-y-0.5">
                         {!sidebarCollapsed && (
                             <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
@@ -262,7 +228,7 @@ export default function AdminLayout({ children, title }) {
                             <SideNavItem
                                 key={item.key}
                                 href={item.href}
-                                iconKey={item.iconKey}
+                                icon={item.icon}
                                 label={item.label}
                                 active={currentRouteKey === item.key}
                                 collapsed={sidebarCollapsed}
@@ -275,7 +241,6 @@ export default function AdminLayout({ children, title }) {
                         <div className="my-3 border-t border-slate-200 dark:border-slate-700/60" />
                     )}
 
-                    {/* Admin items — only shown when there are items (super_admin only) */}
                     {adminItems.length > 0 && (
                         <div className="space-y-0.5">
                             {!sidebarCollapsed && (
@@ -287,7 +252,7 @@ export default function AdminLayout({ children, title }) {
                                 <SideNavItem
                                     key={item.key}
                                     href={item.href}
-                                    iconKey={item.iconKey}
+                                    icon={item.icon}
                                     label={item.label}
                                     active={currentRouteKey === item.key}
                                     collapsed={sidebarCollapsed}
@@ -297,7 +262,6 @@ export default function AdminLayout({ children, title }) {
                         </div>
                     )}
 
-                    {/* Push user card to bottom */}
                     <div className="flex-1" />
 
                     {!sidebarCollapsed && (
@@ -319,10 +283,8 @@ export default function AdminLayout({ children, title }) {
             </aside>
 
             {/* ── Main content ── */}
-            <div
-                style={mainStyle}
-                className="flex flex-1 flex-col overflow-hidden"
-            >
+            <div style={mainStyle} className="flex flex-1 flex-col overflow-hidden">
+
                 {/* ── Topbar ── */}
                 <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 dark:border-slate-700 dark:bg-slate-800">
 
@@ -333,7 +295,9 @@ export default function AdminLayout({ children, title }) {
                             onClick={() => setSidebarOpen(!sidebarOpen)}
                             className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 lg:hidden"
                         >
-                            <Icon d={sidebarOpen ? icons.close : icons.menu} />
+                            {sidebarOpen
+                                ? <XMarkIcon className="w-5 h-5" />
+                                : <Bars3Icon className="w-5 h-5" />}
                         </button>
 
                         {/* Desktop collapse */}
@@ -345,7 +309,7 @@ export default function AdminLayout({ children, title }) {
                             }}
                             className="hidden lg:flex rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
                         >
-                            <Icon d={icons.menu} />
+                            <Bars3Icon className="w-5 h-5" />
                         </button>
 
                         {title && (
@@ -372,7 +336,9 @@ export default function AdminLayout({ children, title }) {
                             onClick={() => setDarkMode(!darkMode)}
                             className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
                         >
-                            <Icon d={darkMode ? icons.sun : icons.moon} />
+                            {darkMode
+                                ? <SunIcon className="w-5 h-5" />
+                                : <MoonIcon className="w-5 h-5" />}
                         </button>
 
                         {/* Notifications */}
@@ -381,7 +347,7 @@ export default function AdminLayout({ children, title }) {
                                 onClick={() => setNotifOpen(!notifOpen)}
                                 className="relative rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
                             >
-                                <Icon d={icons.bell} />
+                                <BellIcon className="w-5 h-5" />
                                 <span
                                     className="absolute top-1 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-slate-800"
                                     style={{ [isRTL ? 'left' : 'right']: 4 }}
@@ -429,7 +395,7 @@ export default function AdminLayout({ children, title }) {
                                     <p className="text-sm font-medium text-slate-700 dark:text-slate-200 leading-none">{userDisplay}</p>
                                     <p className="text-xs text-slate-400 mt-0.5">{user?.role ? t(user.role) : t('admin')}</p>
                                 </div>
-                                <Icon d={icons.chevronDown} className="w-4 h-4 text-slate-400 hidden sm:block" />
+                                <ChevronDownIcon className="w-4 h-4 text-slate-400 hidden sm:block" />
                             </button>
 
                             {profileOpen && (
@@ -441,14 +407,14 @@ export default function AdminLayout({ children, title }) {
                                         href={route('profile.edit')}
                                         className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700"
                                     >
-                                        <Icon d={icons.users} className="w-4 h-4" />
+                                        <UserIcon className="w-4 h-4" />
                                         {t('profile')}
                                     </Link>
                                     <Link
                                         href={route('settings.index')}
                                         className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700"
                                     >
-                                        <Icon d={icons.settings} className="w-4 h-4" />
+                                        <Cog6ToothIcon className="w-4 h-4" />
                                         {t('settings')}
                                     </Link>
                                     <div className="my-1 border-t border-slate-200 dark:border-slate-700" />
@@ -459,7 +425,7 @@ export default function AdminLayout({ children, title }) {
                                         replace
                                         className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
                                     >
-                                        <Icon d={icons.logout} className="w-4 h-4" />
+                                        <ArrowRightOnRectangleIcon className="w-4 h-4" />
                                         {t('logout')}
                                     </Link>
                                 </div>

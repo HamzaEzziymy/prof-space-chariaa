@@ -1,30 +1,45 @@
 import { useState, useEffect, useRef } from 'react';
 import { useForm, usePage, router } from '@inertiajs/react';
 import { Head } from '@inertiajs/react';
+import {
+    ArrowPathIcon,
+    ArrowUpTrayIcon,
+    BuildingOffice2Icon,
+    CameraIcon,
+    CheckIcon,
+    EnvelopeIcon,
+    ExclamationTriangleIcon,
+    GlobeAltIcon,
+    MapPinIcon,
+    PencilIcon,
+    PhotoIcon,
+    PhoneIcon,
+    ShieldCheckIcon,
+    WrenchScrewdriverIcon,
+    XMarkIcon,
+} from '@heroicons/react/24/outline';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { useLanguage } from '@/i18n/LanguageContext';
 
 // ─── Icon ─────────────────────────────────────────────────────────────────────
-const Icon = ({ d, className = 'w-5 h-5' }) => (
-    <svg className={className} fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d={d} />
-    </svg>
+const Icon = ({ icon: IconComponent, className = 'w-5 h-5' }) => (
+    <IconComponent className={className} aria-hidden="true" />
 );
 
 const IC = {
-    check:    'M5 13l4 4L19 7',
-    warning:  'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
-    upload:   'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12',
-    pencil:   'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
-    globe:    'M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
-    building: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
-    mail:     'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
-    phone:    'M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z',
-    location: 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z',
-    tool:     'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z',
-    image:    'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z',
-    camera:   'M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z M15 13a3 3 0 11-6 0 3 3 0 016 0z',
-    shield:   'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
+    check: CheckIcon,
+    warning: ExclamationTriangleIcon,
+    upload: ArrowUpTrayIcon,
+    pencil: PencilIcon,
+    globe: GlobeAltIcon,
+    building: BuildingOffice2Icon,
+    mail: EnvelopeIcon,
+    phone: PhoneIcon,
+    location: MapPinIcon,
+    tool: WrenchScrewdriverIcon,
+    image: PhotoIcon,
+    camera: CameraIcon,
+    shield: ShieldCheckIcon,
 };
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
@@ -41,7 +56,7 @@ function Toast({ message, type = 'success' }) {
     return (
         <div className={`fixed bottom-6 right-6 z-[9999] flex items-center gap-3 rounded-2xl px-5 py-3.5 text-sm font-medium text-white shadow-2xl ${ok ? 'bg-emerald-600' : 'bg-red-500'}`}>
             <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-white/20">
-                <Icon d={ok ? IC.check : IC.warning} className="w-3.5 h-3.5" />
+                <Icon icon={ok ? IC.check : IC.warning} className="w-3.5 h-3.5" />
             </span>
             {message}
         </div>
@@ -56,7 +71,7 @@ function Input({ icon, className = '', ...props }) {
     return (
         <div className="relative">
             <span className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none text-slate-400">
-                <Icon d={icon} className="w-4 h-4" />
+                <Icon icon={icon} className="w-4 h-4" />
             </span>
             <input className={`${inputCls} pl-10 ${className}`} {...props} />
         </div>
@@ -75,7 +90,7 @@ function Field({ label, hint, error, required, children }) {
             </label>
             {children}
             {hint  && <p className="text-[11px] text-slate-400 leading-relaxed">{hint}</p>}
-            {error && <p className="flex items-center gap-1 text-[11px] text-red-500"><Icon d={IC.warning} className="w-3 h-3" />{error}</p>}
+            {error && <p className="flex items-center gap-1 text-[11px] text-red-500"><Icon icon={IC.warning} className="w-3 h-3" />{error}</p>}
         </div>
     );
 }
@@ -88,7 +103,7 @@ function Card({ title, description, icon, iconColor = 'text-indigo-500', iconBg 
                 <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-800/60">
                     {icon && (
                         <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${iconBg}`}>
-                            <Icon d={icon} className={`w-4 h-4 ${iconColor}`} />
+                            <Icon icon={icon} className={`w-4 h-4 ${iconColor}`} />
                         </span>
                     )}
                     <div>
@@ -111,8 +126,8 @@ function SaveBtn({ processing, label, variant = 'primary' }) {
     return (
         <button type="submit" disabled={processing} className={`${base} ${styles}`}>
             {processing
-                ? <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
-                : <Icon d={IC.check} className="w-4 h-4" />}
+                ? <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                : <Icon icon={IC.check} className="w-4 h-4" />}
             {label}
         </button>
     );
@@ -177,7 +192,7 @@ function UploadPanel({ routeName, fieldName, dimensionLabel, hint, accept, onClo
                 ) : (
                     <div className="flex items-center gap-2 select-none">
                         <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white dark:bg-slate-600 shadow-sm">
-                            <Icon d={IC.upload} className="w-4 h-4 text-slate-400" />
+                            <Icon icon={IC.upload} className="w-4 h-4 text-slate-400" />
                         </span>
                         <div>
                             <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Glisser ou cliquer</p>
@@ -192,7 +207,7 @@ function UploadPanel({ routeName, fieldName, dimensionLabel, hint, accept, onClo
 
             {errors[fieldName] && (
                 <p className="flex items-center gap-1 text-[11px] text-red-500">
-                    <Icon d={IC.warning} className="w-3 h-3" />
+                    <Icon icon={IC.warning} className="w-3 h-3" />
                     {errors[fieldName]}
                 </p>
             )}
@@ -231,9 +246,7 @@ export default function SettingsIndex({ settings, newUser = false }) {
                                 {/* Animated Icon */}
                                 <div className="flex-shrink-0">
                                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/20 animate-pulse">
-                                        <svg className="h-6 w-6 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
+                                        <CheckIcon className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                                     </div>
                                 </div>
 
@@ -253,7 +266,7 @@ export default function SettingsIndex({ settings, newUser = false }) {
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <div className="flex items-center gap-3 rounded-lg bg-white/60 dark:bg-slate-800/40 p-3 backdrop-blur-sm border border-emerald-100 dark:border-emerald-900/20">
                                             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex-shrink-0">
-                                                <Icon d={IC.building} className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                                <Icon icon={IC.building} className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                                             </span>
                                             <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300">
                                                 {locale === 'ar' ? 'تعريف مؤسستك' : 'Identifier votre établissement'}
@@ -262,7 +275,7 @@ export default function SettingsIndex({ settings, newUser = false }) {
 
                                         <div className="flex items-center gap-3 rounded-lg bg-white/60 dark:bg-slate-800/40 p-3 backdrop-blur-sm border border-emerald-100 dark:border-emerald-900/20">
                                             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex-shrink-0">
-                                                <Icon d={IC.image} className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                                <Icon icon={IC.image} className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                                             </span>
                                             <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300">
                                                 {locale === 'ar' ? 'إضافة شعار العلامة التجارية' : 'Ajouter votre logo'}
@@ -271,7 +284,7 @@ export default function SettingsIndex({ settings, newUser = false }) {
 
                                         <div className="flex items-center gap-3 rounded-lg bg-white/60 dark:bg-slate-800/40 p-3 backdrop-blur-sm border border-emerald-100 dark:border-emerald-900/20">
                                             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex-shrink-0">
-                                                <Icon d={IC.globe} className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                                <Icon icon={IC.globe} className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                                             </span>
                                             <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300">
                                                 {locale === 'ar' ? 'معلومات الاتصال' : 'Infos de contact'}
@@ -280,7 +293,7 @@ export default function SettingsIndex({ settings, newUser = false }) {
 
                                         <div className="flex items-center gap-3 rounded-lg bg-white/60 dark:bg-slate-800/40 p-3 backdrop-blur-sm border border-emerald-100 dark:border-emerald-900/20">
                                             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex-shrink-0">
-                                                <Icon d={IC.tool} className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                                <Icon icon={IC.tool} className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                                             </span>
                                             <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300">
                                                 {locale === 'ar' ? 'تخصيص النظام' : 'Personnaliser'}
@@ -294,9 +307,7 @@ export default function SettingsIndex({ settings, newUser = false }) {
                                     onClick={() => window.location.reload()}
                                     className="mt-1 flex-shrink-0 text-emerald-400 hover:text-emerald-600 dark:text-emerald-500 dark:hover:text-emerald-400 transition"
                                 >
-                                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
+                                    <XMarkIcon className="h-5 w-5" />
                                 </button>
                             </div>
                         </div>
@@ -333,9 +344,7 @@ function BrandHeroCard({ settings, t }) {
                     {settings.app_logo_url ? (
                         <img src={settings.app_logo_url} alt="Logo" className="h-full w-full object-contain p-4" />
                     ) : (
-                        <svg className="h-16 w-16 text-slate-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342" />
-                        </svg>
+                        <PhotoIcon className="h-16 w-16 text-slate-300 dark:text-slate-600" />
                     )}
                 </div>
 
@@ -348,7 +357,7 @@ function BrandHeroCard({ settings, t }) {
                         editing ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-black/40 hover:bg-black/60',
                     ].join(' ')}
                 >
-                    <Icon d={IC.pencil} className="w-3.5 h-3.5" />
+                    <Icon icon={IC.pencil} className="w-3.5 h-3.5" />
                     {editing ? 'Fermer' : 'Modifier'}
                 </button>
             </div>
@@ -359,7 +368,7 @@ function BrandHeroCard({ settings, t }) {
                     {settings.app_favicon_url ? (
                         <img src={settings.app_favicon_url} alt="Icon" className="h-full w-full object-contain p-1" />
                     ) : (
-                        <Icon d={IC.image} className="w-6 h-6 text-slate-300 dark:text-slate-500" />
+                        <Icon icon={IC.image} className="w-6 h-6 text-slate-300 dark:text-slate-500" />
                     )}
                 </div>
             </div>
@@ -525,7 +534,7 @@ function MaintenanceCard({ settings, t }) {
             <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-amber-200/60 dark:border-amber-700/30 bg-amber-50 dark:bg-amber-900/20">
                 <div className="flex items-center gap-3">
                     <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-900/40">
-                        <Icon d={IC.warning} className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                        <Icon icon={IC.warning} className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                     </span>
                     <div>
                         <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">{t('settingsMaintenance')}</p>
@@ -558,7 +567,7 @@ function MaintenanceCard({ settings, t }) {
                     {data.maintenance_mode && (
                         <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 dark:border-red-700/30 dark:bg-red-900/20 px-4 py-3.5">
                             <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/40 mt-0.5">
-                                <Icon d={IC.shield} className="w-4 h-4 text-red-600 dark:text-red-400" />
+                                <Icon icon={IC.shield} className="w-4 h-4 text-red-600 dark:text-red-400" />
                             </span>
                             <div>
                                 <p className="text-xs font-semibold text-red-700 dark:text-red-400">Mode maintenance actif</p>
