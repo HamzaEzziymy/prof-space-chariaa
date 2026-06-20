@@ -3,7 +3,7 @@ import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
 import { LanguageProvider, useLanguage } from '@/i18n/LanguageContext';
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 
 // ─── Login form (inner, needs language context) ───────────────────────────────
 function LoginForm({ status, canResetPassword, registrationOpen = true }) {
@@ -22,6 +22,7 @@ function LoginForm({ status, canResetPassword, registrationOpen = true }) {
     const submit = (e) => {
         e.preventDefault();
         post(route('login'), {
+            replace: true,
             onFinish: () => reset('password'),
         });
     };
@@ -33,24 +34,24 @@ function LoginForm({ status, canResetPassword, registrationOpen = true }) {
 
     return (
         <div
-            className="relative flex min-h-screen items-center justify-center bg-slate-100 dark:bg-slate-900 p-4 overflow-hidden"
+            className="relative flex min-h-screen items-center justify-center bg-slate-100 p-4 overflow-hidden"
             dir={isRTL ? 'rtl' : 'ltr'}
         >
             {/* Background */}
             <div className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-                style={{ backgroundImage: `url('/storage/images/zllij-bg.jfif')` }}
+                style={{ backgroundImage: `url('/storage/images/zllij-bg.avif')` }}
             />
-            <div className="absolute inset-0 bg-white/70 dark:bg-slate-900/80" />
+            <div className="absolute inset-0 bg-white/20" />
 
             <div className={`relative w-full max-w-md z-10 transition-all duration-700 ease-out ${mounted ? 'translate-x-0 opacity-100' : slideFrom}`}>
 
                 {/* Card */}
-                <div className="rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800">
+                <div className="rounded-2xl border border-slate-200 bg-white shadow-xl">
 
                     {/* Header */}
-                    <div className="border-b border-slate-100 dark:border-slate-700 p-8 pb-6 text-center">
+                    <div className="border-b border-slate-100 p-8 pb-6 text-center">
                         {/* Logo */}
-                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white dark:bg-slate-700 shadow-lg ring-1 ring-slate-200 dark:ring-slate-600 overflow-hidden">
+                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-lg ring-1 ring-slate-200 overflow-hidden">
                             {iconUrl
                                 ? <img src={iconUrl} alt={appName} className="h-full w-full object-contain p-2" />
                                 : logoUrl
@@ -58,17 +59,17 @@ function LoginForm({ status, canResetPassword, registrationOpen = true }) {
                                     : <span className="text-2xl font-bold text-primary">{appName?.[0] ?? 'P'}</span>
                             }
                         </div>
-                        <h1 className="text-xl font-bold text-slate-800 dark:text-white">
+                        <h1 className="text-xl font-bold text-slate-800">
                             {locale === 'ar' ? 'تسجيل الدخول' : 'Connexion'}
                         </h1>
-                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        <p className="mt-1 text-sm text-slate-500">
                             {locale === 'ar' ? 'فضاء الأستاذ — لوحة الإدارة' : 'ProfSpace — Panneau d\'administration'}
                         </p>
                     </div>
 
                     {/* Status message (e.g. password reset success) */}
                     {status && (
-                        <div className="mx-8 mt-6 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm font-medium text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-700 dark:text-emerald-400">
+                        <div className="mx-8 mt-6 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm font-medium text-emerald-700">
                             {status}
                         </div>
                     )}
@@ -81,14 +82,14 @@ function LoginForm({ status, canResetPassword, registrationOpen = true }) {
                             <InputLabel
                                 htmlFor="email"
                                 value={locale === 'ar' ? 'البريد الإلكتروني' : 'Adresse e-mail'}
-                                className="text-slate-600 dark:text-slate-300 text-sm font-medium"
+                                className="text-slate-600 text-sm font-medium"
                             />
                             <TextInput
                                 id="email"
                                 type="email"
                                 name="email"
                                 value={data.email}
-                                className="mt-1 block w-full rounded-xl border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:border-primary focus:ring-primary text-sm"
+                                className="mt-1 block w-full rounded-xl border-slate-300 focus:border-primary focus:ring-primary text-sm"
                                 autoComplete="username"
                                 isFocused={true}
                                 onChange={(e) => setData('email', e.target.value)}
@@ -102,7 +103,7 @@ function LoginForm({ status, canResetPassword, registrationOpen = true }) {
                                 <InputLabel
                                     htmlFor="password"
                                     value={locale === 'ar' ? 'كلمة المرور' : 'Mot de passe'}
-                                    className="text-slate-600 dark:text-slate-300 text-sm font-medium"
+                                    className="text-slate-600 text-sm font-medium"
                                 />
                                 {canResetPassword && (
                                     <Link
@@ -118,7 +119,7 @@ function LoginForm({ status, canResetPassword, registrationOpen = true }) {
                                 type="password"
                                 name="password"
                                 value={data.password}
-                                className="mt-1 block w-full rounded-xl border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:border-primary focus:ring-primary text-sm"
+                                className="mt-1 block w-full rounded-xl border-slate-300 focus:border-primary focus:ring-primary text-sm"
                                 autoComplete="current-password"
                                 onChange={(e) => setData('password', e.target.value)}
                             />
@@ -132,9 +133,9 @@ function LoginForm({ status, canResetPassword, registrationOpen = true }) {
                                 name="remember"
                                 checked={data.remember}
                                 onChange={(e) => setData('remember', e.target.checked)}
-                                className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary dark:border-slate-600 dark:bg-slate-700"
+                                className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
                             />
-                            <span className="text-sm text-slate-600 dark:text-slate-400">
+                            <span className="text-sm text-slate-600">
                                 {locale === 'ar' ? 'تذكرني' : 'Se souvenir de moi'}
                             </span>
                         </label>
@@ -152,7 +153,7 @@ function LoginForm({ status, canResetPassword, registrationOpen = true }) {
                     </form>
 
                     {/* Footer */}
-                    <div className={`border-t border-slate-100 dark:border-slate-700 px-8 py-4 flex items-center justify-between text-sm ${isRTL ? 'flex-row-reverse' : ''}`}>
+                    <div className={`border-t border-slate-100 px-8 py-4 flex items-center justify-between text-sm ${isRTL ? 'flex-row-reverse' : ''}`}>
                         {registrationOpen && (
                             <Link
                                 href={route('register')}
@@ -169,7 +170,7 @@ function LoginForm({ status, canResetPassword, registrationOpen = true }) {
                         <button
                             type="button"
                             onClick={toggleLocale}
-                            className="flex items-center gap-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-medium transition"
+                            className="flex items-center gap-1.5 text-slate-400 hover:text-slate-600 text-xs font-medium transition"
                         >
                             <span>{locale === 'fr' ? '🇲🇦' : '🇫🇷'}</span>
                             <span>{locale === 'fr' ? 'عربية' : 'Français'}</span>
@@ -183,10 +184,18 @@ function LoginForm({ status, canResetPassword, registrationOpen = true }) {
 
 // ─── Page export ──────────────────────────────────────────────────────────────
 export default function Login({ status, canResetPassword, registrationOpen = true }) {
+    const { auth } = usePage().props;
+
+    useEffect(() => {
+        if (auth?.user) {
+            router.visit(route('dashboard'), { replace: true });
+        }
+    }, []);
+
     return (
         <LanguageProvider>
             <Head title="Login" />
-            <LoginForm status={status} canResetPassword={canResetPassword} registrationOpen={registrationOpen} />
+            {auth?.user ? null : <LoginForm status={status} canResetPassword={canResetPassword} registrationOpen={registrationOpen} />}
         </LanguageProvider>
     );
 }

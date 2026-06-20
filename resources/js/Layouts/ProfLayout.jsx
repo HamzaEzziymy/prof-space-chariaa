@@ -371,6 +371,7 @@ export default function ProfLayout({ children, wide }) {
                                         href={route('prof.logout')}
                                         method="post"
                                         as="button"
+                                        replace
                                         className="flex w-full items-center gap-3 px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
                                     >
                                         <Icon d={I.logout} className="w-4 h-4" />

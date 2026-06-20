@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { LanguageProvider, useLanguage } from '@/i18n/LanguageContext';
 import InputError from '@/Components/InputError';
 import TextInput from '@/Components/TextInput';
@@ -18,6 +18,7 @@ function LoginForm() {
     const submit = (e) => {
         e.preventDefault();
         post(route('prof.login'), {
+            replace: true,
             onFinish: () => reset('password'),
         });
     };
@@ -29,15 +30,15 @@ function LoginForm() {
     const slideFrom = isRTL ? '-translate-x-full opacity-0' : 'translate-x-full opacity-0';
 
     return (
-        <div className="relative flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-900 p-4 overflow-hidden"
+        <div className="relative flex min-h-screen items-center justify-center bg-slate-50 p-4 overflow-hidden"
             dir={isRTL ? 'rtl' : 'ltr'}
         >
             <div className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-                style={{ backgroundImage: `url('/storage/images/zllij-bg.jfif')` }}
+                style={{ backgroundImage: `url('/storage/images/zllij-bg.avif')` }}
             />
-            <div className="absolute inset-0 bg-white/70 dark:bg-slate-900/80" />
+            <div className="absolute inset-0 bg-white/20" />
             <div className={`relative w-full max-w-sm z-10 transition-all duration-700 ease-out ${mounted ? 'translate-x-0 opacity-100' : slideFrom}`}>
-                <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
+                <div className="rounded-xl border border-slate-200 bg-white">
 
                     <div className="px-8 pt-10 pb-6 text-center">
                         <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
@@ -49,7 +50,7 @@ function LoginForm() {
                                 </svg>
                             )}
                         </div>
-                        <h1 className="text-xl font-bold text-slate-800 dark:text-white">
+                        <h1 className="text-xl font-bold text-slate-800">
                             {locale === 'ar' ? 'تسجيل الدخول' : 'Connexion'}
                         </h1>
                         <p className="mt-1 text-sm text-slate-400">
@@ -65,7 +66,7 @@ function LoginForm() {
                                 name="email"
                                 value={data.email}
                                 placeholder={locale === 'ar' ? 'البريد الإلكتروني' : 'Adresse e-mail'}
-                                className="block w-full rounded-lg border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:border-primary focus:ring-primary dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:placeholder-slate-500"
+                                className="block w-full rounded-lg border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:border-primary focus:ring-primary"
                                 autoComplete="username"
                                 isFocused={true}
                                 onChange={(e) => setData('email', e.target.value)}
@@ -81,14 +82,14 @@ function LoginForm() {
                                     name="password"
                                     value={data.password}
                                     placeholder={locale === 'ar' ? 'كلمة المرور' : 'Mot de passe'}
-                                    className="block w-full rounded-lg border-slate-300 bg-slate-50 pe-10 ps-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:border-primary focus:ring-primary dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:placeholder-slate-500"
+                                    className="block w-full rounded-lg border-slate-300 bg-slate-50 pe-10 ps-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:border-primary focus:ring-primary"
                                     autoComplete="current-password"
                                     onChange={(e) => setData('password', e.target.value)}
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className={`absolute top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition ${isRTL ? 'left-2' : 'right-2'}`}
+                                    className={`absolute top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition ${isRTL ? 'left-2' : 'right-2'}`}
                                     tabIndex={-1}
                                 >
                                     {showPassword ? (
@@ -117,11 +118,11 @@ function LoginForm() {
                         </button>
                     </form>
 
-                    <div className="flex items-center justify-between border-t border-slate-100 px-8 py-4 dark:border-slate-700">
+                    <div className="flex items-center justify-between border-t border-slate-100 px-8 py-4">
                         <Link href={route('login')} className="text-xs text-slate-400 hover:text-primary transition">
                             {locale === 'ar' ? 'تسجيل الدخول للإدارة' : 'Connexion administration'}
                         </Link>
-                        <button type="button" onClick={toggleLocale} className="text-xs font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition">
+                        <button type="button" onClick={toggleLocale} className="text-xs font-medium text-slate-400 hover:text-slate-600 transition">
                             {locale === 'fr' ? 'عربية' : 'Français'}
                         </button>
                     </div>
@@ -132,10 +133,18 @@ function LoginForm() {
 }
 
 export default function Login() {
+    const { auth } = usePage().props;
+
+    useEffect(() => {
+        if (auth?.user) {
+            router.visit(route('prof.dashboard'), { replace: true });
+        }
+    }, []);
+
     return (
         <LanguageProvider defaultLocale="ar">
             <Head title="Connexion Professeur" />
-            <LoginForm />
+            {auth?.user ? null : <LoginForm />}
         </LanguageProvider>
     );
 }

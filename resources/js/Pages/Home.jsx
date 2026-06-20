@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { LanguageProvider, useLanguage } from '@/i18n/LanguageContext';
 import { AcademicCapIcon, ShieldCheckIcon, UsersIcon, BookOpenIcon, ClipboardDocumentListIcon, CalendarDaysIcon } from '@heroicons/react/24/outline';
@@ -24,10 +25,12 @@ function HomeContent() {
                             <span className="opacity-30 mx-1">|</span>
                             <span className="opacity-70 hidden sm:inline">{isAr ? 'وزارة التعليم العالي' : 'Ministère de l\'Enseignement Supérieur'}</span>
                         </div>
-                        <button type="button" onClick={toggleLocale} className="flex items-center gap-1.5 hover:underline opacity-70 hover:opacity-100 transition flex-shrink-0">
-                            <span>{isAr ? 'Français' : 'العربية'}</span>
-                            <span className="text-xs">{isAr ? '🇫🇷' : '🇲🇦'}</span>
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <button type="button" onClick={toggleLocale} className="flex items-center gap-1.5 hover:underline opacity-70 hover:opacity-100 transition flex-shrink-0">
+                                <span>{isAr ? 'Français' : 'العربية'}</span>
+                                <span className="text-xs">{isAr ? '🇫🇷' : '🇲🇦'}</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -47,9 +50,11 @@ function HomeContent() {
                     </div>
                 </header>
 
-                <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900">
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(99,102,241,0.12),transparent_50%)]" />
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(99,102,241,0.08),transparent_50%)]" />
+                <section className="relative overflow-hidden">
+                    <div className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                        style={{ backgroundImage: `url('/storage/images/zllij-bg.png')` }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-800/50 via-indigo-900/40 to-slate-900/50" />
 
                     <div className="relative mx-auto max-w-6xl px-4 py-16 sm:py-20">
                         <div className="text-center mb-10">
@@ -119,27 +124,44 @@ function HomeContent() {
                     </div>
                 </section>
 
-                <section className="py-16 bg-white">
-                    <div className="mx-auto max-w-6xl px-4">
-                        <div className="text-center mb-10">
-                            <h3 className="text-xl font-bold text-slate-800">{isAr ? 'مزايا المنصة' : 'Fonctionnalités'}</h3>
-                            <p className="mt-1 text-sm text-slate-400">{isAr ? 'كل ما تحتاجه لتسيير الشؤون البيداغوجية' : 'Tout ce qu\'il vous faut pour la gestion pédagogique'}</p>
+                <section className="relative overflow-hidden py-20 bg-gradient-to-b from-slate-50 to-white">
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+                    <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-violet-500/5 rounded-full blur-3xl pointer-events-none" />
+
+                    <div className="relative mx-auto max-w-6xl px-4">
+                        <div className="text-center mb-12">
+                            <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-800">{isAr ? 'مزايا المنصة' : 'Fonctionnalités'}</h3>
+                            <p className="mt-2 text-sm text-slate-400 max-w-md mx-auto">
+                                {isAr ? 'كل ما تحتاجه لتسيير الشؤون البيداغوجية في مكان واحد' : 'Tout ce qu\'il vous faut pour la gestion pédagogique en un seul endroit'}
+                            </p>
                         </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto">
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-5 max-w-3xl mx-auto">
                             {[
-                                { Icon: UsersIcon, label: isAr ? 'إدارة الطلبة' : 'Étudiants', desc: isAr ? 'تسجيل وبحث وتصفية' : 'Inscription, recherche, filtres' },
-                                { Icon: BookOpenIcon, label: isAr ? 'الوحدات' : 'Modules', desc: isAr ? 'برامج ومعاملات وأستاذة' : 'Programmes, coefficients, profs' },
-                                { Icon: ClipboardDocumentListIcon, label: isAr ? 'النقط' : 'Notes', desc: isAr ? 'إدخال وتصحيح وتقارير' : 'Saisie, correction, rapports' },
-                                { Icon: CalendarDaysIcon, label: isAr ? 'الامتحانات' : 'Examens', desc: isAr ? 'تسجيلات ونتائج' : 'Inscriptions et résultats' },
-                            ].map(({ Icon, label, desc }, i) => (
-                                <div key={i} className="flex flex-col items-center rounded-xl border border-slate-100 bg-slate-50/50 p-5 text-center hover:shadow-sm hover:border-slate-200 transition">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600 mb-3">
-                                        <Icon className="h-5 w-5" />
+                                { Icon: UsersIcon,      label: isAr ? 'الطلبة' : 'Étudiants',     desc: isAr ? 'تسجيل، بحث، تصفية' : 'Inscription, recherche, filtres',     color: 'indigo' },
+                                { Icon: BookOpenIcon,    label: isAr ? 'الوحدات' : 'Modules',      desc: isAr ? 'برامج، معاملات، أساتذة' : 'Programmes, coefficients, profs',  color: 'emerald' },
+                                { Icon: ClipboardDocumentListIcon, label: isAr ? 'النقط' : 'Notes', desc: isAr ? 'إدخال، تصحيح، تقارير' : 'Saisie, correction, rapports',       color: 'amber' },
+                                { Icon: CalendarDaysIcon, label: isAr ? 'الامتحانات' : 'Examens',  desc: isAr ? 'تسجيلات ونتائج' : 'Inscriptions et résultats',               color: 'rose' },
+                            ].map(({ Icon, label, desc, color }, i) => {
+                                const colors = {
+                                    indigo:  { bg: 'bg-indigo-50 group-hover:bg-indigo-600',  txt: 'text-indigo-600 group-hover:text-white',  ring: 'ring-indigo-200/50' },
+                                    emerald: { bg: 'bg-emerald-50 group-hover:bg-emerald-600', txt: 'text-emerald-600 group-hover:text-white', ring: 'ring-emerald-200/50' },
+                                    amber:   { bg: 'bg-amber-50 group-hover:bg-amber-600',     txt: 'text-amber-600 group-hover:text-white',   ring: 'ring-amber-200/50' },
+                                    rose:    { bg: 'bg-rose-50 group-hover:bg-rose-600',       txt: 'text-rose-600 group-hover:text-white',    ring: 'ring-rose-200/50' },
+                                };
+                                const c = colors[color];
+
+                                return (
+                                    <div key={i}
+                                        className="group relative flex flex-col items-center rounded-2xl bg-white p-6 text-center transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-slate-200/60 ring-1 ring-slate-100 hover:ring-transparent">
+                                        <div className={`flex h-14 w-14 items-center justify-center rounded-2xl transition-all duration-300 ${c.bg} ${c.txt} shadow-sm group-hover:shadow-lg group-hover:shadow-${color}-200/50 mb-4`}>
+                                            <Icon className="h-6 w-6 transition-transform duration-300 group-hover:scale-110" />
+                                        </div>
+                                        <span className="text-sm font-bold text-slate-800 mb-1">{label}</span>
+                                        <span className="text-[11px] text-slate-400 leading-relaxed">{desc}</span>
                                     </div>
-                                    <span className="text-sm font-bold text-slate-700">{label}</span>
-                                    <span className="mt-0.5 text-[11px] text-slate-400">{desc}</span>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 </section>
@@ -172,7 +194,7 @@ function HomeContent() {
                         </div>
                     </div>
                     <div className="border-t border-white/10 py-4">
-                        <div className="mx-auto max-w-6xl px-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-white/30">
+                        <div className="mx-auto max-w-6xl px-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-white/70">
                             <p>&copy; {new Date().getFullYear()} {isAr ? 'جميع الحقوق محفوظة' : 'Tous droits réservés'}</p>
                             <p>{isAr ? 'تصميم وتطوير : Prof Space Chariaa' : 'Design & développement : Prof Space Chariaa'}</p>
                         </div>
@@ -184,20 +206,15 @@ function HomeContent() {
 }
 
 export default function Home({ auth }) {
+    useEffect(() => {
+        if (auth?.user) {
+            router.visit(route('dashboard'), { replace: true });
+        }
+    }, []);
+
     return (
         <LanguageProvider defaultLocale="ar">
-            {auth?.user ? (
-                <div className="min-h-screen flex items-center justify-center bg-slate-50">
-                    <div className="text-center">
-                        <p className="text-slate-400">{'أنت متصل بالفعل'}</p>
-                        <Link href={route('dashboard')} className="mt-4 inline-flex items-center gap-1.5 text-indigo-600 hover:underline text-sm">
-                            {'الذهاب إلى لوحة التحكم ←'}
-                        </Link>
-                    </div>
-                </div>
-            ) : (
-                <HomeContent />
-            )}
+            {auth?.user ? null : <HomeContent />}
         </LanguageProvider>
     );
 }
