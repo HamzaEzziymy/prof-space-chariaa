@@ -5,7 +5,7 @@ const LanguageContext = createContext(null);
 
 export function LanguageProvider({ children, defaultLocale }) {
     const [locale, setLocale] = useState(() => {
-        return localStorage.getItem('locale') || defaultLocale || 'fr';
+        return defaultLocale || localStorage.getItem('locale') || 'fr';
     });
 
     const isRTL = locale === 'ar';

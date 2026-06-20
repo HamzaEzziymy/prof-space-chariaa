@@ -16,5 +16,7 @@ Route::middleware(['auth', 'prof'])
         Route::get('dashboard',                          [DashboardController::class, 'index'])->name('dashboard');
         Route::get('modules/{module}',                   [DashboardController::class, 'moduleStudents'])->name('modules.show');
         Route::post('modules/{module}/notes',            [DashboardController::class, 'saveNotes'])->name('modules.notes');
+        Route::get('modules/{module}/export-notes',      [DashboardController::class, 'exportNotes'])->name('modules.export-notes');
+        Route::post('modules/{module}/import-notes',     [DashboardController::class, 'importNotes'])->name('modules.import-notes');
         Route::post('logout',                            [AuthController::class, 'destroy'])->name('logout');
     });
