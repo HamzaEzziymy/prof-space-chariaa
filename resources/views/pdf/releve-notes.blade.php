@@ -99,11 +99,18 @@
             margin: 0;
             text-align: center;
         }
-        .header-filiere {
-            font-size: 10.5pt;
-            font-weight: 600;
+        .header-module-line {
+            font-size: 12pt;
+            font-weight: 700;
             color: #334155;
             margin: 6px 0 0;
+            text-align: center;
+        }
+        .header-filiere {
+            font-size: 10pt;
+            font-weight: 600;
+            color: #334155;
+            margin: 4px 0 0;
             text-align: center;
         }
         .header-sub {
@@ -111,40 +118,6 @@
             color: #64748b;
             margin-top: 4px;
             text-align: center;
-        }
-
-        /* Meta grid (4 info boxes) */
-        .meta-row {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 5px 0;
-            margin: 0 -5px;
-        }
-        .meta-row td {
-            width: 25%;
-            vertical-align: top;
-            padding: 0;
-        }
-        .meta-box {
-            background: #ffffff;
-            border: 1px solid #dbeafe;
-            border-radius: 8px;
-            padding: 7px 10px;
-        }
-        .meta-label {
-            display: block;
-            font-size: 6.8pt;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.7px;
-            color: #94a3b8;
-            margin-bottom: 2px;
-        }
-        .meta-value {
-            display: block;
-            font-size: 8.5pt;
-            font-weight: 600;
-            color: #1e293b;
         }
 
         /* ── Stats bar ─────────────────────────────────────────────────── */
@@ -330,52 +303,22 @@
 {{-- ═══════════════════════════════════════════════════════ HEADER ══ --}}
 <div class="header-wrap">
     <table class="header-main">
-        <tr>
+        {{-- <tr>
             <td class="header-logo-cell">
-                <span class="logo-monogram">{{ $isAr ? '?' : 'U' }}</span>
+                    <img src="{{ public_path('/logo.png') }}" alt="Logo">
             </td>
+        <tr> --}}
             <td class="header-info-cell">
                 <div class="header-doctitle">{{ $isAr ? '???? ?????' : 'RELEVE DE NOTES' }}</div>
                 <div class="header-filiere">{{ $isAr ? ($module->semestre?->niveau?->filiere?->nom_ar ?? $module->semestre?->niveau?->filiere?->nom_fr ?? '-') : ($module->semestre?->niveau?->filiere?->nom_fr ?? $module->semestre?->niveau?->filiere?->nom_ar ?? '-') }}</div>
                 <div class="header-sub">{{ $isAr ? ($module->semestre?->niveau?->nom_ar ?? $module->semestre?->niveau?->nom_fr ?? '-') : ($module->semestre?->niveau?->nom_fr ?? $module->semestre?->niveau?->nom_ar ?? '-') }} @if ($module->semestre) - {{ $isAr ? ($module->semestre->nom_ar ?? $module->semestre->nom_fr ?? '-') : ($module->semestre->nom_fr ?? $module->semestre->nom_ar ?? '-') }} @endif</div>
+                <div class="header-module-line">{{ $isAr ? '??????:' : 'MODULE:' }} {{ $isAr ? ($module->nom_ar ?? $module->nom_fr ?? '-') : ($module->nom_fr ?? $module->nom_ar ?? '-') }}</div>
             </td>
             <td class="header-spacer-cell"></td>
         </tr>
     </table>
 
-    <table class="meta-row">
-        <tr>
-            <td>
-                <div class="meta-box">
-                    <span class="meta-label">{{ $isAr ? '??????????????' : 'Professeur' }}</span>
-                    <span class="meta-value">
-                        {{ $prof->nom_fr }} {{ $prof->prenom_fr }}
-                        @if ($prof->nom_ar)
-                            / {{ $prof->nom_ar }} {{ $prof->prenom_ar }}
-                        @endif
-                    </span>
-                </div>
-            </td>
-            <td>
-                <div class="meta-box">
-                    <span class="meta-label">{{ $isAr ? '?????????? ??????????????' : 'Date' }}</span>
-                    <span class="meta-value">{{ $date }}</span>
-                </div>
-            </td>
-            <td>
-                <div class="meta-box">
-                    <span class="meta-label">{{ $isAr ? '?????? ????????????' : '??tudiants' }}</span>
-                    <span class="meta-value">{{ $total }}</span>
-                </div>
-            </td>
-            <td>
-                <div class="meta-box">
-                    <span class="meta-label">{{ $isAr ? '?????????? ????????????????' : 'Ann??e univ.' }}</span>
-                    <span class="meta-value">{{ $anneeUniversitaire ?? '???' }}</span>
-                </div>
-            </td>
-        </tr>
-    </table>
+
 </div>{{-- /.header-wrap --}}
 
 {{-- ═══════════════════════════════════════════════════════ STATS ═══ --}}
