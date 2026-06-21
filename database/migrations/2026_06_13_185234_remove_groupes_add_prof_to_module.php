@@ -14,10 +14,10 @@ return new class extends Migration
         Schema::dropIfExists('groupes');
         DB::statement('SET FOREIGN_KEY_CHECKS = 1');
 
-        // Drop groupe_id FK and column from inscription_examen
-        if (Schema::hasColumn('inscription_examen', 'groupe_id')) {
+        // Drop groupe_id FK and column from inscription_examen (if table still exists)
+        if (Schema::hasTable('inscription_examen') && Schema::hasColumn('inscription_examen', 'groupe_id')) {
             Schema::table('inscription_examen', function (Blueprint $table) {
-                $table->dropForeign('fk_ie_groupe');
+                try { $table->dropForeign('fk_ie_groupe'); } catch (\Exception $e) {}
                 $table->dropColumn('groupe_id');
             });
         }
@@ -68,8 +68,8 @@ return new class extends Migration
             $table->foreign('prof_id')->references('id')->on('prof')->onDelete('set null');
         });
 
-        // Restore groupe_id in inscription_examen
-        if (!Schema::hasColumn('inscription_examen', 'groupe_id')) {
+        // Restore groupe_id in inscription_examen (if table exists)
+        if (Schema::hasTable('inscription_examen') && !Schema::hasColumn('inscription_examen', 'groupe_id')) {
             Schema::table('inscription_examen', function (Blueprint $table) {
                 $table->unsignedBigInteger('groupe_id')->nullable()->after('etud_mod_id');
                 $table->foreign('groupe_id', 'fk_ie_groupe')->references('id')->on('groupes')->onDelete('set null');

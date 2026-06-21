@@ -329,7 +329,7 @@ function ExcelModal({ onClose, t, locale, isRTL }) {
         const example = 'CNE123456,MATH101,normale,1,12.5,10.0,11.0';
         const blob = new Blob([header + '\n' + example], { type: 'text/csv;charset=utf-8;' });
         const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob); a.download = 'inscription_examen_template.csv'; a.click();
+        a.href = URL.createObjectURL(blob); a.download = 'note_exam_template.csv'; a.click();
     };
 
     const ext = file?.name?.split('.').pop()?.toLowerCase();
@@ -682,7 +682,7 @@ function PageContent() {
                     const count = item.inscriptions_count ?? item.inscriptions?.length ?? 0;
                     const iId = isMod ? item.id : item.id;
                     const isExpanded = expanded.has(iId);
-                    const inscrits = item.inscriptions ?? [];
+                    const inscrits = Array.isArray(item.inscriptions) ? item.inscriptions : [];
                     return (
                         <div key={iId} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm overflow-hidden">
                             <div className={`flex items-center gap-3 px-5 py-4 ${isExpanded ? 'border-b border-slate-100 dark:border-slate-700/60' : ''}`}>

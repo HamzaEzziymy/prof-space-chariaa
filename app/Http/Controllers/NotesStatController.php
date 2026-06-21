@@ -6,7 +6,6 @@ use App\Models\Filiere;
 use App\Models\Module;
 use App\Models\Niveau;
 use App\Models\Semestre;
-use App\Models\InscriptionExamen;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -46,9 +45,10 @@ class NotesStatController extends Controller
                 ->get(['id', 'code_module', 'nom_fr', 'nom_ar']);
         }
 
-        $query = InscriptionExamen::query()
-            ->join('module', 'inscription_examen.module_id', '=', 'module.id')
-            ->join('etudiant', 'inscription_examen.etudiant_id', '=', 'etudiant.id');
+        $query = DB::table('note_exam')
+            ->join('etudiant_module', 'note_exam.etud_mod_id', '=', 'etudiant_module.id')
+            ->join('module', 'etudiant_module.module_id', '=', 'module.id')
+            ->join('etudiant', 'etudiant_module.etudiant_id', '=', 'etudiant.id');
 
         if ($filiereId) {
             $query->join('semestre as s1', 'module.semestre_id', '=', 's1.id')
@@ -63,52 +63,52 @@ class NotesStatController extends Controller
             $query->where('module.semestre_id', $semestreId);
         }
         if ($moduleId) {
-            $query->where('inscription_examen.module_id', $moduleId);
+            $query->where('etudiant_module.module_id', $moduleId);
         }
         if ($nexam) {
-            $query->where('inscription_examen.Nexam', $nexam);
+            $query->where('note_exam.Nexam', $nexam);
         }
 
         $stats = (clone $query)->selectRaw('
-            COUNT(DISTINCT inscription_examen.etudiant_id) as total_students,
-            COUNT(DISTINCT inscription_examen.module_id) as total_modules,
-            COUNT(inscription_examen.id) as total_inscriptions,
-            ROUND(AVG(inscription_examen.note_normale), 2) as avg_note_normale,
-            ROUND(AVG(inscription_examen.note_finale), 2) as avg_note_finale,
-            SUM(CASE WHEN COALESCE(inscription_examen.note_finale, inscription_examen.note_normale, 0) >= 10 THEN 1 ELSE 0 END) as pass_count,
-            SUM(CASE WHEN COALESCE(inscription_examen.note_finale, inscription_examen.note_normale, 0) < 10 THEN 1 ELSE 0 END) as fail_count,
-            SUM(CASE WHEN inscription_examen.note_normale IS NOT NULL THEN 1 ELSE 0 END) as with_note_normale,
-            SUM(CASE WHEN inscription_examen.note_rattrapage IS NOT NULL THEN 1 ELSE 0 END) as with_note_rattrapage,
-            SUM(CASE WHEN inscription_examen.note_finale IS NOT NULL THEN 1 ELSE 0 END) as with_note_finale
+            COUNT(DISTINCT etudiant_module.etudiant_id) as total_students,
+            COUNT(DISTINCT etudiant_module.module_id) as total_modules,
+            COUNT(note_exam.id) as total_inscriptions,
+            ROUND(AVG(note_exam.note_normale), 2) as avg_note_normale,
+            ROUND(AVG(note_exam.note_finale), 2) as avg_note_finale,
+            SUM(CASE WHEN COALESCE(note_exam.note_finale, note_exam.note_normale, 0) >= 10 THEN 1 ELSE 0 END) as pass_count,
+            SUM(CASE WHEN COALESCE(note_exam.note_finale, note_exam.note_normale, 0) < 10 THEN 1 ELSE 0 END) as fail_count,
+            SUM(CASE WHEN note_exam.note_normale IS NOT NULL THEN 1 ELSE 0 END) as with_note_normale,
+            SUM(CASE WHEN note_exam.note_rattrapage IS NOT NULL THEN 1 ELSE 0 END) as with_note_rattrapage,
+            SUM(CASE WHEN note_exam.note_finale IS NOT NULL THEN 1 ELSE 0 END) as with_note_finale
         ')->first();
 
         $perModule = (clone $query)
             ->selectRaw('
-                inscription_examen.module_id,
+                etudiant_module.module_id,
                 module.code_module,
                 module.nom_fr,
                 module.nom_ar,
-                COUNT(DISTINCT inscription_examen.etudiant_id) as student_count,
-                ROUND(AVG(inscription_examen.note_finale), 2) as avg_note_finale,
-                SUM(CASE WHEN COALESCE(inscription_examen.note_finale, inscription_examen.note_normale, 0) >= 10 THEN 1 ELSE 0 END) as pass_count,
-                SUM(CASE WHEN COALESCE(inscription_examen.note_finale, inscription_examen.note_normale, 0) < 10 THEN 1 ELSE 0 END) as fail_count
+                COUNT(DISTINCT etudiant_module.etudiant_id) as student_count,
+                ROUND(AVG(note_exam.note_finale), 2) as avg_note_finale,
+                SUM(CASE WHEN COALESCE(note_exam.note_finale, note_exam.note_normale, 0) >= 10 THEN 1 ELSE 0 END) as pass_count,
+                SUM(CASE WHEN COALESCE(note_exam.note_finale, note_exam.note_normale, 0) < 10 THEN 1 ELSE 0 END) as fail_count
             ')
-            ->groupBy('inscription_examen.module_id', 'module.code_module', 'module.nom_fr', 'module.nom_ar')
+            ->groupBy('etudiant_module.module_id', 'module.code_module', 'module.nom_fr', 'module.nom_ar')
             ->orderBy('student_count', 'desc')
             ->get();
 
         $distributionRaw = (clone $query)
             ->selectRaw('
                 CASE
-                    WHEN COALESCE(inscription_examen.note_finale, inscription_examen.note_normale, -1) < 0 THEN -1
-                    WHEN COALESCE(inscription_examen.note_finale, inscription_examen.note_normale, -1) <= 5 THEN 0
-                    WHEN COALESCE(inscription_examen.note_finale, inscription_examen.note_normale, -1) <= 10 THEN 1
-                    WHEN COALESCE(inscription_examen.note_finale, inscription_examen.note_normale, -1) <= 15 THEN 2
+                    WHEN COALESCE(note_exam.note_finale, note_exam.note_normale, -1) < 0 THEN -1
+                    WHEN COALESCE(note_exam.note_finale, note_exam.note_normale, -1) <= 5 THEN 0
+                    WHEN COALESCE(note_exam.note_finale, note_exam.note_normale, -1) <= 10 THEN 1
+                    WHEN COALESCE(note_exam.note_finale, note_exam.note_normale, -1) <= 15 THEN 2
                     ELSE 3
                 END as bucket,
                 COUNT(*) as count
             ')
-            ->whereNotNull(DB::raw('COALESCE(inscription_examen.note_finale, inscription_examen.note_normale)'))
+            ->whereNotNull(DB::raw('COALESCE(note_exam.note_finale, note_exam.note_normale)'))
             ->groupBy('bucket')
             ->pluck('count', 'bucket');
 

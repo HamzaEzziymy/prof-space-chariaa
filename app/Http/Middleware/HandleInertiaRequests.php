@@ -22,9 +22,22 @@ class HandleInertiaRequests extends Middleware
         $profModules = collect();
 
         if ($user && $user->role === 'prof' && $user->prof) {
+            $moduleIds = $user->prof->modules()->pluck('module.id');
+
+            $hasInscriptions = \App\Models\NoteExam::whereIn('etud_mod_id', function ($q) use ($moduleIds) {
+                $q->select('id')->from('etudiant_module')->whereIn('module_id', $moduleIds);
+            })->distinct()->pluck('etud_mod_id');
+
+            $moduleIdsWithNoteExams = \App\Models\EtudiantModule::whereIn('id', $hasInscriptions)
+                ->pluck('module_id')->unique()->toArray();
+
             $profModules = $user->prof->modules()
                 ->with('semestre.niveau.filiere')
-                ->get();
+                ->get()
+                ->map(fn ($m) => [
+                    ...$m->toArray(),
+                    'has_inscriptions' => in_array($m->id, $moduleIdsWithNoteExams),
+                ]);
         }
 
         return [

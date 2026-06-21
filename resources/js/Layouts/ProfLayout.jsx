@@ -203,11 +203,14 @@ export default function ProfLayout({ children, wide }) {
                                                 href={route('prof.modules.show', { module: mod.id })}
                                                 onMouseEnter={(e) => handleMouseEnter(e, name)}
                                                 onMouseLeave={() => setTooltip(null)}
-                                                className={`flex w-full items-center justify-center rounded-lg px-2 py-2.5 transition-all hover:bg-slate-100 dark:hover:bg-slate-800 ${
+                                                className={`relative flex w-full items-center justify-center rounded-lg px-2 py-2.5 transition-all hover:bg-slate-100 dark:hover:bg-slate-800 ${
                                                     isSelected ? 'text-primary bg-primary/5' : 'text-slate-400 dark:text-slate-500'
                                                 }`}
                                             >
                                                 <BookOpenIcon className="w-4 h-4" />
+                                                {mod.has_inscriptions === false && (
+                                                    <span className="absolute -top-0.5 -end-0.5 h-2 w-2 rounded-full bg-amber-400" />
+                                                )}
                                             </Link>
                                         );
                                     }
@@ -224,15 +227,22 @@ export default function ProfLayout({ children, wide }) {
                                         >
                                             <BookOpenIcon className="w-3.5 h-3.5 shrink-0 text-slate-300" />
                                             <span className="truncate">{name}</span>
-                                            {mod.code_module && (
-                                                <span className={`ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] ${
-                                                    isSelected
-                                                        ? 'bg-primary/10 text-primary'
-                                                        : 'bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500'
-                                                }`}>
-                                                    {mod.code_module}
-                                                </span>
-                                            )}
+                                            <div className="ml-auto flex items-center gap-1.5 shrink-0">
+                                                {mod.has_inscriptions === false && (
+                                                    <span className="rounded px-1.5 py-0.5 text-[9px] bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+                                                        {locale === 'ar' ? 'غير جاهز' : 'Non prêt'}
+                                                    </span>
+                                                )}
+                                                {mod.code_module && (
+                                                    <span className={`rounded px-1.5 py-0.5 text-[10px] ${
+                                                        isSelected
+                                                            ? 'bg-primary/10 text-primary'
+                                                            : 'bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500'
+                                                    }`}>
+                                                        {mod.code_module}
+                                                    </span>
+                                                )}
+                                            </div>
                                             {isSelected && (
                                                 <span className="ml-1 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
                                             )}

@@ -6,11 +6,11 @@ use App\Models\Etudiant;
 use App\Models\Module;
 use App\Models\NoteExam;
 use App\Models\EtudiantModule;
-use App\Models\InscriptionExamen;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Inertia\Inertia;
 use App\Http\Controllers\Concerns\HasExcelParser;
+use Illuminate\Support\Facades\DB;
 
 class InscriptionExamenController extends Controller
 {
@@ -24,95 +24,83 @@ class InscriptionExamenController extends Controller
             ->orderBy('nom_fr')->get();
 
         $stats = [
-            'total'   => InscriptionExamen::count(),
-            'with_grades'    => InscriptionExamen::whereNotNull('note_normale')->count(),
+            'total'   => NoteExam::distinct('etud_mod_id')->count('etud_mod_id'),
+            'with_grades'    => NoteExam::whereNotNull('note_normale')->distinct('etud_mod_id')->count('etud_mod_id'),
         ];
 
         $items = Module::with([
-            'inscriptionsExamen' => fn ($q) => $q->with('etudiant:id,nom_fr,prenom_fr,nom_ar,prenom_ar,CNE')
-                ->orderBy(\DB::raw('(SELECT nom_fr FROM etudiant WHERE etudiant.id = inscription_examen.etudiant_id)')),
+            'noteExams' => fn ($q) => $q->with('etudiantModule.etudiant:id,nom_fr,prenom_fr,nom_ar,prenom_ar,CNE')
+                ->orderBy(DB::raw('(SELECT nom_fr FROM etudiant JOIN etudiant_module ON etudiant_module.etudiant_id = etudiant.id WHERE etudiant_module.id = note_exam.etud_mod_id)')),
         ])
-        ->has('inscriptionsExamen')
+        ->has('noteExams')
         ->orderBy('nom_fr')
         ->paginate($perPage)
         ->withQueryString()
         ->through(function ($m) use ($request) {
-            // Load note_exam records for all inscriptions in this module
-            $moduleId = $m->id;
-            $etudiantIds = $m->inscriptionsExamen->pluck('etudiant_id');
-            $etudMods = EtudiantModule::where('module_id', $moduleId)
-                ->whereIn('etudiant_id', $etudiantIds)
-                ->get(['id', 'etudiant_id']);
-            $etudModIds = $etudMods->pluck('id');
-            $noteExams = NoteExam::whereIn('etud_mod_id', $etudModIds)
-                ->where('Nexam', $request->query('nexam', 1))
-                ->get()
-                ->keyBy('etud_mod_id');
-            // Map etud_mod_id to etudiant_id
-            $noteByEtudiant = collect();
-            foreach ($etudMods as $em) {
-                $noteByEtudiant[$em->etudiant_id] = $noteExams->get($em->id);
-            }
+            $nexam = $request->query('nexam', 1);
 
-            // Filter eligible inscriptions: for rattrapage, only students with note_normale < 10 or null
-            $eligibleIds = $m->inscriptionsExamen->filter(function ($ie) use ($noteByEtudiant) {
-                if ($ie->statut !== 'rattrapage') return true;
-                $nn = $noteByEtudiant[$ie->etudiant_id]?->note_normale ?? $ie->note_normale;
+            // Deduplicate by student — each student has one record, Nexam is just a field
+            $inscriptions = $m->noteExams->groupBy('etud_mod_id')->map(function ($group) {
+                $ne = $group->first();
+                $etud = $ne->etudiantModule?->etudiant;
+                return [
+                    'id'         => $ne->id,
+                    'Nexam'      => $ne->Nexam,
+                    'statut'     => $ne->statut ?? 'normale',
+                    'note_normale'    => $ne->note_normale,
+                    'note_rattrapage' => $ne->note_rattrapage,
+                    'note_finale'     => $ne->note_finale,
+                    'note_normale_decision_ar' => $ne->note_normale_decision_ar,
+                    'note_normale_decision_fr' => $ne->note_normale_decision_fr,
+                    'note_ratt_decision_ar'    => $ne->note_ratt_decision_ar,
+                    'note_ratt_decision_fr'    => $ne->note_ratt_decision_fr,
+                    'decision_finale_ar' => $ne->decision_finale_ar,
+                    'decision_finale_fr' => $ne->decision_finale_fr,
+                    'etudiant'   => $etud ? [
+                        'id'       => $etud->id,
+                        'nom_fr'   => $etud->nom_fr,
+                        'prenom_fr'=> $etud->prenom_fr,
+                        'nom_ar'   => $etud->nom_ar,
+                        'prenom_ar'=> $etud->prenom_ar,
+                        'CNE'      => $etud->CNE,
+                    ] : null,
+                ];
+            })->values();
+
+            // Filter eligible: for rattrapage, only students with note_normale < 10 or null
+            $eligibleIds = $inscriptions->filter(function ($ie) {
+                if ($ie['statut'] !== 'rattrapage') return true;
+                $nn = $ie['note_normale'];
                 return $nn === null || $nn < 10;
             })->pluck('id')->toArray();
 
-            $filtered = $m->inscriptionsExamen->whereIn('id', $eligibleIds);
-            $inscriptions = $filtered->map(function ($ie) use ($noteByEtudiant) {
-                    $noteNormale = $noteByEtudiant[$ie->etudiant_id]?->note_normale ?? $ie->note_normale;
-                    return [
-                    'id'         => $ie->id,
-                    'Nexam'      => $ie->Nexam,
-                    'statut'     => $ie->statut,
-                    'note_normale'    => $noteNormale,
-                    'note_rattrapage' => $noteByEtudiant[$ie->etudiant_id]?->note_rattrapage ?? $ie->note_rattrapage,
-                    'note_finale'     => $noteByEtudiant[$ie->etudiant_id]?->note_finale ?? $ie->note_finale,
-                    'note_normale_decision_ar' => $noteByEtudiant[$ie->etudiant_id]?->note_normale_decision_ar ?? $ie->note_normale_decision_ar,
-                    'note_normale_decision_fr' => $noteByEtudiant[$ie->etudiant_id]?->note_normale_decision_fr ?? $ie->note_normale_decision_fr,
-                    'note_ratt_decision_ar'    => $noteByEtudiant[$ie->etudiant_id]?->note_ratt_decision_ar ?? $ie->note_ratt_decision_ar,
-                    'note_ratt_decision_fr'    => $noteByEtudiant[$ie->etudiant_id]?->note_ratt_decision_fr ?? $ie->note_ratt_decision_fr,
-                    'decision_finale_ar' => $noteByEtudiant[$ie->etudiant_id]?->decision_finale_ar ?? $ie->decision_finale_ar,
-                    'decision_finale_fr' => $noteByEtudiant[$ie->etudiant_id]?->decision_finale_fr ?? $ie->decision_finale_fr,
-                    'etudiant'   => $ie->etudiant ? [
-                        'id'       => $ie->etudiant->id,
-                        'nom_fr'   => $ie->etudiant->nom_fr,
-                        'prenom_fr'=> $ie->etudiant->prenom_fr,
-                        'nom_ar'   => $ie->etudiant->nom_ar,
-                        'prenom_ar'=> $ie->etudiant->prenom_ar,
-                        'CNE'      => $ie->etudiant->CNE,
-                    ] : null,
-                    ];
-                })->values();
+            $filtered = $inscriptions->whereIn('id', $eligibleIds)->values();
 
             return [
-            'id'          => $m->id,
-            'nom_fr'      => $m->nom_fr,
-            'nom_ar'      => $m->nom_ar,
-            'code_module' => $m->code_module,
-            'coefficient' => $m->coefficient,
-            'semestre'    => $m->semestre ? [
-                'id'     => $m->semestre->id,
-                'nom_fr' => $m->semestre->nom_fr,
-                'nom_ar' => $m->semestre->nom_ar,
-                'niveau' => $m->semestre->niveau ? [
-                    'id'     => $m->semestre->niveau->id,
-                    'nom_fr' => $m->semestre->niveau->nom_fr,
-                    'nom_ar' => $m->semestre->niveau->nom_ar,
-                    'filiere' => $m->semestre->niveau->filiere ? [
-                        'id'     => $m->semestre->niveau->filiere->id,
-                        'nom_fr' => $m->semestre->niveau->filiere->nom_fr,
-                        'nom_ar' => $m->semestre->niveau->filiere->nom_ar,
+                'id'          => $m->id,
+                'nom_fr'      => $m->nom_fr,
+                'nom_ar'      => $m->nom_ar,
+                'code_module' => $m->code_module,
+                'coefficient' => $m->coefficient,
+                'semestre'    => $m->semestre ? [
+                    'id'     => $m->semestre->id,
+                    'nom_fr' => $m->semestre->nom_fr,
+                    'nom_ar' => $m->semestre->nom_ar,
+                    'niveau' => $m->semestre->niveau ? [
+                        'id'     => $m->semestre->niveau->id,
+                        'nom_fr' => $m->semestre->niveau->nom_fr,
+                        'nom_ar' => $m->semestre->niveau->nom_ar,
+                        'filiere' => $m->semestre->niveau->filiere ? [
+                            'id'     => $m->semestre->niveau->filiere->id,
+                            'nom_fr' => $m->semestre->niveau->filiere->nom_fr,
+                            'nom_ar' => $m->semestre->niveau->filiere->nom_ar,
+                        ] : null,
                     ] : null,
                 ] : null,
-            ] : null,
-            'inscriptions_count' => $inscriptions->count(),
-            'inscriptions' => $inscriptions,
-        ];
-    });
+                'inscriptions_count' => $filtered->count(),
+                'inscriptions' => $filtered,
+            ];
+        });
 
         return Inertia::render('InscriptionExamen/Index', [
             'items'      => $items,
@@ -136,9 +124,13 @@ class InscriptionExamenController extends Controller
         $skipped = 0;
 
         foreach ($validated['students'] as $s) {
-            $record = InscriptionExamen::firstOrCreate(
-                ['module_id' => $moduleId, 'etudiant_id' => $s['etudiant_id']],
-                ['Nexam' => $s['Nexam'] ?? null, 'statut' => 'normale']
+            $em = EtudiantModule::firstOrCreate(
+                ['module_id' => $moduleId, 'etudiant_id' => $s['etudiant_id']]
+            );
+
+            $record = NoteExam::firstOrCreate(
+                ['etud_mod_id' => $em->id],
+                ['Nexam' => $s['Nexam'] ?? 1, 'statut' => 'normale']
             );
             if ($record->wasRecentlyCreated) $created++;
             else $skipped++;
@@ -151,13 +143,13 @@ class InscriptionExamenController extends Controller
         return back()->with('success', $msg);
     }
 
-    public function updateStatut(Request $request, InscriptionExamen $inscriptionExamen)
+    public function updateStatut(Request $request, NoteExam $noteExam)
     {
         $validated = $request->validate([
             'statut' => 'required|in:normale,rattrapage,finale',
         ]);
 
-        $inscriptionExamen->update(['statut' => $validated['statut']]);
+        $noteExam->update(['statut' => $validated['statut']]);
 
         return back()->with('success', 'Statut mis à jour');
     }
@@ -170,19 +162,20 @@ class InscriptionExamenController extends Controller
 
         $statut = $validated['statut'];
 
+        $etudModIds = EtudiantModule::where('module_id', $module)->pluck('id');
+
         if ($statut === 'finale') {
-            // Auto-calculate note_finale = GREATEST(note_normale, note_rattrapage)
-            InscriptionExamen::where('module_id', $module)
+            NoteExam::whereIn('etud_mod_id', $etudModIds)
                 ->update([
                     'statut' => 'finale',
-                    'note_finale' => \DB::raw('GREATEST(COALESCE(note_normale,0), COALESCE(note_rattrapage,0))'),
+                    'note_finale' => DB::raw('GREATEST(COALESCE(note_normale,0), COALESCE(note_rattrapage,0))'),
                 ]);
         } else {
-            InscriptionExamen::where('module_id', $module)
+            NoteExam::whereIn('etud_mod_id', $etudModIds)
                 ->update(['statut' => $statut]);
         }
 
-        $updated = InscriptionExamen::where('module_id', $module)->count();
+        $updated = NoteExam::whereIn('etud_mod_id', $etudModIds)->count();
 
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json(['message' => "Statut changé en $statut pour $updated inscription(s)"]);
@@ -191,10 +184,10 @@ class InscriptionExamenController extends Controller
         return back()->with('success', "Statut mis à jour pour $updated inscription(s)");
     }
 
-    public function destroy(InscriptionExamen $inscriptionExamen)
+    public function destroy(NoteExam $noteExam)
     {
-        $inscriptionExamen->delete();
-        return back()->with('success', 'inscription_examen_deleted');
+        $noteExam->delete();
+        return back()->with('success', 'Inscription supprimée');
     }
 
     public function getEnrolledStudents($module): JsonResponse
@@ -216,15 +209,18 @@ class InscriptionExamenController extends Controller
                 'CNE'      => $e->CNE,
             ]);
 
-        // Check which already have an inscription for this module
-        $existing = InscriptionExamen::where('module_id', $module)
-            ->whereIn('etudiant_id', $students->pluck('id'))
+        $etudMods = EtudiantModule::where('module_id', $module)->pluck('id');
+        $existing = NoteExam::whereIn('etud_mod_id', $etudMods)
+            ->pluck('etud_mod_id')
+            ->toArray();
+
+        $existingEtudiantIds = EtudiantModule::whereIn('id', $existing)
             ->pluck('etudiant_id')
             ->toArray();
 
         return response()->json([
             'students' => $students,
-            'existing_ids' => $existing,
+            'existing_ids' => $existingEtudiantIds,
         ]);
     }
 
@@ -310,15 +306,20 @@ class InscriptionExamenController extends Controller
                 continue;
             }
 
-            InscriptionExamen::create([
-                'module_id'       => $moduleId,
-                'etudiant_id'     => $etudiantId,
-                'Nexam'           => $nexam,
-                'statut'          => $statut ?? 'normale',
-                'note_normale'    => $noteN,
-                'note_rattrapage' => $noteR,
-                'note_finale'     => $noteF,
-            ]);
+            $em = EtudiantModule::firstOrCreate(
+                ['module_id' => $moduleId, 'etudiant_id' => $etudiantId]
+            );
+
+            NoteExam::updateOrCreate(
+                ['etud_mod_id' => $em->id],
+                [
+                    'Nexam'           => $nexam ?? 1,
+                    'statut'          => $statut ?? 'normale',
+                    'note_normale'    => $noteN,
+                    'note_rattrapage' => $noteR,
+                    'note_finale'     => $noteF,
+                ]
+            );
 
             $report[] = ['line' => $line, 'cne' => $cne, 'code_module' => $codeModule, 'status' => 'imported', 'reason' => null];
             $imported++;

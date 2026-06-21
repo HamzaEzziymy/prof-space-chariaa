@@ -7,9 +7,9 @@ use App\Http\Controllers\Concerns\HasExcelParser;
 use App\Models\Module;
 use App\Models\Etudiant;
 use App\Models\EtudiantModule;
-use App\Models\InscriptionExamen;
 use App\Models\NoteExam;
 use Illuminate\Http\JsonResponse;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -41,43 +41,50 @@ class DashboardController extends Controller
         $prof = $user->prof;
 
         $module = Module::where('prof_id', $prof->id)
-            ->with('semestre.niveau.filiere')
+            ->with('semestre.niveau.filiere', 'prof.user')
             ->findOrFail($moduleId);
 
-        $inscriptions = InscriptionExamen::where('module_id', $module->id)->get()->keyBy('etudiant_id');
+        $noteExams = NoteExam::whereHas('etudiantModule', fn ($q) => $q->where('module_id', $module->id))
+            ->with('etudiantModule.etudiant:id,nom_fr,prenom_fr,nom_ar,prenom_ar,CNE,sexe')
+            ->get();
 
-        $etudiantModules = EtudiantModule::where('module_id', $module->id)->with('etudiant')->get();
-        $allNoteExams = NoteExam::whereIn('etud_mod_id', $etudiantModules->pluck('id'))->get()->groupBy('etud_mod_id');
+        if ($noteExams->isEmpty()) {
+            return Inertia::render('Prof/ModuleNotes', [
+                'module'      => $module,
+                'students'    => null,
+                'allStudents' => collect(),
+                'stats'       => ['total' => 0, 'entered' => 0, 'pending' => 0],
+                'ready'       => false,
+            ]);
+        }
 
-        $allStudents = $etudiantModules
-            ->map(function ($em) use ($inscriptions, $allNoteExams) {
-                $insc = $inscriptions->get($em->etudiant->id);
-                $statut = $insc?->statut ?? 'normale';
-                $nexam = $insc?->Nexam ?? 1;
-                $notes = $allNoteExams->get($em->id)?->keyBy('Nexam');
-                $first = $notes?->first();
-                $noteNormale = $first?->note_normale;
+        // Deduplicate by student — each student has one NoteExam record per module
+        $allStudents = $noteExams->groupBy('etud_mod_id')->map(function ($group) {
+            $ne = $group->first();
+            $etud = $ne->etudiantModule?->etudiant;
+            $statut = $ne->statut ?? 'normale';
+            $noteNormale = $ne->note_normale;
 
-                if ($statut === 'rattrapage' && $noteNormale !== null && $noteNormale >= 10) {
-                    return null;
-                }
+            if ($statut === 'rattrapage' && $noteNormale !== null && $noteNormale >= 10) {
+                return null;
+            }
 
-                return [
-                    'etud_mod_id'     => $em->id,
-                    'id'              => $em->etudiant->id,
-                    'nom_fr'          => $em->etudiant->nom_fr,
-                    'prenom_fr'       => $em->etudiant->prenom_fr,
-                    'nom_ar'          => $em->etudiant->nom_ar,
-                    'prenom_ar'       => $em->etudiant->prenom_ar,
-                    'CNE'             => $em->etudiant->CNE,
-                    'sexe'            => $em->etudiant->sexe,
-                    'nexam'           => $nexam,
-                    'note_normale'    => $noteNormale,
-                    'note_rattrapage' => $first?->note_rattrapage,
-                    'note_finale'     => $first?->note_finale,
-                    'statut'          => $statut,
-                ];
-            })
+            return [
+                'etud_mod_id'     => $ne->etud_mod_id,
+                'id'              => $etud->id,
+                'nom_fr'          => $etud->nom_fr,
+                'prenom_fr'       => $etud->prenom_fr,
+                'nom_ar'          => $etud->nom_ar,
+                'prenom_ar'       => $etud->prenom_ar,
+                'CNE'             => $etud->CNE,
+                'sexe'            => $etud->sexe,
+                'nexam'           => $ne->Nexam ?? 1,
+                'note_normale'    => $noteNormale,
+                'note_rattrapage' => $ne->note_rattrapage,
+                'note_finale'     => $ne->note_finale,
+                'statut'          => $statut,
+            ];
+        })
             ->filter()
             ->sortBy(fn ($s) => ($s['nom_fr'] ?? '').' '.($s['prenom_fr'] ?? ''))
             ->values();
@@ -111,6 +118,7 @@ class DashboardController extends Controller
             'students'       => $paginated,
             'allStudents'    => $exportStudents,
             'stats'          => ['total' => $total, 'entered' => $entered, 'pending' => $total - $entered],
+            'ready'          => true,
         ]);
     }
 
@@ -140,8 +148,9 @@ class DashboardController extends Controller
 
         foreach ($validated['notes'] as $item) {
             NoteExam::updateOrCreate(
-                ['etud_mod_id' => $item['etud_mod_id'], 'Nexam' => $item['Nexam']],
+                ['etud_mod_id' => $item['etud_mod_id']],
                 [
+                    'Nexam'           => $item['Nexam'],
                     'note_normale'    => $item['note_normale'] ?? null,
                     'note_rattrapage' => $item['note_rattrapage'] ?? null,
                     'note_finale'     => $item['note_finale'] ?? null,
@@ -161,23 +170,21 @@ class DashboardController extends Controller
         $locale = request()->query('locale', 'fr');
         $isAr = $locale === 'ar';
 
-        $inscriptions = InscriptionExamen::where('module_id', $module->id)->get()->keyBy('etudiant_id');
-
-        $students = EtudiantModule::where('module_id', $module->id)
-            ->with('etudiant')
+        $students = NoteExam::whereHas('etudiantModule', fn ($q) => $q->where('module_id', $module->id))
+            ->with('etudiantModule.etudiant:id,nom_fr,prenom_fr,CNE')
             ->get()
-            ->map(function ($em) use ($inscriptions) {
-                $insc = $inscriptions->get($em->etudiant->id);
-                $statut = $insc?->statut ?? 'normale';
-                $nexam = $insc?->Nexam ?? 1;
-                $note = NoteExam::where('etud_mod_id', $em->id)->first();
-                $nn = $note?->note_normale;
+            ->groupBy('etud_mod_id')
+            ->map(function ($group) {
+                $ne = $group->first();
+                $etud = $ne->etudiantModule?->etudiant;
+                $statut = $ne->statut ?? 'normale';
+                $nn = $ne->note_normale;
                 if ($statut === 'rattrapage' && $nn !== null && $nn >= 10) return null;
                 return [
-                    'CNE'       => $em->etudiant->CNE,
-                    'nom_fr'    => $em->etudiant->nom_fr,
-                    'prenom_fr' => $em->etudiant->prenom_fr,
-                    'nexam'     => $nexam,
+                    'CNE'       => $etud->CNE,
+                    'nom_fr'    => $etud->nom_fr,
+                    'prenom_fr' => $etud->prenom_fr,
+                    'nexam'     => $ne->Nexam ?? 1,
                     'statut'    => $statut,
                 ];
             })
@@ -199,14 +206,19 @@ class DashboardController extends Controller
             fputcsv($handle, $headers);
             foreach ($students as $s) {
                 fputcsv($handle, [
-                    $s['CNE'], $s['nom_fr'], $s['prenom_fr'],
-                    $s['nexam'], $statutLabel[$s['statut']] ?? $s['statut'], '',
+                    $s['CNE'],
+                    $s['nom_fr'],
+                    $s['prenom_fr'],
+                    $s['nexam'],
+                    $statutLabel[$s['statut']] ?? $s['statut'],
+                    '',
                 ]);
             }
             fclose($handle);
         };
 
         $filename = 'notes_' . $module->code_module . '_' . date('Ymd') . '.csv';
+
         return response()->stream($callback, 200, [
             'Content-Type'        => 'text/csv; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
@@ -218,6 +230,9 @@ class DashboardController extends Controller
         $user = auth()->user();
         $prof = $user->prof;
         $module = Module::where('prof_id', $prof->id)->findOrFail($moduleId);
+        $locale = $request->input('locale', 'fr');
+
+        $tl = fn ($fr, $ar) => $locale === 'ar' ? $ar : $fr;
 
         $request->validate(['file' => 'required|file|mimes:csv,txt,xlsx,xls']);
 
@@ -235,19 +250,28 @@ class DashboardController extends Controller
             return response()->json(['success' => false, 'message' => 'Fichier vide ou illisible'], 422);
         }
 
-        $header = array_map('trim', array_map('strtolower', $rows[0]));
+        $header = array_map(fn ($h) => trim(mb_strtolower($h)), $rows[0]);
         $cneIdx = array_search('cne', $header);
         $noteIdx = array_search('note', $header);
+
+        if ($noteIdx === false) {
+            $noteIdx = array_search('النقطة', $header);
+        }
+        if ($noteIdx === false) {
+            $noteIdx = array_search('العلامة', $header);
+        }
+        if ($noteIdx === false) {
+            $noteIdx = array_search('الدرجة', $header);
+        }
 
         if ($cneIdx === false || $noteIdx === false) {
             return response()->json([
                 'success' => false,
-                'message' => 'Le fichier doit contenir les colonnes "CNE" et "Note"',
+                'message' => $tl('Le fichier doit contenir les colonnes "CNE" et "Note"', 'يجب أن يحتوي الملف على عمودي CNE والنقطة'),
             ], 422);
         }
 
         $dataRows = array_slice($rows, 1);
-        $statuts = InscriptionExamen::where('module_id', $module->id)->pluck('statut', 'etudiant_id');
         $imported = 0;
         $errors = [];
         $seen = [];
@@ -258,35 +282,35 @@ class DashboardController extends Controller
             $noteRaw = trim((string) ($row[$noteIdx] ?? ''));
 
             if (empty($cne) && empty($noteRaw)) continue;
-            if (empty($cne)) { $errors[] = "Ligne $line : CNE manquant"; continue; }
+            if (empty($cne)) { $errors[] = ['line' => $line, 'cne' => '', 'reason' => $tl('CNE manquant', 'CNE مفقود')]; continue; }
 
-            if (isset($seen[$cne])) { $errors[] = "Ligne $line : CNE '$cne' en double"; continue; }
+            if (isset($seen[$cne])) { $errors[] = ['line' => $line, 'cne' => $cne, 'reason' => $tl('CNE en double', 'CNE مكرر')]; continue; }
             $seen[$cne] = $line;
 
             $etud = Etudiant::where('CNE', $cne)->first();
-            if (!$etud) { $errors[] = "Ligne $line : CNE '$cne' introuvable"; continue; }
+            if (!$etud) { $errors[] = ['line' => $line, 'cne' => $cne, 'reason' => $tl('CNE introuvable', 'CNE غير موجود')]; continue; }
 
             $em = EtudiantModule::where('module_id', $module->id)->where('etudiant_id', $etud->id)->first();
-            if (!$em) { $errors[] = "Ligne $line : étudiant '$cne' non inscrit dans ce module"; continue; }
+            if (!$em) { $errors[] = ['line' => $line, 'cne' => $cne, 'reason' => $tl("étudiant '$cne' non inscrit dans ce module", "الطالب '$cne' غير مسجل في هذه الوحدة")]; continue; }
 
-            if ($noteRaw === '') { $errors[] = "Ligne $line : note manquante pour '$cne'"; continue; }
+            if ($noteRaw === '') { $errors[] = ['line' => $line, 'cne' => $cne, 'reason' => $tl('note manquante', 'النقطة مفقودة')]; continue; }
 
-            $statut = $statuts[$etud->id] ?? 'normale';
             $existing = NoteExam::where('etud_mod_id', $em->id)->first();
+            $statut = $existing?->statut ?? 'normale';
             $nn = $existing?->note_normale;
             if ($statut === 'rattrapage' && $nn !== null && $nn >= 10) {
-                $errors[] = "Ligne $line : '$cne' déjà validé en normale, pas de rattrapage";
+                $errors[] = ['line' => $line, 'cne' => $cne, 'reason' => $tl('déjà validé en normale, pas de rattrapage', 'مستوفي في الدورة العادية، لا يمكن التسجيل في الاستدراك')];
                 continue;
             }
 
             if (!is_numeric($noteRaw)) {
-                $errors[] = "Ligne $line : note '$noteRaw' non valide pour '$cne'";
+                $errors[] = ['line' => $line, 'cne' => $cne, 'reason' => $tl("note '$noteRaw' non valide", "النقطة '$noteRaw' غير صالحة")];
                 continue;
             }
 
             $note = (float) $noteRaw;
             if ($note < 0 || ($note > 20 && (int) $note !== 99)) {
-                $errors[] = "Ligne $line : note '$noteRaw' pour '$cne' doit être entre 0 et 20 ou 99 (absent)";
+                $errors[] = ['line' => $line, 'cne' => $cne, 'reason' => $tl('note doit être entre 0 et 20 ou 99 (absent)', 'النقطة يجب أن تكون بين 0 و 20 أو 99 (غائب)')];
                 continue;
             }
 
@@ -299,8 +323,8 @@ class DashboardController extends Controller
             $nexam = $existing?->Nexam ?? 1;
 
             NoteExam::updateOrCreate(
-                ['etud_mod_id' => $em->id, 'Nexam' => $nexam],
-                [$field => $note]
+                ['etud_mod_id' => $em->id],
+                ['Nexam' => $nexam, $field => $note]
             );
 
             $imported++;
@@ -311,8 +335,57 @@ class DashboardController extends Controller
             'imported' => $imported,
             'errors'   => $errors,
             'message'  => $imported > 0
-                ? "$imported note(s) importée(s)" . (count($errors) ? " avec " . count($errors) . " erreur(s)" : " avec succès")
-                : "Aucune note importée",
+                ? $tl("$imported note(s) importée(s)" . (count($errors) ? " avec " . count($errors) . " erreur(s)" : " avec succès"), "$imported نقطة مستوردة" . (count($errors) ? " مع " . count($errors) . " خطأ" : " بنجاح"))
+                : $tl('Aucune note importée', 'لم يتم استيراد أي نقطة'),
         ]);
+    }
+
+    public function releveNotesPdf(int $moduleId)
+    {
+        $user = auth()->user();
+        $prof = $user->prof;
+        $module = Module::where('prof_id', $prof->id)
+            ->with('semestre.niveau.filiere', 'prof.user')
+            ->findOrFail($moduleId);
+
+        $locale = request()->query('locale', 'fr');
+        $isAr = $locale === 'ar';
+
+        $noteExams = NoteExam::whereHas('etudiantModule', fn ($q) => $q->where('module_id', $module->id))
+            ->with('etudiantModule.etudiant:id,nom_fr,prenom_fr,nom_ar,prenom_ar,CNE')
+            ->get();
+
+        $students = $noteExams->groupBy('etud_mod_id')->map(function ($group) {
+            $ne = $group->first();
+            $etud = $ne->etudiantModule?->etudiant;
+            $statut = $ne->statut ?? 'normale';
+            $nn = $ne->note_normale;
+            if ($statut === 'rattrapage' && $nn !== null && $nn >= 10) return null;
+            $note = $ne->note_finale ?? $ne->note_rattrapage ?? $nn ?? '';
+            return [
+                'CNE'       => $etud->CNE,
+                'nom_fr'    => $etud->nom_fr,
+                'prenom_fr' => $etud->prenom_fr,
+                'nom_ar'    => $etud->nom_ar,
+                'prenom_ar' => $etud->prenom_ar,
+                'note'      => $note,
+            ];
+        })->filter()->sortBy(fn ($s) => ($s['nom_fr'] ?? '').' '.($s['prenom_fr'] ?? ''))->values();
+
+        $html = view('pdf.releve-notes', [
+            'module'             => $module,
+            'prof'               => $prof,
+            'students'           => $students,
+            'total'              => $students->count(),
+            'date'               => now()->translatedFormat('d F Y'),
+            'anneeUniversitaire' => null,
+            'isAr'               => $isAr,
+        ])->render();
+
+        $filename = 'releve_notes_' . $module->code_module . '_' . now()->format('Ymd') . '.pdf';
+        return Pdf::loadHTML($html)
+            ->setPaper('a4', 'portrait')
+            ->setOption('defaultFont', 'DejaVu Sans')
+            ->download($filename);
     }
 }

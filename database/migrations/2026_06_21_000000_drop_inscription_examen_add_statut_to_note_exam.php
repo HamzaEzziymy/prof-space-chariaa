@@ -8,11 +8,26 @@ return new class extends Migration
 {
     public function up(): void
     {
+        Schema::dropIfExists('inscription_examen');
+
+        if (!Schema::hasColumn('note_exam', 'statut')) {
+            Schema::table('note_exam', function (Blueprint $table) {
+                $table->string('statut', 20)->nullable()->after('Nexam')->default('normale');
+            });
+        }
+    }
+
+    public function down(): void
+    {
+        Schema::table('note_exam', function (Blueprint $table) {
+            $table->dropColumn('statut');
+        });
+
         Schema::create('inscription_examen', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->unsignedBigInteger('etud_mod_id');
-            $table->unsignedBigInteger('groupe_id')->nullable();
-            $table->unsignedBigInteger('id_salle')->nullable();
+            $table->unsignedBigInteger('module_id')->nullable();
+            $table->unsignedBigInteger('etudiant_id')->nullable();
+            $table->string('statut', 20)->nullable();
             $table->integer('Nexam')->nullable();
             $table->float('note_normale')->nullable();
             $table->float('note_rattrapage')->nullable();
@@ -24,18 +39,8 @@ return new class extends Migration
             $table->string('decision_finale_ar', 50)->default('غير مستوفي');
             $table->string('decision_finale_fr', 50)->default('Non validé');
             $table->timestamps();
-
-            $table->foreign('etud_mod_id', 'fk_ie_etud_mod')
-                ->references('id')->on('etudiant_module')->cascadeOnDelete();
-            $table->foreign('groupe_id', 'fk_ie_groupe')
-                ->references('id')->on('groupes')->nullOnDelete();
-            $table->foreign('id_salle', 'fk_ie_salle')
-                ->references('id')->on('salle')->nullOnDelete();
+            $table->foreign('module_id')->references('id')->on('module')->onDelete('cascade');
+            $table->foreign('etudiant_id')->references('id')->on('etudiant')->onDelete('cascade');
         });
-    }
-
-    public function down(): void
-    {
-        Schema::dropIfExists('inscription_examen');
     }
 };

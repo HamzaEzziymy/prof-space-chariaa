@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 
 class NoteExam extends Model
 {
@@ -12,6 +13,7 @@ class NoteExam extends Model
     protected $fillable = [
         'etud_mod_id',
         'Nexam',
+        'statut',
         'note_normale',
         'note_rattrapage',
         'note_finale',
@@ -38,7 +40,6 @@ class NoteExam extends Model
         parent::boot();
 
         static::saving(function (self $note) {
-            // --- note_normale decision ---
             if (is_null($note->note_normale)) {
                 $note->note_normale_decision_ar = 'غير مستوفي';
                 $note->note_normale_decision_fr = 'Non validé';
@@ -47,7 +48,6 @@ class NoteExam extends Model
                 $note->note_normale_decision_fr = $note->note_normale >= 10 ? 'Validé' : 'Non validé';
             }
 
-            // --- note_rattrapage decision (nullable) ---
             if (is_null($note->note_rattrapage)) {
                 $note->note_ratt_decision_ar = null;
                 $note->note_ratt_decision_fr = null;
@@ -56,7 +56,6 @@ class NoteExam extends Model
                 $note->note_ratt_decision_fr = $note->note_rattrapage >= 10 ? 'Validé' : 'Non validé';
             }
 
-            // --- decision_finale (if rattrapage exists use it, else normale) ---
             if (!is_null($note->note_rattrapage)) {
                 $note->decision_finale_ar = $note->note_rattrapage >= 10 ? 'مستوفي' : 'غير مستوفي';
                 $note->decision_finale_fr = $note->note_rattrapage >= 10 ? 'Validé' : 'Non validé';
@@ -70,17 +69,21 @@ class NoteExam extends Model
         });
     }
 
-    /**
-     * Get the student-module enrollment this note belongs to.
-     */
     public function etudiantModule(): BelongsTo
     {
         return $this->belongsTo(EtudiantModule::class, 'etud_mod_id');
     }
 
-    /**
-     * Get the salle (room) where this exam took place.
-     */
+    public function module(): HasOneThrough
+    {
+        return $this->hasOneThrough(Module::class, EtudiantModule::class, 'id', 'id', 'etud_mod_id', 'module_id');
+    }
+
+    public function etudiant(): HasOneThrough
+    {
+        return $this->hasOneThrough(Etudiant::class, EtudiantModule::class, 'id', 'id', 'etud_mod_id', 'etudiant_id');
+    }
+
     public function salle(): BelongsTo
     {
         return $this->belongsTo(Salle::class, 'id_salle');

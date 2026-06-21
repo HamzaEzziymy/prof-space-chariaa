@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Module extends Model
 {
@@ -42,8 +43,8 @@ class Module extends Model
         return $this->hasMany(EtudiantModule::class, 'module_id');
     }
 
-    public function inscriptionsExamen(): HasMany
+    public function noteExams(): HasManyThrough
     {
-        return $this->hasMany(InscriptionExamen::class, 'module_id');
+        return $this->hasManyThrough(NoteExam::class, EtudiantModule::class, 'module_id', 'etud_mod_id');
     }
 }

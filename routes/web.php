@@ -113,8 +113,8 @@ Route::middleware(['auth', 'admin'])->prefix('inscription-examen')->name('inscri
     Route::get('/',             [\App\Http\Controllers\InscriptionExamenController::class, 'index'])->name('index');
     Route::post('/',            [\App\Http\Controllers\InscriptionExamenController::class, 'store'])->name('store');
     Route::put('/batch-statut/{module}', [\App\Http\Controllers\InscriptionExamenController::class, 'batchStatut'])->name('batch-statut');
-    Route::put('/{inscriptionExamen}/statut', [\App\Http\Controllers\InscriptionExamenController::class, 'updateStatut'])->name('update-statut');
-    Route::delete('/{inscriptionExamen}', [\App\Http\Controllers\InscriptionExamenController::class, 'destroy'])->name('destroy');
+    Route::put('/{noteExam}/statut', [\App\Http\Controllers\InscriptionExamenController::class, 'updateStatut'])->name('update-statut');
+    Route::delete('/{noteExam}', [\App\Http\Controllers\InscriptionExamenController::class, 'destroy'])->name('destroy');
     Route::post('/import',      [\App\Http\Controllers\InscriptionExamenController::class, 'import'])->name('import');
     Route::get('/enrolled/{module}', [\App\Http\Controllers\InscriptionExamenController::class, 'getEnrolledStudents'])->name('enrolled');
 });
