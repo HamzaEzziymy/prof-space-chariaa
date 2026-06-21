@@ -5,7 +5,7 @@
     <title>{{ $isAr ? 'بيان النقاط' : 'Relevé de notes' }}</title>
     <style>
         @page {
-            margin: 16mm 14mm 22mm 14mm;
+            margin: 5mm 14mm 22mm 14mm;
         }
 
         * {
@@ -27,7 +27,24 @@
             background: #ffffff;
         }
 
-        /* ── Fixed footer ─────────────────────────────────────────────── */
+        .rtl-block {
+            direction: rtl;
+            unicode-bidi: embed;
+            text-align: right;
+        }
+
+        .rtl-inline {
+            direction: rtl;
+            unicode-bidi: embed;
+            display: inline-block;
+        }
+
+        .ltr-inline {
+            direction: ltr;
+            unicode-bidi: embed;
+            display: inline-block;
+        }
+
         .page-footer {
             position: fixed;
             bottom: 0;
@@ -47,46 +64,28 @@
         .footer-left  { display: table-cell; text-align: {{ $isAr ? 'right' : 'left' }}; }
         .footer-right { display: table-cell; text-align: {{ $isAr ? 'left' : 'right' }}; }
 
-        /* ── Header band ──────────────────────────────────────────────── */
         .header-wrap {
             margin-bottom: 14px;
             padding-bottom: 10px;
             border-bottom: 1px solid #dbeafe;
         }
+        .header-logo {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .header-logo img {
+            display: block;
+            width: 70%;
+            max-width: 70%;
+            height: auto;
+            margin: 0 auto;
+            object-fit: contain;
+        }
 
-        /* Logo + title row */
         .header-main {
             width: 100%;
             border-collapse: collapse;
         }
-        .header-logo-cell,
-        .header-spacer-cell {
-            width: 72px;
-            vertical-align: middle;
-        }
-        .header-logo-cell {
-            padding-{{ $isAr ? 'left' : 'right' }}: 16px;
-        }
-        .header-logo-cell img {
-            width: 62px;
-            height: 62px;
-            object-fit: contain;
-            display: block;
-        }
-        /* Fallback monogram when no logo */
-        .logo-monogram {
-            width: 62px;
-            height: 62px;
-            background: #1e40af;
-            border-radius: 12px;
-            display: block;
-            text-align: center;
-            line-height: 62px;
-            font-size: 24pt;
-            font-weight: 700;
-            color: #ffffff;
-        }
-
         .header-info-cell {
             vertical-align: middle;
             text-align: center;
@@ -120,63 +119,6 @@
             text-align: center;
         }
 
-        /* ── Stats bar ─────────────────────────────────────────────────── */
-        .stats-wrap {
-            margin-bottom: 12px;
-        }
-        .stats-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 5px 0;
-        }
-        .stats-table td {
-            width: 25%;
-            vertical-align: top;
-        }
-        .stat-box {
-            border-radius: 8px;
-            padding: 8px 10px;
-            text-align: center;
-        }
-        .stat-box .num {
-            display: block;
-            font-size: 13pt;
-            font-weight: 700;
-            line-height: 1;
-            margin-bottom: 3px;
-        }
-        .stat-box .lbl {
-            display: block;
-            font-size: 6.8pt;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
-        }
-        .stat-valid   { background: #dcfce7; border: 1px solid #bbf7d0; }
-        .stat-valid   .num { color: #166534; }
-        .stat-valid   .lbl { color: #15803d; }
-        .stat-fail    { background: #fee2e2; border: 1px solid #fecaca; }
-        .stat-fail    .num { color: #b91c1c; }
-        .stat-fail    .lbl { color: #dc2626; }
-        .stat-absent  { background: #fef3c7; border: 1px solid #fde68a; }
-        .stat-absent  .num { color: #92400e; }
-        .stat-absent  .lbl { color: #b45309; }
-        .stat-empty   { background: #f1f5f9; border: 1px solid #e2e8f0; }
-        .stat-empty   .num { color: #475569; }
-        .stat-empty   .lbl { color: #64748b; }
-
-        /* ── Section heading ───────────────────────────────────────────── */
-            font-size: 7.4pt;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.6px;
-            color: #64748b;
-            border-bottom: 2px solid #1e40af;
-            padding-bottom: 4px;
-            margin-bottom: 8px;
-        }
-
-        /* ── Data table ────────────────────────────────────────────────── */
         table.data {
             width: 100%;
             border-collapse: collapse;
@@ -207,19 +149,18 @@
         }
 
         .center { text-align: center; }
-        .index  { color: #94a3b8; font-size: 7.8pt; font-weight: 700; }
 
         .cne {
             font-family: 'DejaVu Sans Mono', monospace;
             font-size: 7.6pt;
             color: #475569;
             letter-spacing: 0.3px;
+            direction: ltr;
         }
 
         .note-value  { text-align: center; font-weight: 700; color: #1e3a8a; }
         .note-absent { text-align: center; font-weight: 700; color: #a16207; }
 
-        /* Badges */
         .badge {
             display: inline;
             min-width: 0;
@@ -236,7 +177,6 @@
         .badge-absent { color: #92400e; }
         .badge-empty  { color: #64748b; }
 
-        /* Empty state */
         .empty-state {
             text-align: center;
             padding: 32px 16px;
@@ -244,21 +184,18 @@
             font-size: 10pt;
         }
 
-        /* ── Signature section ─────────────────────────────────────────── */
         .sig-section {
-            margin-top: 22px;
-            padding-top: 12px;
-            border-top: 1px solid #e2e8f0;
+            margin-top: 6px;
+            margin-bottom: 10px;
         }
         .sig-table { width: 100%; border-collapse: collapse; }
         .sig-table td { vertical-align: bottom; font-size: 8pt; }
-        .sig-date { color: #94a3b8; }
-        .sig-right { text-align: {{ $isAr ? 'left' : 'right' }}; }
+        .sig-date { color: #94a3b8; text-align: left; }
+        .sig-right { text-align: right; }
         .sig-line {
             display: inline-block;
             min-width: 200px;
             padding-top: 6px;
-            border-top: 1.5px solid #1e40af;
             color: #334155;
             text-align: center;
             font-size: 8pt;
@@ -268,11 +205,10 @@
 </head>
 <body>
 
-{{-- Fixed footer with page numbers --}}
 <div class="page-footer">
     <div class="page-footer-inner">
-        <span class="footer-left">{{ $isAr ? 'بيان النقاط' : 'Relevé de notes' }} — {{ $isAr ? ($module->nom_ar ?? $module->nom_fr) : $module->nom_fr }}</span>
-        <span class="footer-right">{{ $isAr ? 'صفحة' : 'Page' }} {PAGENO} / {nb}</span>
+        <span class="footer-left" dir="{{ $isAr ? 'rtl' : 'ltr' }}">{{ $isAr ? 'بيان النقاط' : 'Relevé de notes' }} — {{ $isAr ? ($module->nom_ar ?? $module->nom_fr) : $module->nom_fr }}</span>
+        <span class="footer-right" dir="{{ $isAr ? 'rtl' : 'ltr' }}">{{ $isAr ? 'صفحة' : 'Page' }} {PAGENO} / {nb}</span>
     </div>
 </div>
 
@@ -282,48 +218,43 @@
         $prenom = $isAr ? ($student['prenom_ar'] ?? $student['prenom_fr'] ?? '') : ($student['prenom_fr'] ?? $student['prenom_ar'] ?? '');
         return mb_strtolower(trim($nom . ' ' . $prenom));
     })->values();
-
-    $validCount  = 0;
-    $failCount   = 0;
-    $absentCount = 0;
-    $emptyCount  = 0;
-
-    foreach ($students as $student) {
-        $note    = $student['note'] ?? '';
-        $isEmpty = $note === '' || $note === null;
-        $isAbsent = !$isEmpty && ((int) $note === 99);
-
-        if ($isEmpty)        { $emptyCount++; }
-        elseif ($isAbsent)   { $absentCount++; }
-        elseif ((float)$note >= 10) { $validCount++; }
-        else                 { $failCount++; }
-    }
 @endphp
 
-{{-- ═══════════════════════════════════════════════════════ HEADER ══ --}}
 <div class="header-wrap">
+    <div class="header-logo">
+        <img src="{{ public_path('./logo.jpg') }}" alt="Logo">
+    </div>
+    <hr style="border: 1px solid #1e40af; margin-top: 10px; margin-bottom: 10px;">
+    <div class="sig-section">
+        <table class="sig-table">
+            <tr>
+                <td class="sig-date">
+                    @if ($isAr)
+                        <span class="rtl-inline">تم الإنشاء في:</span>
+                        <span class="ltr-inline">{{ $date }}</span>
+                    @else
+                        Généré le {{ $date }}
+                    @endif
+                </td>
+                <td class="sig-right">
+                    <span class="sig-line {{ $isAr ? 'rtl-inline' : '' }}">{{ $isAr ? 'توقيع الأستاذ:' : 'Signature du professeur:' }}</span>
+                </td>
+            </tr>
+        </table>
+    </div>
     <table class="header-main">
-        {{-- <tr>
-            <td class="header-logo-cell">
-                    <img src="{{ public_path('/logo.png') }}" alt="Logo">
-            </td>
-        <tr> --}}
+        <tr>
             <td class="header-info-cell">
-                <div class="header-doctitle">{{ $isAr ? '???? ?????' : 'RELEVE DE NOTES' }}</div>
-                <div class="header-filiere">{{ $isAr ? ($module->semestre?->niveau?->filiere?->nom_ar ?? $module->semestre?->niveau?->filiere?->nom_fr ?? '-') : ($module->semestre?->niveau?->filiere?->nom_fr ?? $module->semestre?->niveau?->filiere?->nom_ar ?? '-') }}</div>
-                <div class="header-sub">{{ $isAr ? ($module->semestre?->niveau?->nom_ar ?? $module->semestre?->niveau?->nom_fr ?? '-') : ($module->semestre?->niveau?->nom_fr ?? $module->semestre?->niveau?->nom_ar ?? '-') }} @if ($module->semestre) - {{ $isAr ? ($module->semestre->nom_ar ?? $module->semestre->nom_fr ?? '-') : ($module->semestre->nom_fr ?? $module->semestre->nom_ar ?? '-') }} @endif</div>
-                <div class="header-module-line">{{ $isAr ? '??????:' : 'MODULE:' }} {{ $isAr ? ($module->nom_ar ?? $module->nom_fr ?? '-') : ($module->nom_fr ?? $module->nom_ar ?? '-') }}</div>
+                <div class="header-doctitle {{ $isAr ? 'rtl-block' : '' }}">{{ $isAr ? 'بيان النقاط' : 'RELEVE DE NOTES' }}</div>
+                <div class="header-filiere {{ $isAr ? 'rtl-block' : '' }}">{{ $isAr ? ($module->semestre?->niveau?->filiere?->nom_ar ?? $module->semestre?->niveau?->filiere?->nom_fr ?? '-') : ($module->semestre?->niveau?->filiere?->nom_fr ?? $module->semestre?->niveau?->filiere?->nom_ar ?? '-') }}</div>
+                <div class="header-sub {{ $isAr ? 'rtl-block' : '' }}">{{ $isAr ? ($module->semestre?->niveau?->nom_ar ?? $module->semestre?->niveau?->nom_fr ?? '-') : ($module->semestre?->niveau?->nom_fr ?? $module->semestre?->niveau?->nom_ar ?? '-') }} @if ($module->semestre) - {{ $isAr ? ($module->semestre->nom_ar ?? $module->semestre->nom_fr ?? '-') : ($module->semestre->nom_fr ?? $module->semestre->nom_ar ?? '-') }} @endif</div>
+                <div class="header-module-line {{ $isAr ? 'rtl-block' : '' }}">{{ $isAr ? 'الوحدة:' : 'MODULE:' }} {{ $isAr ? ($module->nom_ar ?? $module->nom_fr ?? '-') : ($module->nom_fr ?? $module->nom_ar ?? '-') }}</div>
             </td>
-            <td class="header-spacer-cell"></td>
         </tr>
     </table>
+</div>
 
-
-</div>{{-- /.header-wrap --}}
-
-{{-- ═══════════════════════════════════════════════════════ STATS ═══ --}}
-
-<table class="data">
+<table class="data" dir="{{ $isAr ? 'rtl' : 'ltr' }}">
     <thead>
         <tr>
             <th style="width:80px">CNE</th>
@@ -366,10 +297,10 @@
             @endphp
             <tr>
                 <td class="cne">{{ $s['CNE'] }}</td>
-                <td>{{ $nomDisplay }}</td>
-                <td>{{ $prenomDisplay }}</td>
+                <td dir="{{ $isAr ? 'rtl' : 'ltr' }}">{{ $nomDisplay }}</td>
+                <td dir="{{ $isAr ? 'rtl' : 'ltr' }}">{{ $prenomDisplay }}</td>
                 <td class="{{ $isAbsent ? 'note-absent' : 'note-value' }}">{{ $noteDisplay }}</td>
-                <td class="center"><span class="badge {{ $badgeClass }}">{{ $decisionDisplay }}</span></td>
+                <td class="center"><span class="badge {{ $badgeClass }} {{ $isAr ? 'rtl-inline' : '' }}">{{ $decisionDisplay }}</span></td>
             </tr>
         @empty
             <tr>
@@ -382,22 +313,6 @@
         @endforelse
     </tbody>
 </table>
-
-{{-- ═══════════════════════════════════════════════════════ SIGNATURE --}}
-<div class="sig-section">
-    <table class="sig-table">
-        <tr>
-            <td class="sig-date">
-                {{ $isAr ? 'تم الإنشاء في' : 'Généré le' }} {{ $date }}
-            </td>
-            <td class="sig-right">
-                <span class="sig-line">
-                    {{ $isAr ? 'توقيع الأستاذ' : 'Signature du professeur' }}
-                </span>
-            </td>
-        </tr>
-    </table>
-</div>
 
 </body>
 </html>
