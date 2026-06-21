@@ -5,7 +5,7 @@ const LanguageContext = createContext(null);
 
 export function LanguageProvider({ children, defaultLocale }) {
     const [locale, setLocale] = useState(() => {
-        return defaultLocale || localStorage.getItem('locale') || 'fr';
+        return localStorage.getItem('locale') || defaultLocale || 'fr';
     });
 
     const isRTL = locale === 'ar';
@@ -36,3 +36,4 @@ export function useLanguage() {
     if (!ctx) throw new Error('useLanguage must be used inside LanguageProvider');
     return ctx;
 }
+

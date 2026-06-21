@@ -208,7 +208,7 @@
 <div class="page-footer">
     <div class="page-footer-inner">
         <span class="footer-left" dir="{{ $isAr ? 'rtl' : 'ltr' }}">{{ $isAr ? 'بيان النقاط' : 'Relevé de notes' }} — {{ $isAr ? ($module->nom_ar ?? $module->nom_fr) : $module->nom_fr }}</span>
-        <span class="footer-right" dir="{{ $isAr ? 'rtl' : 'ltr' }}">{{ $isAr ? 'صفحة' : 'Page' }} {PAGENO} / {nb}</span>
+        <span class="footer-right"></span>
     </div>
 </div>
 
@@ -237,7 +237,13 @@
                     @endif
                 </td>
                 <td class="sig-right">
-                    <span class="sig-line {{ $isAr ? 'rtl-inline' : '' }}">{{ $isAr ? 'توقيع الأستاذ:' : 'Signature du professeur:' }}</span>
+                    <span class="sig-line {{ $isAr ? 'rtl-inline' : '' }}">
+                        {{ $isAr ? 'توقيع الأستاذ:' : 'Signature du professeur:' }}
+                        <br>
+                    <span>................................</span>
+
+                    </span>
+                    
                 </td>
             </tr>
         </table>
@@ -314,5 +320,18 @@
     </tbody>
 </table>
 
+
+<script type="text/php">
+    if (isset($pdf) && isset($fontMetrics)) {
+        $font = $fontMetrics->getFont('DejaVu Sans', 'normal');
+        $size = 7;
+        $text = @json($isAr ? 'صفحة {PAGE_NUM} / {PAGE_COUNT}' : 'Page {PAGE_NUM} / {PAGE_COUNT}');
+        $color = [0.58, 0.64, 0.72];
+        $textWidth = $fontMetrics->getTextWidth($text, $font, $size);
+        $x = $pdf->get_width() - $textWidth - 40;
+        $y = $pdf->get_height() - 18;
+        $pdf->page_text($x, $y, $text, $font, $size, $color);
+    }
+</script>
 </body>
 </html>
