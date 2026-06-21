@@ -107,11 +107,9 @@ class NoteExamController extends Controller
         $saved = 0;
         foreach ($data['notes'] as $item) {
             $note = NoteExam::updateOrCreate(
+                ['etud_mod_id' => $item['etud_mod_id']],
                 [
-                    'etud_mod_id' => $item['etud_mod_id'],
-                    'Nexam'       => $item['Nexam'],
-                ],
-                [
+                    'Nexam'           => $item['Nexam'],
                     'note_normale'    => $item['note_normale'] ?? null,
                     'note_rattrapage' => $item['note_rattrapage'] ?? null,
                     'note_finale'     => $item['note_finale'] ?? null,

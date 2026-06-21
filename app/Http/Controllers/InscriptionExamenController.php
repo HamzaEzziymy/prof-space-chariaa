@@ -23,6 +23,10 @@ class InscriptionExamenController extends Controller
         $allModules = Module::select('id', 'nom_fr', 'nom_ar', 'code_module')
             ->orderBy('nom_fr')->get();
 
+        $modulesWithExam = Module::select('id', 'nom_fr', 'nom_ar', 'code_module')
+            ->whereHas('noteExams')
+            ->orderBy('nom_fr')->get();
+
         $stats = [
             'total'   => NoteExam::distinct('etud_mod_id')->count('etud_mod_id'),
             'with_grades'    => NoteExam::whereNotNull('note_normale')->distinct('etud_mod_id')->count('etud_mod_id'),
@@ -67,11 +71,11 @@ class InscriptionExamenController extends Controller
                 ];
             })->values();
 
-            // Filter eligible: for rattrapage, only students with note_normale < 10 or null
+            // Filter eligible: for rattrapage, only students with note_normale < 10 or null or absent (99)
             $eligibleIds = $inscriptions->filter(function ($ie) {
                 if ($ie['statut'] !== 'rattrapage') return true;
                 $nn = $ie['note_normale'];
-                return $nn === null || $nn < 10;
+                return $nn === null || $nn < 10 || (int) $nn === 99;
             })->pluck('id')->toArray();
 
             $filtered = $inscriptions->whereIn('id', $eligibleIds)->values();
@@ -103,10 +107,11 @@ class InscriptionExamenController extends Controller
         });
 
         return Inertia::render('InscriptionExamen/Index', [
-            'items'      => $items,
-            'allModules' => $allModules,
-            'stats'      => $stats,
-            'groupBy'    => $request->query('group_by', 'module'),
+            'items'           => $items,
+            'allModules'      => $allModules,
+            'modulesWithExam' => $modulesWithExam,
+            'stats'           => $stats,
+            'groupBy'         => $request->query('group_by', 'module'),
         ]);
     }
 
@@ -168,7 +173,7 @@ class InscriptionExamenController extends Controller
             NoteExam::whereIn('etud_mod_id', $etudModIds)
                 ->update([
                     'statut' => 'finale',
-                    'note_finale' => DB::raw('GREATEST(COALESCE(note_normale,0), COALESCE(note_rattrapage,0))'),
+                    'note_finale' => DB::raw('COALESCE(note_rattrapage, note_normale)'),
                 ]);
         } else {
             NoteExam::whereIn('etud_mod_id', $etudModIds)
@@ -222,6 +227,55 @@ class InscriptionExamenController extends Controller
             'students' => $students,
             'existing_ids' => $existingEtudiantIds,
         ]);
+    }
+
+    public function exportData(Request $request): JsonResponse
+    {
+        $moduleId = $request->query('module_id');
+        $statut   = $request->query('statut');
+
+        $query = NoteExam::with([
+            'etudiantModule.etudiant:id,nom_fr,prenom_fr,nom_ar,prenom_ar,CNE',
+            'etudiantModule.module:id,code_module,nom_fr,nom_ar',
+        ]);
+
+        if ($moduleId) {
+            $query->whereHas('etudiantModule', fn ($q) => $q->where('module_id', $moduleId));
+        }
+        if ($statut && in_array($statut, ['normale', 'rattrapage', 'finale'])) {
+            $query->where('statut', $statut);
+        }
+
+        $data = $query->get()->groupBy('etud_mod_id')->map(function ($group) {
+            $ne = $group->first();
+            $em = $ne->etudiantModule;
+            $etud = $em?->etudiant;
+            $module = $em?->module;
+
+            return [
+                'CNE'          => $etud?->CNE,
+                'nom_fr'       => $etud?->nom_fr,
+                'prenom_fr'    => $etud?->prenom_fr,
+                'nom_ar'       => $etud?->nom_ar,
+                'prenom_ar'    => $etud?->prenom_ar,
+                'code_module'  => $module?->code_module,
+                'module_nom_fr'=> $module?->nom_fr,
+                'module_nom_ar'=> $module?->nom_ar,
+                'statut'       => $ne->statut ?? 'normale',
+                'Nexam'        => $ne->Nexam,
+                'note_normale' => $ne->note_normale,
+                'note_rattrapage' => $ne->note_rattrapage,
+                'note_finale'  => $ne->note_finale,
+                'decision_normale_fr' => $ne->note_normale_decision_fr,
+                'decision_normale_ar' => $ne->note_normale_decision_ar,
+                'decision_ratt_fr'    => $ne->note_ratt_decision_fr,
+                'decision_ratt_ar'    => $ne->note_ratt_decision_ar,
+                'decision_finale_fr'  => $ne->decision_finale_fr,
+                'decision_finale_ar'  => $ne->decision_finale_ar,
+            ];
+        })->values();
+
+        return response()->json(['data' => $data]);
     }
 
     public function import(Request $request): JsonResponse

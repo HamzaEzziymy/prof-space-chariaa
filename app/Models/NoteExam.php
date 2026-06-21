@@ -43,6 +43,9 @@ class NoteExam extends Model
             if (is_null($note->note_normale)) {
                 $note->note_normale_decision_ar = 'غير مستوفي';
                 $note->note_normale_decision_fr = 'Non validé';
+            } elseif ((int) $note->note_normale === 99) {
+                $note->note_normale_decision_ar = 'غائب';
+                $note->note_normale_decision_fr = 'Absent';
             } else {
                 $note->note_normale_decision_ar = $note->note_normale >= 10 ? 'مستوفي' : 'غير مستوفي';
                 $note->note_normale_decision_fr = $note->note_normale >= 10 ? 'Validé' : 'Non validé';
@@ -51,17 +54,20 @@ class NoteExam extends Model
             if (is_null($note->note_rattrapage)) {
                 $note->note_ratt_decision_ar = null;
                 $note->note_ratt_decision_fr = null;
+            } elseif ((int) $note->note_rattrapage === 99) {
+                $note->note_ratt_decision_ar = 'غائب';
+                $note->note_ratt_decision_fr = 'Absent';
             } else {
                 $note->note_ratt_decision_ar = $note->note_rattrapage >= 10 ? 'مستوفي' : 'غير مستوفي';
                 $note->note_ratt_decision_fr = $note->note_rattrapage >= 10 ? 'Validé' : 'Non validé';
             }
 
             if (!is_null($note->note_rattrapage)) {
-                $note->decision_finale_ar = $note->note_rattrapage >= 10 ? 'مستوفي' : 'غير مستوفي';
-                $note->decision_finale_fr = $note->note_rattrapage >= 10 ? 'Validé' : 'Non validé';
+                $note->decision_finale_ar = (int) $note->note_rattrapage === 99 ? 'غائب' : ($note->note_rattrapage >= 10 ? 'مستوفي' : 'غير مستوفي');
+                $note->decision_finale_fr = (int) $note->note_rattrapage === 99 ? 'Absent' : ($note->note_rattrapage >= 10 ? 'Validé' : 'Non validé');
             } elseif (!is_null($note->note_normale)) {
-                $note->decision_finale_ar = $note->note_normale >= 10 ? 'مستوفي' : 'غير مستوفي';
-                $note->decision_finale_fr = $note->note_normale >= 10 ? 'Validé' : 'Non validé';
+                $note->decision_finale_ar = (int) $note->note_normale === 99 ? 'غائب' : ($note->note_normale >= 10 ? 'مستوفي' : 'غير مستوفي');
+                $note->decision_finale_fr = (int) $note->note_normale === 99 ? 'Absent' : ($note->note_normale >= 10 ? 'Validé' : 'Non validé');
             } else {
                 $note->decision_finale_ar = 'غير مستوفي';
                 $note->decision_finale_fr = 'Non validé';

@@ -597,10 +597,252 @@ function StatutModal({ moduleId, onClose, t, locale, isRTL, setToast }) {
     );
 }
 
+function ExportModal({ onClose, t, locale, isRTL, modulesWithExam }) {
+    const [moduleId, setModuleId] = useState('');
+    const [statut, setStatut] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const params = {};
+            if (moduleId) params.module_id = moduleId;
+            if (statut) params.statut = statut;
+            const res = await window.axios.get(route('inscription-examen.export'), { params });
+            return res.data.data;
+        } catch {
+            return [];
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const formatNote = (v) => {
+        if (v === null || v === undefined || v === '') return '';
+        const n = Number(v);
+        if (n === 99) return isRTL ? 'غائب' : 'Absent';
+        return n.toFixed(2);
+    };
+
+    const exportVertical = async () => {
+        const data = await fetchData();
+        if (!data.length) return;
+
+        const headers = isRTL
+            ? ['CNE', 'الاسم', 'النسب', 'الوحدة', 'رمز الوحدة', 'الحالة', 'رقم الامتحان', 'النقطة العادية', 'نقطة الاستدراك', 'النقطة النهائية', 'قرار العادي', 'قرار الاستدراك', 'القرار النهائي']
+            : ['CNE', 'Nom', 'Prénom', 'Module', 'Code Module', 'Statut', 'N° Examen', 'Note Normale', 'Note Rattrapage', 'Note Finale', 'Décision Normale', 'Décision Rattrapage', 'Décision Finale'];
+
+        const rows = data.map(d => [
+            d.CNE,
+            isRTL ? (d.nom_ar || d.nom_fr) : d.nom_fr,
+            isRTL ? (d.prenom_ar || d.prenom_fr) : d.prenom_fr,
+            isRTL ? (d.module_nom_ar || d.module_nom_fr) : d.module_nom_fr,
+            d.code_module,
+            d.statut,
+            d.Nexam,
+            formatNote(d.note_normale),
+            formatNote(d.note_rattrapage),
+            formatNote(d.note_finale),
+            isRTL ? d.decision_normale_ar : d.decision_normale_fr,
+            isRTL ? d.decision_ratt_ar : d.decision_ratt_fr,
+            isRTL ? d.decision_finale_ar : d.decision_finale_fr,
+        ]);
+
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+        const colWidths = [14, 16, 16, 22, 14, 12, 10, 12, 12, 12, 14, 14, 14];
+        ws['!cols'] = colWidths.map(w => ({ wch: w }));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Inscriptions');
+        XLSX.writeFile(wb, `inscriptions_examen_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    };
+
+    const exportHorizontal = async () => {
+        const data = await fetchData();
+        if (!data.length) return;
+
+        const grouped = {};
+        data.forEach(d => {
+            const key = d.CNE;
+            if (!grouped[key]) {
+                grouped[key] = {
+                    CNE: d.CNE,
+                    nom_fr: d.nom_fr,
+                    prenom_fr: d.prenom_fr,
+                    nom_ar: d.nom_ar,
+                    prenom_ar: d.prenom_ar,
+                    modules: [],
+                };
+            }
+            grouped[key].modules.push({
+                key: d.code_module,
+                statut: d.statut,
+                Nexam: d.Nexam,
+                note_normale: d.note_normale,
+                note_rattrapage: d.note_rattrapage,
+                note_finale: d.note_finale,
+                decision_normale: isRTL ? d.decision_normale_ar : d.decision_normale_fr,
+                decision_ratt: isRTL ? d.decision_ratt_ar : d.decision_ratt_fr,
+                decision_finale: isRTL ? d.decision_finale_ar : d.decision_finale_fr,
+            });
+        });
+
+        const allModuleKeys = [...new Set(data.map(d => d.code_module))].sort();
+
+        const noteLabels = isRTL
+            ? ['ن.عادية', 'ن.استدراك', 'ن.نهائية', 'ق.عادي', 'ق.استدراك', 'ق.نهائي']
+            : ['N.Normale', 'N.Rattrap', 'N.Finale', 'D.Normale', 'D.Rattrap', 'D.Finale'];
+
+        const headers = isRTL
+            ? ['CNE', 'الاسم', 'النسب']
+            : ['CNE', 'Nom', 'Prénom'];
+
+        allModuleKeys.forEach(mk => {
+            noteLabels.forEach(nl => {
+                headers.push(`${mk}_${nl}`);
+            });
+        });
+
+        const rows = Object.values(grouped).map(g => {
+            const row = [
+                g.CNE,
+                isRTL ? (g.nom_ar || g.nom_fr) : g.nom_fr,
+                isRTL ? (g.prenom_ar || g.prenom_fr) : g.prenom_fr,
+            ];
+            const modMap = {};
+            g.modules.forEach(m => { modMap[m.key] = m; });
+
+            allModuleKeys.forEach(mk => {
+                const m = modMap[mk];
+                row.push(m ? formatNote(m.note_normale) : '');
+                row.push(m ? formatNote(m.note_rattrapage) : '');
+                row.push(m ? formatNote(m.note_finale) : '');
+                row.push(m ? (m.decision_normale || '') : '');
+                row.push(m ? (m.decision_ratt || '') : '');
+                row.push(m ? (m.decision_finale || '') : '');
+            });
+            return row;
+        });
+
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Inscriptions');
+        XLSX.writeFile(wb, `inscriptions_horizontal_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    };
+
+    return (
+        <>
+            <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl dark:bg-slate-900 overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-indigo-50 dark:bg-indigo-900/20 shrink-0">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-900/50">
+                                <Icon icon={I.download} className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                            </div>
+                            <div>
+                                <p className="font-bold text-slate-800 dark:text-white text-sm">
+                                    {locale === 'ar' ? 'تصدير Excel' : 'Exporter Excel'}
+                                </p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                    {locale === 'ar' ? 'اختر التنسيق الذي تريد تصدير البيانات به' : 'Choisissez le format d\'export des données'}
+                                </p>
+                            </div>
+                        </div>
+                        <button onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800 transition">
+                            <Icon icon={I.close} className="h-5 w-5" />
+                        </button>
+                    </div>
+
+                    <div className="p-6 space-y-5">
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                {locale === 'ar' ? 'الوحدة (اختياري)' : 'Module (optionnel)'}
+                            </label>
+                            <ModuleCombo items={modulesWithExam} value={moduleId}
+                                onChange={setModuleId}
+                                placeholder={locale === 'ar' ? 'جميع الوحدات' : 'Tous les modules'} />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                {locale === 'ar' ? 'الحالة (اختياري)' : 'Statut (optionnel)'}
+                            </label>
+                            <div className="flex gap-2">
+                                {['', 'normale', 'rattrapage', 'finale'].map(s => (
+                                    <button key={s} onClick={() => setStatut(s)}
+                                        className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+                                            statut === s
+                                                ? s === '' ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-800'
+                                                  : s === 'normale' ? 'bg-blue-600 text-white border-blue-600'
+                                                  : s === 'rattrapage' ? 'bg-amber-600 text-white border-amber-600'
+                                                  : 'bg-violet-600 text-white border-violet-600'
+                                                : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                        }`}>
+                                        {s === '' ? (locale === 'ar' ? 'الكل' : 'Tous')
+                                         : s === 'normale' ? (locale === 'ar' ? 'عادي' : 'Normale')
+                                         : s === 'rattrapage' ? (locale === 'ar' ? 'استدراك' : 'Rattrapage')
+                                         : (locale === 'ar' ? 'نهائي' : 'Finale')}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4 space-y-3">
+                            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                                {locale === 'ar' ? 'تنسيق التصدير' : 'Format d\'export'}
+                            </p>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button onClick={exportVertical} disabled={loading}
+                                    className="flex flex-col items-center gap-2 rounded-xl border-2 border-indigo-200 bg-white dark:border-indigo-700 dark:bg-slate-700 px-4 py-5 text-center transition hover:border-indigo-400 hover:bg-indigo-50/50 dark:hover:border-indigo-500 dark:hover:bg-indigo-900/10 disabled:opacity-50">
+                                    <svg className="h-8 w-8 text-indigo-500" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" />
+                                    </svg>
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-800 dark:text-white">
+                                            {locale === 'ar' ? 'عمودي' : 'Vertical'}
+                                        </p>
+                                        <p className="text-[10px] text-slate-400 mt-0.5">
+                                            {locale === 'ar' ? 'سجل لكل تسجيل' : 'Une ligne par inscription'}
+                                        </p>
+                                    </div>
+                                    {loading && <ArrowPathIcon className="h-4 w-4 animate-spin text-indigo-500" />}
+                                </button>
+                                <button onClick={exportHorizontal} disabled={loading}
+                                    className="flex flex-col items-center gap-2 rounded-xl border-2 border-emerald-200 bg-white dark:border-emerald-700 dark:bg-slate-700 px-4 py-5 text-center transition hover:border-emerald-400 hover:bg-emerald-50/50 dark:hover:border-emerald-500 dark:hover:bg-emerald-900/10 disabled:opacity-50">
+                                    <svg className="h-8 w-8 text-emerald-500" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3.75v16.5M12 3.75v16.5M17.25 3.75v16.5M3.75 12h16.5" />
+                                    </svg>
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-800 dark:text-white">
+                                            {locale === 'ar' ? 'أفقي' : 'Horizontal'}
+                                        </p>
+                                        <p className="text-[10px] text-slate-400 mt-0.5">
+                                            {locale === 'ar' ? 'سجل لكل طالب' : 'Une ligne par étudiant'}
+                                        </p>
+                                    </div>
+                                    {loading && <ArrowPathIcon className="h-4 w-4 animate-spin text-emerald-500" />}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-end px-6 py-4 border-t border-slate-100 dark:border-slate-800">
+                        <button onClick={onClose}
+                            className="rounded-xl border border-slate-200 dark:border-slate-700 px-5 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                            {t('cancel')}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </>
+    );
+}
+
 function PageContent() {
     const { t, locale, isRTL } = useLanguage();
-    const { items, groupBy, allModules, stats, flash } = usePage().props;
+    const { items, groupBy, allModules, modulesWithExam, stats, flash } = usePage().props;
     const [showAdd, setShowAdd] = useState(false);
+    const [showExport, setShowExport] = useState(false);
     const [showExcel, setShowExcel] = useState(false);
     const [expanded, setExpanded] = useState(new Set());
     const [toast, setToast] = useState(null);
@@ -639,6 +881,11 @@ function PageContent() {
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <button onClick={() => setShowExport(true)}
+                        className="flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-400 dark:hover:bg-indigo-900/30 active:scale-95 transition">
+                        <Icon icon={I.download} className="h-4 w-4" />
+                        <span className="hidden sm:inline">{locale === 'ar' ? 'تصدير Excel' : 'Export Excel'}</span>
+                    </button>
                     <button onClick={() => setShowExcel(true)}
                         className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30 active:scale-95 transition">
                         <Icon icon={I.excel} className="h-4 w-4" />
@@ -743,6 +990,7 @@ function PageContent() {
                                                         : curStatut === 'rattrapage' ? (locale === 'ar' ? ie.note_ratt_decision_ar : ie.note_ratt_decision_fr)
                                                         : (locale === 'ar' ? ie.decision_finale_ar : ie.decision_finale_fr);
                                                     const isValid = decision === 'Validé' || decision === 'مستوفي';
+                                                    const isAbsent = decision === 'Absent' || decision === 'غائب';
                                                     return (
                                                         <tr key={ie.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-700/10 transition-colors">
                                                             <td className="px-3 py-2.5">
@@ -768,9 +1016,9 @@ function PageContent() {
                                                                 </span>
                                                             </td>
                                                             <td className="px-3 py-2.5 text-center text-sm font-mono text-slate-600 dark:text-slate-300">{ie.Nexam ?? '—'}</td>
-                                                            <td className="px-3 py-2.5 text-center text-sm font-mono text-slate-700 dark:text-slate-200">{noteVal !== null && noteVal !== undefined ? Number(noteVal).toFixed(2) : '—'}</td>
+                                                            <td className="px-3 py-2.5 text-center text-sm font-mono text-slate-700 dark:text-slate-200">{isAbsent ? (locale === 'ar' ? 'غائب' : 'Absent') : (noteVal !== null && noteVal !== undefined ? Number(noteVal).toFixed(2) : '—')}</td>
                                                             <td className="px-3 py-2.5">
-                                                                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${isValid ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                                                                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${isAbsent ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : isValid ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
                                                                     {decision}
                                                                 </span>
                                                             </td>
@@ -818,6 +1066,7 @@ function PageContent() {
             {statutModal && <StatutModal moduleId={statutModal} onClose={() => { setStatutModal(null); router.reload({ only: ['items', 'stats'] }); }} t={t} locale={locale} isRTL={isRTL} setToast={setToast} />}
             {showAdd && <AddModal onClose={() => setShowAdd(false)} t={t} locale={locale} isRTL={isRTL}
                 allModules={allModules} />}
+            {showExport && <ExportModal onClose={() => setShowExport(false)} t={t} locale={locale} isRTL={isRTL} modulesWithExam={modulesWithExam} />}
             {showExcel && <ExcelModal onClose={() => setShowExcel(false)} t={t} locale={locale} isRTL={isRTL} />}
         </>
     );

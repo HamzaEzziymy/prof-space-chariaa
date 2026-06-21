@@ -117,6 +117,7 @@ Route::middleware(['auth', 'admin'])->prefix('inscription-examen')->name('inscri
     Route::delete('/{noteExam}', [\App\Http\Controllers\InscriptionExamenController::class, 'destroy'])->name('destroy');
     Route::post('/import',      [\App\Http\Controllers\InscriptionExamenController::class, 'import'])->name('import');
     Route::get('/enrolled/{module}', [\App\Http\Controllers\InscriptionExamenController::class, 'getEnrolledStudents'])->name('enrolled');
+    Route::get('/export',       [\App\Http\Controllers\InscriptionExamenController::class, 'exportData'])->name('export');
 });
 
 // ── Inscription pédagogique (admin + super_admin) ────────────────────────────

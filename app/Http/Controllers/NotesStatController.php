@@ -73,10 +73,10 @@ class NotesStatController extends Controller
             COUNT(DISTINCT etudiant_module.etudiant_id) as total_students,
             COUNT(DISTINCT etudiant_module.module_id) as total_modules,
             COUNT(note_exam.id) as total_inscriptions,
-            ROUND(AVG(note_exam.note_normale), 2) as avg_note_normale,
-            ROUND(AVG(note_exam.note_finale), 2) as avg_note_finale,
-            SUM(CASE WHEN COALESCE(note_exam.note_finale, note_exam.note_normale, 0) >= 10 THEN 1 ELSE 0 END) as pass_count,
-            SUM(CASE WHEN COALESCE(note_exam.note_finale, note_exam.note_normale, 0) < 10 THEN 1 ELSE 0 END) as fail_count,
+            ROUND(AVG(CASE WHEN note_exam.note_normale = 99 THEN NULL ELSE note_exam.note_normale END), 2) as avg_note_normale,
+            ROUND(AVG(CASE WHEN note_exam.note_finale = 99 THEN NULL ELSE note_exam.note_finale END), 2) as avg_note_finale,
+            SUM(CASE WHEN COALESCE(NULLIF(note_exam.note_finale, 99), NULLIF(note_exam.note_normale, 99), 0) >= 10 THEN 1 ELSE 0 END) as pass_count,
+            SUM(CASE WHEN COALESCE(NULLIF(note_exam.note_finale, 99), NULLIF(note_exam.note_normale, 99), 0) < 10 AND COALESCE(note_exam.note_finale, note_exam.note_normale) IS NOT NULL THEN 1 ELSE 0 END) as fail_count,
             SUM(CASE WHEN note_exam.note_normale IS NOT NULL THEN 1 ELSE 0 END) as with_note_normale,
             SUM(CASE WHEN note_exam.note_rattrapage IS NOT NULL THEN 1 ELSE 0 END) as with_note_rattrapage,
             SUM(CASE WHEN note_exam.note_finale IS NOT NULL THEN 1 ELSE 0 END) as with_note_finale
@@ -89,9 +89,9 @@ class NotesStatController extends Controller
                 module.nom_fr,
                 module.nom_ar,
                 COUNT(DISTINCT etudiant_module.etudiant_id) as student_count,
-                ROUND(AVG(note_exam.note_finale), 2) as avg_note_finale,
-                SUM(CASE WHEN COALESCE(note_exam.note_finale, note_exam.note_normale, 0) >= 10 THEN 1 ELSE 0 END) as pass_count,
-                SUM(CASE WHEN COALESCE(note_exam.note_finale, note_exam.note_normale, 0) < 10 THEN 1 ELSE 0 END) as fail_count
+                ROUND(AVG(CASE WHEN note_exam.note_finale = 99 THEN NULL ELSE note_exam.note_finale END), 2) as avg_note_finale,
+                SUM(CASE WHEN COALESCE(NULLIF(note_exam.note_finale, 99), NULLIF(note_exam.note_normale, 99), 0) >= 10 THEN 1 ELSE 0 END) as pass_count,
+                SUM(CASE WHEN COALESCE(NULLIF(note_exam.note_finale, 99), NULLIF(note_exam.note_normale, 99), 0) < 10 AND COALESCE(note_exam.note_finale, note_exam.note_normale) IS NOT NULL THEN 1 ELSE 0 END) as fail_count
             ')
             ->groupBy('etudiant_module.module_id', 'module.code_module', 'module.nom_fr', 'module.nom_ar')
             ->orderBy('student_count', 'desc')
@@ -100,10 +100,10 @@ class NotesStatController extends Controller
         $distributionRaw = (clone $query)
             ->selectRaw('
                 CASE
-                    WHEN COALESCE(note_exam.note_finale, note_exam.note_normale, -1) < 0 THEN -1
-                    WHEN COALESCE(note_exam.note_finale, note_exam.note_normale, -1) <= 5 THEN 0
-                    WHEN COALESCE(note_exam.note_finale, note_exam.note_normale, -1) <= 10 THEN 1
-                    WHEN COALESCE(note_exam.note_finale, note_exam.note_normale, -1) <= 15 THEN 2
+                    WHEN NULLIF(COALESCE(note_exam.note_finale, note_exam.note_normale), 99) IS NULL THEN -1
+                    WHEN NULLIF(COALESCE(note_exam.note_finale, note_exam.note_normale), 99) <= 5 THEN 0
+                    WHEN NULLIF(COALESCE(note_exam.note_finale, note_exam.note_normale), 99) <= 10 THEN 1
+                    WHEN NULLIF(COALESCE(note_exam.note_finale, note_exam.note_normale), 99) <= 15 THEN 2
                     ELSE 3
                 END as bucket,
                 COUNT(*) as count

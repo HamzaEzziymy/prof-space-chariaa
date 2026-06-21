@@ -65,7 +65,7 @@ class DashboardController extends Controller
             $statut = $ne->statut ?? 'normale';
             $noteNormale = $ne->note_normale;
 
-            if ($statut === 'rattrapage' && $noteNormale !== null && $noteNormale >= 10) {
+            if ($statut === 'rattrapage' && $noteNormale !== null && $noteNormale >= 10 && (int) $noteNormale !== 99) {
                 return null;
             }
 
@@ -179,7 +179,7 @@ class DashboardController extends Controller
                 $etud = $ne->etudiantModule?->etudiant;
                 $statut = $ne->statut ?? 'normale';
                 $nn = $ne->note_normale;
-                if ($statut === 'rattrapage' && $nn !== null && $nn >= 10) return null;
+                if ($statut === 'rattrapage' && $nn !== null && $nn >= 10 && (int) $nn !== 99) return null;
                 return [
                     'CNE'       => $etud->CNE,
                     'nom_fr'    => $etud->nom_fr,
@@ -298,7 +298,7 @@ class DashboardController extends Controller
             $existing = NoteExam::where('etud_mod_id', $em->id)->first();
             $statut = $existing?->statut ?? 'normale';
             $nn = $existing?->note_normale;
-            if ($statut === 'rattrapage' && $nn !== null && $nn >= 10) {
+            if ($statut === 'rattrapage' && $nn !== null && $nn >= 10 && (int) $nn !== 99) {
                 $errors[] = ['line' => $line, 'cne' => $cne, 'reason' => $tl('déjà validé en normale, pas de rattrapage', 'مستوفي في الدورة العادية، لا يمكن التسجيل في الاستدراك')];
                 continue;
             }
@@ -360,7 +360,7 @@ class DashboardController extends Controller
             $etud = $ne->etudiantModule?->etudiant;
             $statut = $ne->statut ?? 'normale';
             $nn = $ne->note_normale;
-            if ($statut === 'rattrapage' && $nn !== null && $nn >= 10) return null;
+            if ($statut === 'rattrapage' && $nn !== null && $nn >= 10 && (int) $nn !== 99) return null;
             $note = $ne->note_finale ?? $ne->note_rattrapage ?? $nn ?? '';
             return [
                 'CNE'       => $etud->CNE,
