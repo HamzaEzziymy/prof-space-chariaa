@@ -83,7 +83,9 @@ export const translations = {
 
         // Charts
         enrollmentTrend: 'Tendance des inscriptions',
+        examModeStats: 'Statistiques des examens par module',
         gradeDistribution: 'Distribution des notes',
+        sexDistribution: 'Répartition par sexe',
         modulesByType: 'Modules par type',
         studentsPerModule: 'Étudiants par module',
 
@@ -560,7 +562,9 @@ export const translations = {
 
         // Charts
         enrollmentTrend: 'اتجاه التسجيلات',
+        examModeStats: 'إحصائيات الامتحانات حسب الوحدة',
         gradeDistribution: 'توزيع النتائج',
+        sexDistribution: 'التوزيع حسب الجنس',
         modulesByType: 'الوحدات حسب النوع',
         studentsPerModule: 'الطلاب لكل وحدة',
 

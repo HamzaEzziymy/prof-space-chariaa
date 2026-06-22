@@ -232,8 +232,8 @@
             <tr>
                 <td class="sig-date">
                     @if ($isAr)
-                        <span class="rtl-inline">{{ arabic_reshape('تم الإنشاء في:') }}</span>
-                        <span class="ltr-inline">{{ $date }}</span>
+                    <span class="ltr-inline">{{ $date }}</span>
+                    <span class="rtl-inline">{{ arabic_reshape('تم الإنشاء في:') }}</span>
                     @else
                         Généré le {{ $date }}
                     @endif
@@ -256,7 +256,7 @@
                 <div class="header-doctitle {{ $isAr ? 'rtl-block' : '' }}">{{ $isAr ? arabic_reshape('بيان النقاط') : 'RELEVE DE NOTES' }}</div>
                 <div class="header-filiere {{ $isAr ? 'rtl-block' : '' }}">{{ $isAr ? arabic_reshape($module->semestre?->niveau?->filiere?->nom_ar ?? $module->semestre?->niveau?->filiere?->nom_fr ?? '-') : ($module->semestre?->niveau?->filiere?->nom_fr ?? $module->semestre?->niveau?->filiere?->nom_ar ?? '-') }}</div>
                 <div class="header-sub {{ $isAr ? 'rtl-block' : '' }}">{{ $isAr ? arabic_reshape($module->semestre?->niveau?->nom_ar ?? $module->semestre?->niveau?->nom_fr ?? '-') : ($module->semestre?->niveau?->nom_fr ?? $module->semestre?->niveau?->nom_ar ?? '-') }} @if ($module->semestre) - {{ $isAr ? arabic_reshape($module->semestre->nom_ar ?? $module->semestre->nom_fr ?? '-') : ($module->semestre->nom_fr ?? $module->semestre->nom_ar ?? '-') }} @endif</div>
-                <div class="header-module-line {{ $isAr ? 'rtl-block' : '' }}">{{ $isAr ? arabic_reshape('الوحدة:') : 'MODULE:' }} {{ $isAr ? arabic_reshape($module->nom_ar ?? $module->nom_fr ?? '-') : ($module->nom_fr ?? $module->nom_ar ?? '-') }}</div>
+                <div class="header-module-line {{ $isAr ? 'rtl-block' : '' }}">{{ $isAr ? "" : 'MODULE:' }} {{ $isAr ? arabic_reshape($module->nom_ar ?? $module->nom_fr ?? '-') : ($module->nom_fr ?? $module->nom_ar ?? '-') }}{{ $isAr ? arabic_reshape('الوحدة: ') : '' }}</div>
             </td>
         </tr>
     </table>

@@ -24,14 +24,59 @@ class DashboardController extends Controller
         $prof = $user->prof;
 
         $modules = $prof
-            ? $prof->modules()->with('semestre.niveau.filiere')->get()
+            ? $prof->modules()->with('semestre.niveau.filiere')->withCount('etudiants')->get()
             : collect();
 
-        $totalStudents = $modules->sum(fn ($m) => $m->etudiants()->count());
+        $modulesOverview = $modules->map(function ($module) {
+            $noteExams = NoteExam::whereHas('etudiantModule', fn ($q) => $q->where('module_id', $module->id))
+                ->get();
+
+            $total = $noteExams->count();
+            $entered = $noteExams->filter(function ($noteExam) {
+                $field = match ($noteExam->statut ?? 'normale') {
+                    'rattrapage' => 'note_rattrapage',
+                    'finale' => 'note_finale',
+                    default => 'note_normale',
+                };
+
+                return $noteExam->{$field} !== null;
+            })->count();
+
+            $pending = max($total - $entered, 0);
+
+            return [
+                'id' => $module->id,
+                'nom_fr' => $module->nom_fr,
+                'nom_ar' => $module->nom_ar,
+                'code_module' => $module->code_module,
+                'semestre' => $module->semestre,
+                'students_count' => $module->etudiants_count,
+                'exam_total' => $total,
+                'entered' => $entered,
+                'pending' => $pending,
+                'ready' => $total > 0,
+                'progress' => $total > 0 ? round(($entered / $total) * 100) : 0,
+                'normale_count' => $noteExams->where('statut', 'normale')->count(),
+                'rattrapage_count' => $noteExams->where('statut', 'rattrapage')->count(),
+            ];
+        })->values();
+
+        $totalStudents = $modules->sum(fn ($m) => $m->etudiants_count);
+        $totalExamInscriptions = $modulesOverview->sum('exam_total');
+        $enteredNotes = $modulesOverview->sum('entered');
 
         return Inertia::render('Prof/Dashboard', [
             'prof'          => $prof,
             'totalStudents' => $totalStudents,
+            'dashboardStats' => [
+                'modulesCount' => $modules->count(),
+                'readyModules' => $modulesOverview->where('ready', true)->count(),
+                'totalExamInscriptions' => $totalExamInscriptions,
+                'enteredNotes' => $enteredNotes,
+                'pendingNotes' => $modulesOverview->sum('pending'),
+                'progress' => $totalExamInscriptions > 0 ? round(($enteredNotes / $totalExamInscriptions) * 100) : 0,
+            ],
+            'modulesOverview' => $modulesOverview,
         ]);
     }
 

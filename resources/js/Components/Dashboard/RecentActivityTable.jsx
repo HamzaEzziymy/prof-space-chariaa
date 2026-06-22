@@ -1,3 +1,4 @@
+import { router } from '@inertiajs/react';
 import { useLanguage } from '@/i18n/LanguageContext';
 
 const statusColors = {
@@ -6,7 +7,7 @@ const statusColors = {
     pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
 };
 
-export default function RecentActivityTable({ title, rows = [], columns = [] }) {
+export default function RecentActivityTable({ title, rows = [], columns = [], viewAllRoute }) {
     const { t, isRTL } = useLanguage();
 
     return (
@@ -14,9 +15,18 @@ export default function RecentActivityTable({ title, rows = [], columns = [] }) 
             {/* Header */}
             <div className={`flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-700 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">{title}</h3>
-                <button className="text-xs font-medium text-primary hover:underline">
-                    {t('viewAll')}
-                </button>
+                {viewAllRoute ? (
+                    <button
+                        onClick={() => router.visit(viewAllRoute)}
+                        className="text-xs font-medium text-primary hover:underline"
+                    >
+                        {t('viewAll')}
+                    </button>
+                ) : (
+                    <button className="text-xs font-medium text-primary hover:underline">
+                        {t('viewAll')}
+                    </button>
+                )}
             </div>
 
             {/* Table */}

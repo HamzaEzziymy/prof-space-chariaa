@@ -13,7 +13,6 @@ import {
     CalendarDaysIcon,
     UserIcon,
     Cog6ToothIcon,
-    BellIcon,
     Bars3Icon,
     XMarkIcon,
     ChevronDownIcon,
@@ -90,9 +89,7 @@ export default function AdminLayout({ children, title }) {
     );
     const [darkMode, setDarkMode]   = useState(() => localStorage.getItem('theme') === 'dark');
     const [profileOpen, setProfileOpen] = useState(false);
-    const [notifOpen, setNotifOpen]     = useState(false);
     const profileRef = useRef(null);
-    const notifRef   = useRef(null);
 
     const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024);
     useEffect(() => {
@@ -109,7 +106,6 @@ export default function AdminLayout({ children, title }) {
     useEffect(() => {
         const handler = (e) => {
             if (profileRef.current && !profileRef.current.contains(e.target)) setProfileOpen(false);
-            if (notifRef.current   && !notifRef.current.contains(e.target))   setNotifOpen(false);
         };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
@@ -340,45 +336,6 @@ export default function AdminLayout({ children, title }) {
                                 ? <SunIcon className="w-5 h-5" />
                                 : <MoonIcon className="w-5 h-5" />}
                         </button>
-
-                        {/* Notifications */}
-                        <div className="relative" ref={notifRef}>
-                            <button
-                                onClick={() => setNotifOpen(!notifOpen)}
-                                className="relative rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
-                            >
-                                <BellIcon className="w-5 h-5" />
-                                <span
-                                    className="absolute top-1 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-slate-800"
-                                    style={{ [isRTL ? 'left' : 'right']: 4 }}
-                                />
-                            </button>
-
-                            {notifOpen && (
-                                <div
-                                    className="absolute top-10 z-50 w-80 rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800"
-                                    style={{ [isRTL ? 'left' : 'right']: 0 }}
-                                >
-                                    <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-slate-700">
-                                        <p className="font-semibold text-slate-700 dark:text-white">{t('recentActivity')}</p>
-                                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">3</span>
-                                    </div>
-                                    {[
-                                        { icon: '👤', text: t('newStudentRegistered'), time: `5 ${t('minutesAgo')}` },
-                                        { icon: '📚', text: t('moduleCreated'),        time: `1 ${t('hoursAgo')}` },
-                                        { icon: '📝', text: t('gradeUpdated'),         time: `2 ${t('daysAgo')}` },
-                                    ].map((n, i) => (
-                                        <div key={i} className="flex items-start gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700 last:border-0">
-                                            <span className="text-xl">{n.icon}</span>
-                                            <div>
-                                                <p className="text-sm text-slate-700 dark:text-slate-200">{n.text}</p>
-                                                <p className="text-xs text-slate-400">{n.time}</p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
 
                         {/* Profile */}
                         <div className="relative" ref={profileRef}>
