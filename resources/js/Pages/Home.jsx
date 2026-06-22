@@ -10,8 +10,6 @@ function HomeContent() {
     const logoUrl = appSettings?.app_logo_url;
     const iconUrl = appSettings?.app_favicon_url;
 
-    const arrowRotate = (isSecond) => (isRTL ? !isSecond : isSecond) ? 'rotate-180' : '';
-
     return (
         <>
             <Head title={isAr ? 'كلية الشريعة بفاس - المنصة البيداغوجية' : 'Faculté de Chariaa — Plateforme pédagogique'} />
@@ -52,46 +50,47 @@ function HomeContent() {
 
                 <section className="relative overflow-hidden">
                     <div className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-                        style={{ backgroundImage: `url('/storage/images/zllij-bg.png')` }}
+                        style={{ backgroundImage: `url('./zllij-hero.jpg')` }}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-br from-purple-800/50 via-indigo-900/40 to-slate-900/50" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-800/[0.01] via-indigo-900/[0.01] to-slate-900/[0.01]" />
+                    <div className="absolute inset-0 bg-[#fff7e6]/45" />
 
                     <div className="relative mx-auto max-w-6xl px-4 py-16 sm:py-20">
                         <div className="text-center mb-10">
-                            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm px-4 py-1.5 text-xs font-medium text-white/70 border border-white/10 mb-5">
+                            <div className="inline-flex items-center gap-2 rounded-full bg-white/75 backdrop-blur-sm px-4 py-1.5 text-xs font-bold text-[#0b2a5b] border border-[#d99a25]/35 mb-5 shadow-lg shadow-[#0b2a5b]/10">
                                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                                 {isAr ? 'منصة التسيير البيداغوجي الرقمية' : 'Plateforme de gestion pédagogique'}
                             </div>
-                            <h2 className="text-3xl sm:text-4xl font-extrabold text-white leading-tight">
+                            <h2 className="text-3xl sm:text-4xl font-extrabold text-[#071b4d] leading-tight drop-shadow-[0_3px_12px_rgba(255,255,255,0.95)]">
                                 {isAr ? (
-                                    <>مساحة <span className="text-indigo-300">الأساتذة</span> والإدارة</>
+                                    <>مساحة <span className="text-[#00897b]">الأساتذة</span> والإدارة</>
                                 ) : (
-                                    <>Espace <span className="text-indigo-300">Professeurs</span> & Administration</>
+                                    <>Espace <span className="text-[#00897b]">Professeurs</span> & Administration</>
                                 )}
                             </h2>
-                            <p className="mt-3 text-sm text-white/50 max-w-xl mx-auto">
+                            <p className="mt-3 text-sm font-semibold text-[#17345f] max-w-xl mx-auto drop-shadow-[0_2px_8px_rgba(255,255,255,0.95)]">
                                 {isAr
                                     ? 'منصة متكاملة لتسيير وتدبير الشؤون البيداغوجية : إدارة الطلبة، الأساتذة، الوحدات، النقط والتقارير'
                                     : 'Plateforme complète pour la gestion pédagogique : étudiants, professeurs, modules, notes et rapports'}
                             </p>
                         </div>
 
-                        <div className="grid gap-6 sm:grid-cols-2 max-w-2xl mx-auto">
+                        <div className="grid gap-5 sm:grid-cols-2 max-w-3xl mx-auto">
                             <button type="button" onClick={() => router.visit(route('login'))}
-                                className="group relative overflow-hidden rounded-2xl bg-white/95 backdrop-blur-sm p-7 shadow-xl transition-all hover:shadow-2xl hover:-translate-y-1 hover:bg-white w-full text-left rtl:text-right">
-                                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition" />
-                                <div className={`flex items-start gap-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 transition group-hover:bg-indigo-600 group-hover:text-white group-hover:shadow-lg group-hover:shadow-indigo-200">
-                                        <ShieldCheckIcon className="h-8 w-8" />
+                                className="group relative w-full overflow-hidden rounded-lg border border-[#d99a25]/30 bg-white/90 p-5 text-left shadow-xl shadow-[#071b4d]/10 ring-1 ring-white/60 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-[#d99a25]/60 hover:bg-white hover:shadow-2xl hover:shadow-[#071b4d]/15 rtl:text-right">
+                                <div className="absolute inset-x-0 top-0 h-1 bg-[#d99a25]" />
+                                <div className={`flex items-start gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-[#071b4d] text-white shadow-lg shadow-[#071b4d]/20 transition group-hover:bg-[#00897b]">
+                                        <ShieldCheckIcon className="h-7 w-7" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="text-base font-bold text-slate-800">{isAr ? 'الإدارة' : 'Administration'}</h3>
-                                        <p className="mt-1 text-xs text-slate-400 leading-relaxed">
+                                        <h3 className="text-lg font-extrabold text-[#071b4d]">{isAr ? 'الإدارة' : 'Administration'}</h3>
+                                        <p className="mt-2 text-sm font-medium leading-relaxed text-[#355070]">
                                             {isAr ? 'إدارة الأساتذة، الطلبة، الوحدات، الامتحانات والنقط' : 'Gérer les professeurs, étudiants, modules, examens et notes'}
                                         </p>
-                                        <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-indigo-600 group-hover:gap-2.5 transition-all">
-                                            {isAr ? 'دخول' : 'Se connecter'}
-                                            <svg className={`h-3.5 w-3.5 ${arrowRotate(false)}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                        <div dir="ltr" className="mt-5 inline-flex flex-row items-center gap-2 rounded-lg bg-[#071b4d] px-4 py-2 text-xs font-bold text-white shadow-sm transition-all group-hover:bg-[#00897b] group-hover:shadow-md">
+                                            <span dir={isAr ? 'rtl' : 'ltr'}>{isAr ? 'دخول' : 'Se connecter'}</span>
+                                            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                                             </svg>
                                         </div>
@@ -100,20 +99,20 @@ function HomeContent() {
                             </button>
 
                             <button type="button" onClick={() => router.visit(route('prof.login'))}
-                                className="group relative overflow-hidden rounded-2xl bg-white/95 backdrop-blur-sm p-7 shadow-xl transition-all hover:shadow-2xl hover:-translate-y-1 hover:bg-white w-full text-left rtl:text-right">
-                                <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent opacity-0 group-hover:opacity-100 transition" />
-                                <div className={`flex items-start gap-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-600 transition group-hover:bg-violet-600 group-hover:text-white group-hover:shadow-lg group-hover:shadow-violet-200">
-                                        <AcademicCapIcon className="h-8 w-8" />
+                                className="group relative w-full overflow-hidden rounded-lg border border-[#00897b]/30 bg-white/90 p-5 text-left shadow-xl shadow-[#071b4d]/10 ring-1 ring-white/60 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-[#00897b]/60 hover:bg-white hover:shadow-2xl hover:shadow-[#071b4d]/15 rtl:text-right">
+                                <div className="absolute inset-x-0 top-0 h-1 bg-[#00897b]" />
+                                <div className={`flex items-start gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-[#00897b] text-white shadow-lg shadow-[#00897b]/20 transition group-hover:bg-[#071b4d]">
+                                        <AcademicCapIcon className="h-7 w-7" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="text-base font-bold text-slate-800">{isAr ? 'فضاء الأستاذ' : 'Espace professeur'}</h3>
-                                        <p className="mt-1 text-xs text-slate-400 leading-relaxed">
+                                        <h3 className="text-lg font-extrabold text-[#071b4d]">{isAr ? 'فضاء الأستاذ' : 'Espace professeur'}</h3>
+                                        <p className="mt-2 text-sm font-medium leading-relaxed text-[#355070]">
                                             {isAr ? 'الاطلاع على الوحدات المسندة، إدخال النقط ومتابعة الطلبة' : 'Consulter vos modules, saisir les notes et suivre vos étudiants'}
                                         </p>
-                                        <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-violet-600 group-hover:gap-2.5 transition-all">
-                                            {isAr ? 'دخول' : 'Se connecter'}
-                                            <svg className={`h-3.5 w-3.5 ${arrowRotate(true)}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                        <div dir="ltr" className="mt-5 inline-flex flex-row-reverse items-center gap-2 rounded-lg bg-[#00897b] px-4 py-2 text-xs font-bold text-white shadow-sm transition-all group-hover:bg-[#071b4d] group-hover:shadow-md">
+                                            <span dir={isAr ? 'rtl' : 'ltr'}>{isAr ? 'دخول' : 'Se connecter'}</span>
+                                            <svg className="h-3.5 w-3.5 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                                             </svg>
                                         </div>

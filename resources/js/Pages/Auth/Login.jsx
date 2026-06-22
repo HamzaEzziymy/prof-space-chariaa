@@ -39,7 +39,7 @@ function LoginForm({ status, canResetPassword, registrationOpen = true }) {
         >
             {/* Background */}
             <div className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-                style={{ backgroundImage: `url('/storage/images/zllij-bg.avif')` }}
+                style={{ backgroundImage: `url('./zllij-bg.jpg')` }}
             />
             <div className="absolute inset-0 bg-white/20" />
 

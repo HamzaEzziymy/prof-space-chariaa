@@ -34,11 +34,11 @@ function LoginForm() {
             dir={isRTL ? 'rtl' : 'ltr'}
         >
             <div className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-                style={{ backgroundImage: `url('/storage/images/zllij-bg.avif')` }}
+                style={{ backgroundImage: `url('/zllij-bg.jpg')` }}
             />
             <div className="absolute inset-0 bg-white/20" />
             <div className={`relative w-full max-w-sm z-10 transition-all duration-700 ease-out ${mounted ? 'translate-x-0 opacity-100' : slideFrom}`}>
-                <div className="rounded-xl border border-slate-200 bg-white">
+                <div className="rounded-xl border border-white/70 bg-white shadow-2xl shadow-slate-950/25 ring-1 ring-slate-900/5">
 
                     <div className="px-8 pt-10 pb-6 text-center">
                         <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
