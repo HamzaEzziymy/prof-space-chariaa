@@ -2,7 +2,7 @@
 <html lang="{{ $isAr ? 'ar' : 'fr' }}" dir="{{ $isAr ? 'rtl' : 'ltr' }}">
 <head>
     <meta charset="utf-8">
-    <title>{{ $isAr ? 'بيان النقاط' : 'Relevé de notes' }}</title>
+    <title>{{ $isAr ? arabic_reshape('بيان النقاط') : 'Relevé de notes' }}</title>
     <style>
         @page {
             margin: 5mm 14mm 22mm 14mm;
@@ -18,7 +18,7 @@
         }
 
         body {
-            font-family: 'DejaVu Sans', sans-serif;
+            font-family: {{ $isAr ? "'Amiri', 'DejaVu Sans'" : "'DejaVu Sans'" }}, sans-serif;
             font-size: 9pt;
             color: #1e293b;
             line-height: 1.5;
@@ -129,7 +129,7 @@
         table.data thead th {
             background: #1e3a8a;
             color: #ffffff;
-            padding: 8px 8px;
+            padding: 4px 6px;
             font-size: 7.4pt;
             font-weight: 700;
             text-transform: uppercase;
@@ -140,7 +140,7 @@
         table.data thead th.center { text-align: center; }
 
         table.data tbody td {
-            padding: 7px 8px;
+            padding: 1px 6px;
             border: 1px solid #dbe4f0;
             vertical-align: middle;
         }
@@ -177,6 +177,8 @@
         .badge-absent { color: #92400e; }
         .badge-empty  { color: #64748b; }
 
+        .rtl-cell { text-align: right; direction: rtl; }
+
         .empty-state {
             text-align: center;
             padding: 32px 16px;
@@ -207,7 +209,7 @@
 
 <div class="page-footer">
     <div class="page-footer-inner">
-        <span class="footer-left" dir="{{ $isAr ? 'rtl' : 'ltr' }}">{{ $isAr ? 'بيان النقاط' : 'Relevé de notes' }} — {{ $isAr ? ($module->nom_ar ?? $module->nom_fr) : $module->nom_fr }}</span>
+        <span class="footer-left" dir="{{ $isAr ? 'rtl' : 'ltr' }}">{{ $isAr ? arabic_reshape('بيان النقاط') : 'Relevé de notes' }} — {{ $isAr ? arabic_reshape($module->nom_ar ?? $module->nom_fr) : $module->nom_fr }}</span>
         <span class="footer-right"></span>
     </div>
 </div>
@@ -230,7 +232,7 @@
             <tr>
                 <td class="sig-date">
                     @if ($isAr)
-                        <span class="rtl-inline">تم الإنشاء في:</span>
+                        <span class="rtl-inline">{{ arabic_reshape('تم الإنشاء في:') }}</span>
                         <span class="ltr-inline">{{ $date }}</span>
                     @else
                         Généré le {{ $date }}
@@ -238,7 +240,7 @@
                 </td>
                 <td class="sig-right">
                     <span class="sig-line {{ $isAr ? 'rtl-inline' : '' }}">
-                        {{ $isAr ? 'توقيع الأستاذ:' : 'Signature du professeur:' }}
+                        {{ $isAr ? arabic_reshape('توقيع الأستاذ:') : 'Signature du professeur:' }}
                         <br>
                     <span>................................</span>
 
@@ -251,10 +253,10 @@
     <table class="header-main">
         <tr>
             <td class="header-info-cell">
-                <div class="header-doctitle {{ $isAr ? 'rtl-block' : '' }}">{{ $isAr ? 'بيان النقاط' : 'RELEVE DE NOTES' }}</div>
-                <div class="header-filiere {{ $isAr ? 'rtl-block' : '' }}">{{ $isAr ? ($module->semestre?->niveau?->filiere?->nom_ar ?? $module->semestre?->niveau?->filiere?->nom_fr ?? '-') : ($module->semestre?->niveau?->filiere?->nom_fr ?? $module->semestre?->niveau?->filiere?->nom_ar ?? '-') }}</div>
-                <div class="header-sub {{ $isAr ? 'rtl-block' : '' }}">{{ $isAr ? ($module->semestre?->niveau?->nom_ar ?? $module->semestre?->niveau?->nom_fr ?? '-') : ($module->semestre?->niveau?->nom_fr ?? $module->semestre?->niveau?->nom_ar ?? '-') }} @if ($module->semestre) - {{ $isAr ? ($module->semestre->nom_ar ?? $module->semestre->nom_fr ?? '-') : ($module->semestre->nom_fr ?? $module->semestre->nom_ar ?? '-') }} @endif</div>
-                <div class="header-module-line {{ $isAr ? 'rtl-block' : '' }}">{{ $isAr ? 'الوحدة:' : 'MODULE:' }} {{ $isAr ? ($module->nom_ar ?? $module->nom_fr ?? '-') : ($module->nom_fr ?? $module->nom_ar ?? '-') }}</div>
+                <div class="header-doctitle {{ $isAr ? 'rtl-block' : '' }}">{{ $isAr ? arabic_reshape('بيان النقاط') : 'RELEVE DE NOTES' }}</div>
+                <div class="header-filiere {{ $isAr ? 'rtl-block' : '' }}">{{ $isAr ? arabic_reshape($module->semestre?->niveau?->filiere?->nom_ar ?? $module->semestre?->niveau?->filiere?->nom_fr ?? '-') : ($module->semestre?->niveau?->filiere?->nom_fr ?? $module->semestre?->niveau?->filiere?->nom_ar ?? '-') }}</div>
+                <div class="header-sub {{ $isAr ? 'rtl-block' : '' }}">{{ $isAr ? arabic_reshape($module->semestre?->niveau?->nom_ar ?? $module->semestre?->niveau?->nom_fr ?? '-') : ($module->semestre?->niveau?->nom_fr ?? $module->semestre?->niveau?->nom_ar ?? '-') }} @if ($module->semestre) - {{ $isAr ? arabic_reshape($module->semestre->nom_ar ?? $module->semestre->nom_fr ?? '-') : ($module->semestre->nom_fr ?? $module->semestre->nom_ar ?? '-') }} @endif</div>
+                <div class="header-module-line {{ $isAr ? 'rtl-block' : '' }}">{{ $isAr ? arabic_reshape('الوحدة:') : 'MODULE:' }} {{ $isAr ? arabic_reshape($module->nom_ar ?? $module->nom_fr ?? '-') : ($module->nom_fr ?? $module->nom_ar ?? '-') }}</div>
             </td>
         </tr>
     </table>
@@ -263,11 +265,19 @@
 <table class="data" dir="{{ $isAr ? 'rtl' : 'ltr' }}">
     <thead>
         <tr>
+            @if ($isAr)
+            <th style="width:92px" class="center">{{ arabic_reshape('القرار') }}</th>
+            <th style="width:58px" class="center">{{ arabic_reshape('النقطة') }}</th>
+            <th>{{ arabic_reshape('النسب') }}</th>
+            <th>{{ arabic_reshape('الاسم') }}</th>
             <th style="width:80px">CNE</th>
-            <th>{{ $isAr ? 'الاسم' : 'Nom' }}</th>
-            <th>{{ $isAr ? 'النسب' : 'Prénom' }}</th>
-            <th style="width:58px" class="center">{{ $isAr ? 'النقطة' : 'Note /20' }}</th>
-            <th style="width:92px" class="center">{{ $isAr ? 'القرار' : 'Décision' }}</th>
+            @else
+            <th style="width:80px">CNE</th>
+            <th>Nom</th>
+            <th>Prénom</th>
+            <th style="width:58px" class="center">Note /20</th>
+            <th style="width:92px" class="center">Décision</th>
+            @endif
         </tr>
     </thead>
     <tbody>
@@ -279,20 +289,20 @@
                 $noteVal  = $isEmpty ? null : (float) $note;
 
                 $noteDisplay = $isAbsent
-                    ? ($isAr ? 'غائب' : 'Absent')
+                    ? ($isAr ? arabic_reshape('غائب') : 'Absent')
                     : ($noteVal !== null ? number_format($noteVal, 2) : '—');
 
                 if ($isEmpty) {
                     $decisionDisplay = '—';
                     $badgeClass = 'badge-empty';
                 } elseif ($isAbsent) {
-                    $decisionDisplay = $isAr ? 'غائب' : 'Absent';
+                    $decisionDisplay = $isAr ? arabic_reshape('غائب') : 'Absent';
                     $badgeClass = 'badge-absent';
                 } elseif ($noteVal >= 10) {
-                    $decisionDisplay = $isAr ? 'مستوفي' : 'Validé';
+                    $decisionDisplay = $isAr ? arabic_reshape('مستوفي') : 'Validé';
                     $badgeClass = 'badge-valid';
                 } else {
-                    $decisionDisplay = $isAr ? 'غير مستوفي' : 'Non validé';
+                    $decisionDisplay = $isAr ? arabic_reshape('غير مستوفي') : 'Non validé';
                     $badgeClass = 'badge-fail';
                 }
 
@@ -301,18 +311,28 @@
                 $prenomDisplay = mb_strtoupper((string) ($prenom ?? '-'));
                 $nomDisplay = mb_strtoupper((string) ($nom ?? '-'));
             @endphp
+            @if ($isAr)
+            <tr>
+                <td class="center rtl-cell"><span class="badge {{ $badgeClass }} rtl-inline">{{ $decisionDisplay }}</span></td>
+                <td class="{{ $isAbsent ? 'note-absent' : 'note-value' }} rtl-cell">{{ $noteDisplay }}</td>
+                <td class="rtl-cell">{{ $prenomDisplay }}</td>
+                <td class="rtl-cell">{{ $nomDisplay }}</td>
+                <td class="cne">{{ $s['CNE'] }}</td>
+            </tr>
+            @else
             <tr>
                 <td class="cne">{{ $s['CNE'] }}</td>
-                <td dir="{{ $isAr ? 'rtl' : 'ltr' }}">{{ $nomDisplay }}</td>
-                <td dir="{{ $isAr ? 'rtl' : 'ltr' }}">{{ $prenomDisplay }}</td>
+                <td>{{ $nomDisplay }}</td>
+                <td>{{ $prenomDisplay }}</td>
                 <td class="{{ $isAbsent ? 'note-absent' : 'note-value' }}">{{ $noteDisplay }}</td>
-                <td class="center"><span class="badge {{ $badgeClass }} {{ $isAr ? 'rtl-inline' : '' }}">{{ $decisionDisplay }}</span></td>
+                <td class="center"><span class="badge {{ $badgeClass }}">{{ $decisionDisplay }}</span></td>
             </tr>
+            @endif
         @empty
             <tr>
                 <td colspan="5">
                     <div class="empty-state">
-                        {{ $isAr ? 'لا توجد بيانات متاحة' : 'Aucune donnée disponible' }}
+                        {{ $isAr ? arabic_reshape('لا توجد بيانات متاحة') : 'Aucune donnée disponible' }}
                     </div>
                 </td>
             </tr>
@@ -323,9 +343,9 @@
 
 <script type="text/php">
     if (isset($pdf) && isset($fontMetrics)) {
-        $font = $fontMetrics->getFont('DejaVu Sans', 'normal');
+        $font = $fontMetrics->getFont('{{ $isAr ? 'Amiri' : 'DejaVu Sans' }}', 'normal');
         $size = 7;
-        $text = @json($isAr ? 'صفحة {PAGE_NUM} / {PAGE_COUNT}' : 'Page {PAGE_NUM} / {PAGE_COUNT}');
+        $text = @json($isAr ? arabic_reshape('صفحة') . ' {PAGE_NUM} / {PAGE_COUNT}' : 'Page {PAGE_NUM} / {PAGE_COUNT}');
         $color = [0.58, 0.64, 0.72];
         $textWidth = $fontMetrics->getTextWidth($text, $font, $size);
         $x = $pdf->get_width() - $textWidth - 40;

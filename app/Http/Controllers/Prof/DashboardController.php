@@ -372,6 +372,14 @@ class DashboardController extends Controller
             ];
         })->filter()->sortBy(fn ($s) => ($s['nom_fr'] ?? '').' '.($s['prenom_fr'] ?? ''))->values();
 
+        if ($isAr) {
+            $students = $students->map(function ($s) {
+                $s['nom_ar'] = arabic_reshape($s['nom_ar'] ?? '');
+                $s['prenom_ar'] = arabic_reshape($s['prenom_ar'] ?? '');
+                return $s;
+            });
+        }
+
         $html = view('pdf.releve-notes', [
             'module'             => $module,
             'prof'               => $prof,
@@ -383,9 +391,35 @@ class DashboardController extends Controller
         ])->render();
 
         $filename = 'releve_notes_' . $module->code_module . '_' . now()->format('Ymd') . '.pdf';
-        return Pdf::loadHTML($html)
-            ->setPaper('a4', 'portrait')
-            ->setOption('defaultFont', 'DejaVu Sans')
-            ->download($filename);
+
+        $pdf = Pdf::loadHTML($html);
+        $pdf->setPaper('a4', 'portrait');
+
+        $defaultFont = $isAr ? 'Amiri' : 'DejaVu Sans';
+        $pdf->setOption('defaultFont', $defaultFont);
+
+        if ($isAr) {
+            $dompdf = $pdf->getDomPDF();
+            $fontMetrics = $dompdf->getFontMetrics();
+            $fontDir = storage_path('fonts');
+            $fontMetrics->registerFont(
+                ['family' => 'Amiri', 'style' => 'normal', 'weight' => 'normal'],
+                "$fontDir/Amiri-Regular.ttf"
+            );
+            $fontMetrics->registerFont(
+                ['family' => 'Amiri', 'style' => 'normal', 'weight' => 'bold'],
+                "$fontDir/Amiri-Bold.ttf"
+            );
+            $fontMetrics->registerFont(
+                ['family' => 'Amiri', 'style' => 'italic', 'weight' => 'normal'],
+                "$fontDir/Amiri-Italic.ttf"
+            );
+            $fontMetrics->registerFont(
+                ['family' => 'Amiri', 'style' => 'italic', 'weight' => 'bold'],
+                "$fontDir/Amiri-BoldItalic.ttf"
+            );
+        }
+
+        return $pdf->download($filename);
     }
 }
