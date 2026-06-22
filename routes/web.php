@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\EtudiantController;
 use App\Http\Controllers\ModuleController;
-use App\Http\Controllers\NotesStatController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProfessorController;
 use App\Http\Controllers\SettingsController;
@@ -31,9 +30,6 @@ Route::middleware('auth')->group(function () {
     // Force password change on first login
     Route::get('/password/change',  [ForcePasswordChangeController::class, 'create'])->name('password.change');
     Route::post('/password/change', [ForcePasswordChangeController::class, 'store'])->name('password.change.store');
-});// ── Statistiques des notes (admin + super_admin) ──────────────────────────────
-Route::middleware(['auth', 'admin'])->prefix('notes')->name('notes.')->group(function () {
-    Route::get('/', [NotesStatController::class, 'index'])->name('index');
 });
 
 Route::middleware(['auth', 'super_admin'])->prefix('settings')->name('settings.')->group(function () {

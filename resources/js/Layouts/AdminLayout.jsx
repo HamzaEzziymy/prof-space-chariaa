@@ -8,7 +8,6 @@ import {
     BookOpenIcon,
     BuildingOffice2Icon,
     ClipboardDocumentListIcon,
-    DocumentTextIcon,
     Squares2X2Icon,
     CalendarDaysIcon,
     UserIcon,
@@ -121,7 +120,6 @@ export default function AdminLayout({ children, title }) {
         { key: 'modules',            href: route('modules.index'),              icon: BookOpenIcon,                label: t('modules')          },
         { key: 'inscriptions',       href: route('inscriptions.index'),         icon: ClipboardDocumentListIcon,   label: t('inscriptions')     },
         { key: 'exam-inscriptions',  href: route('inscription-examen.index'),   icon: ClipboardDocumentCheckIcon, label: t('examInscriptions') },
-        { key: 'grades',             href: route('notes.index'),                icon: DocumentTextIcon,            label: t('grades')           },
     ];
 
     const adminItems = [
@@ -138,7 +136,6 @@ export default function AdminLayout({ children, title }) {
         : currentRoute?.includes('users')               ? 'users'
         : currentRoute?.includes('professors')          ? 'professors'
         : currentRoute?.includes('etudiants')           ? 'students'
-        : currentRoute?.includes('notes')               ? 'grades'
         : currentRoute?.includes('inscription-examen')  ? 'exam-inscriptions'
         : currentRoute?.includes('inscriptions')        ? 'inscriptions'
         : currentRoute?.includes('structure')           ? 'structure'
